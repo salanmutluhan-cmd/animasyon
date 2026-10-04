@@ -53,6 +53,9 @@
     switch (cmd.type) {
       case 'feed': pet.feed(); break;
       case 'water': pet.giveWater(); break;
+      case 'treat': pet.feedTreat(); break;
+      case 'bath': pet.bathe(); break;
+      case 'walkTo': pet.walkTo(cmd.x); break;
       case 'sleep': pet.sleep(); break;
       case 'wake': pet.wake(); break;
       case 'yawn': pet.yawn(); break;

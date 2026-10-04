@@ -1,157 +1,120 @@
-# 🐾 Pet Bakım Mini Oyunu — Animasyon Motoru
+# 🐾 Pet Bakım Mini Oyunu: Animasyon Motoru
 
 Regl takip uygulaması içine eklenecek **köpek ve kedi bakma** mini oyunu için hazır animasyon paketi.
-2D, karşıdan görünüm, cartoon tarzı; bütün animasyonlar kod ile (prosedürel) üretilir. Bu yüzden
-görüntü her ekran boyutunda keskin kalır ve hareketler yumuşak geçişlerle birbirine bağlanır.
+Görünüm 2D, karşıdan bakış ve cartoon tarzında. Tüm animasyonlar kodla üretilir, bu yüzden her ekranda keskin görünür.
+Çalışması için tek bir HTML dosyası yeter, dış bağlantı gerekmez.
 
-| Köpek | Kedi | Yemek | Su | Sevilme |
+| Tüylü köpek | Mamayı ağzına götürünce | Yeme | Duş (köpük) | Silkelenme |
 |---|---|---|---|---|
-| ![](docs/dog-idle.png) | ![](docs/cat-idle.png) | ![](docs/dog-eat.png) | ![](docs/dog-drink.png) | ![](docs/dog-pet-awake.png) |
+| ![](docs/dog-idle.png) | ![](docs/dog-food-near.png) | ![](docs/dog-nom.png) | ![](docs/dog-shower.png) | ![](docs/dog-shake.png) |
 
-| Sevilme (kedi) | Uyku | Yorgun | Esneme | Susamış |
+| Yürüme | Kirli kedi | Kedi duşta | Kediye mama | Uyku |
 |---|---|---|---|---|
-| ![](docs/cat-pet-awake.png) | ![](docs/cat-sleep.png) | ![](docs/dog-tired.png) | ![](docs/cat-yawn.png) | ![](docs/cat-thirsty.png) |
+| ![](docs/dog-walk.png) | ![](docs/cat-dirty.png) | ![](docs/cat-bath.png) | ![](docs/cat-treat.png) | ![](docs/cat-sleep.png) |
 
-## Neler var?
+## Hızlı deneme (telefonda da)
 
-**Karakter**
-- Köpek: sarkık kulaklar (rüzgârda sallanır, ruh haline göre kalkar/düşer), göz lekesi, kuyruk
-- Kedi: sivri kulaklar, tekir çizgiler, bıyıklar (sevilince titrer), dikey göz bebeği (mutlulukta büyür)
-- Bacaklar düz çubuk değil: omuz, dirsek kıvrımı, bilek ve parmak çizgili patiler; arkada oturan kalça ve arka ayaklar
-- Gözler: göz kırpma, etrafa bakma, göz kapakları (uykulu / kısık / mutlu ^^ / uyuyor ‿‿)
-- Ağız: gülümseme, somurtma, açılma, dil çıkarma, çiğneme; yanaklar kızarabiliyor
-- Nefes alma (uyurken derin, susayınca hızlı soluma)
+`demo.html` **tek başına çalışır**, yanında başka dosya gerekmez. Telefona gönderip Chrome ile açabilirsiniz.
 
-**Durumlar (ruh hali – istatistiklere göre otomatik)**
-| Ruh hali | Ne zaman | Animasyon |
-|---|---|---|
-| `happy` | tüm değerler yüksek | gülümser, kuyruk hızlı sallanır, arada zıplar, kafa eğer |
-| `neutral` | normal | sakin, arada dudak yalar / kafa eğer |
-| `hungry` | tokluk < 30 | üzgün kaşlar, karın guruldar (titreme + "gurr"), dudak yalar |
-| `thirsty` | su < 30 | dili dışarıda hızlı soluma, ter damlası |
-| `tired` | enerji < 25 | yarı kapalı gözler, sarkık kulak ve kafa, sık sık esneme |
-| `sad` | mutluluk < 30 | somurtma, kulaklar ve kuyruk aşağıda, iç çekme |
-| `sleeping` | uyutulunca | yere yatar, gözler kapalı, Zzz, derin nefes |
+> ⚠️ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. Dosyayı indirip
+> tarayıcıda açın ya da bilgisayarda `npx serve .` çalıştırıp telefondan `http://<bilgisayar-ip>:3000/demo.html` adresine girin.
 
-**Aksiyonlar**
-| Aksiyon | Açıklama | Etkisi |
-|---|---|---|
-| `feed()` | Mama kabı gelir, kafasını eğip yer, çiğner, kırıntılar uçar, dudaklarını yalar | tokluk +35, mutluluk +5 |
-| `giveWater()` | Su kabı gelir, diliyle lap lap içer, halkalar ve damlalar | su +40, mutluluk +3 |
-| `sleep()` | Esner, yatar ve uyur | uyurken enerji dolar |
-| `wake()` | Gözlerini yavaşça açar, kalkar, gerinip esner | — |
-| Parmakla sevme | Parmağı hayvanın üstünde gezdirince: gözler ^^, yanaklar pembe, kafa parmağa doğru eğilir, kalpler çıkar. Köpek dil çıkarıp kuyruk sallar, kedi mırlar ("purr") | mutluluk artar |
-| Dokunma | Kafaya dokununca mutlu tepki, gövdeye dokununca zıplar; uyurken dokunulursa uykusunda gülümser | mutluluk +1 |
-| `celebrate()` | Zıplayarak sevinir, yıldız ve kalpler (ör. kullanıcı günlük kaydını girince) | — |
-| `play(name)` | Herhangi bir animasyonu elle oynat: `yawn`, `growl`, `lickLips`, `sigh`, `headTilt`, `hop`, `boop` … | — |
+## Oynanış
 
-Uyurken besleme veya su verme denenirse önce uyanır, sonra yer/içer. Enerji 100 olunca kendiliğinden uyanır (`autoWake`).
+| Etkileşim | Ne olur |
+|---|---|
+| **Mama** (sol alt): parmakla sürükleyip **ağzına götür** | Hayvan mamaya bakar, uzaktaysa ona doğru yürür, yaklaştıkça ağzını açar, dil çıkarır, salyası akar. **Bırakınca** mamayı ağzına alır, çiğner, dudaklarını yalar (tokluk +15). Tokken başını çevirip reddeder. |
+| **Su** (sol alt): su kabını hayvanın önüne sürükle | Kap önüne konur, diliyle lap lap içer (su +40) |
+| **Duş** (sağ alt): duş başlığını **hayvanın üstüne** götür | Su akar, hayvanın kafasında ve gövdesinde köpükler birikir, gözlerini sıkar, kulakları düşer, çamur lekeleri çıkar |
+| Duş başlığını **yerine bırak** | Hayvan **silkelenerek kurulanır**: sallanır, etrafa su damlaları saçar, köpükler patlar, tüyleri kabarır, parıltılar çıkar (temizlik = 100) |
+| Parmağını hayvanın üstünde gezdir | Sevilme: gözleri ^^ olur, yanakları pembeleşir, kafasını parmağa doğru eğer, kalpler çıkar. Köpek dil çıkarıp kuyruk sallar, kedi mırlar |
+| Kafasına dokun | Mutlu tepki verir. Gövdesine dokunursan zıplar |
+| Kendiliğinden | Ekranda **sağa sola rastgele yürür**: adım atar, kafasını gittiği yöne çevirir, kulakları sallanır. Ruh haline göre hızlanır ya da yavaşlar, yorgunken çok az yürür |
+
+**Ruh halleri** (istatistiklere göre otomatik): `happy`, `neutral`, `hungry` (karnı guruldar), `thirsty` (dil dışarıda soluma),
+`tired` (yarı kapalı gözler, esneme), `dirty` (çamur lekeleri, koku, kaşınma), `sad`, `sleeping` (yatar, Zzz).
+
+**Çizim detayı:** Gövde, kalça, bacaklar, kuyruk, kulaklar ve yanaklarda tüy tutamları var. Göğüste kabarık açık renk tüy, tüy dokusu ve tüy çizgileri de var.
+Patilerde 4 parmak çıkıntısı ve parmak çizgileri, bileklerde ve dirseklerde tüy püskülleri bulunuyor.
+Gözlerde iris, göz bebeği, parlama ve göz kapakları; burunda burun delikleri var.
 
 ## Dosyalar
 
 ```
-dist/pet.html                       ← TEK DOSYA. WebView'de açılacak sayfa (motor gömülü)
-src/pet-engine.js                   ← animasyon motoru (bağımlılık yok)
-src/pet.template.html               ← WebView köprüsü (dist/pet.html bundan üretilir)
-demo.html                           ← tarayıcıda deneme sayfası (butonlar, istatistik çubukları)
-integration/react-native/PetView.tsx + petHtml.js
-integration/flutter/pet_view.dart
-tools/build.js                      ← src değişince: node tools/build.js
+demo.html                          ← TEK DOSYA deneme sayfası (butonlar + istatistikler)
+dist/pet.html                      ← TEK DOSYA, uygulamadaki WebView'de açılacak sayfa
+integration/android/PetView.kt     ← Android (Kotlin) WebView bileşeni
+integration/android/assets/pet.html← app/src/main/assets/ içine kopyalanacak dosya
+integration/react-native/          ← React Native / Expo bileşeni
+integration/flutter/pet_view.dart  ← Flutter widget'ı
+src/pet-engine.js                  ← animasyon motoru (kaynak)
+tools/build.js                     ← src değişince: node tools/build.js
 ```
 
-## Hızlı deneme
+## Android'e entegrasyon (Kotlin)
 
-`demo.html` dosyasını tarayıcıda açın. Zaman hızı kaydırıcısıyla açlık/yorgunluğun ilerleyişini hızlandırabilir,
-"Ruh hali test" butonlarıyla her durumu anında görebilirsiniz. Telefonda denemek için:
-`npx serve .` → telefondan `http://<bilgisayar-ip>:3000/demo.html`.
+1. `integration/android/assets/pet.html` → `app/src/main/assets/pet.html`
+2. `integration/android/PetView.kt` dosyasını projeye ekleyin, paket adını değiştirin.
+3. Layout ve kod:
 
-## Uygulamaya entegrasyon
-
-Motor saf HTML/SVG/JS olduğu için her platformda **WebView** içinde çalışır.
-
-### React Native / Expo
-```bash
-npx expo install react-native-webview
+```xml
+<com.example.pet.PetView
+    android:id="@+id/petView"
+    android:layout_width="match_parent"
+    android:layout_height="480dp" />
 ```
-`integration/react-native/` klasöründeki `PetView.tsx` ve `petHtml.js` dosyalarını projenize kopyalayın:
-```tsx
-const pet = useRef<PetViewHandle>(null);
+```kotlin
+val prefs = getSharedPreferences("pet", MODE_PRIVATE)
+petView.onStats = { json -> prefs.edit().putString("state", json.toString()).apply() }
+petView.onMood = { mood -> /* "hungry", "dirty" ... bildirim vb. */ }
+petView.load(species = "dog", savedState = prefs.getString("state", null))
 
-<PetView ref={pet} species="cat" style={{ width: '100%', aspectRatio: 400 / 420 }}
-  initialState={kayitliDurum}
-  onStats={s => AsyncStorage.setItem('pet', JSON.stringify(s))}
-  onMood={m => console.log('ruh hali', m)} />
-
-<Button title="Besle" onPress={() => pet.current?.feed()} />
+// isteğe bağlı butonlar (ekrandaki sürüklenebilir araçlar zaten hazır):
+feedBtn.setOnClickListener { petView.feedTreat() }
+bathBtn.setOnClickListener { petView.bathe() }
+sleepBtn.setOnClickListener { petView.sleep() }
 ```
 
-### Flutter
-`dist/pet.html` → `assets/pet.html` olarak kopyalayın, `webview_flutter` ekleyin, `integration/flutter/pet_view.dart` kullanın:
-```dart
-final pet = PetController();
-PetView(controller: pet, species: 'dog', onStats: (s) => prefs.setString('pet', jsonEncode(s)));
-ElevatedButton(onPressed: pet.feed, child: Text('Besle'));
-```
-
-### Native (Swift / Kotlin)
-- `dist/pet.html` dosyasını uygulama paketine ekleyip WKWebView / Android WebView ile yükleyin.
-- Komut göndermek: `webView.evaluateJavaScript("petCommand({type:'feed'})")`
-- Olay almak: iOS'ta `petBridge` adlı `WKScriptMessageHandler`, Android'de `addJavascriptInterface(obj, "AndroidPet")` (`postMessage(String)` metodu ile).
-- Arka planı şeffaf yapın (iOS: `isOpaque = false`, Android: `setBackgroundColor(Color.TRANSPARENT)`).
-
-### Web / iframe
-```html
-<div id="pet" style="width:300px;height:315px"></div>
-<script src="src/pet-engine.js"></script>
-<script>const pet = new PetEngine(document.getElementById('pet'), { species: 'dog' });</script>
-```
+React Native ve Flutter için `integration/` klasöründeki dosyalara bakın. Kullanım aynı: `feedTreat()`, `bathe()`, `giveWater()`, `sleep()`, `wake()`.
 
 ## Köprü protokolü
 
 **Uygulama → hayvan** (`window.petCommand(json)`):
 ```js
-{type:'feed'} {type:'water'} {type:'sleep'} {type:'wake'} {type:'pet'} {type:'celebrate'} {type:'yawn'}
-{type:'play', name:'growl'}
+{type:'treat'}  // elle mama (otomatik ağza götürme)
+{type:'feed'}   // mama kabından yeme
+{type:'water'} {type:'bath'} {type:'sleep'} {type:'wake'} {type:'pet'} {type:'celebrate'} {type:'yawn'}
+{type:'walkTo', x:0.3}          // 0..1 arası konuma yürü
+{type:'play', name:'growl'}     // herhangi bir animasyon
 {type:'setSpecies', species:'dog'|'cat'}
-{type:'setState', state:{ stats:{fullness, hydration, energy, happiness}, sleeping, lastUpdate }}
-{type:'setTimeScale', value: 1}
-{type:'setColors', colors:{ fur:'#ccc', dog:{ear:'#555'}, cat:{iris:'#4aa3ff'} }}
-{type:'pause'} {type:'resume'} {type:'getState'}
+{type:'setState', state:{ stats:{fullness, hydration, energy, happiness, cleanliness}, sleeping, lastUpdate }}
+{type:'setTimeScale', value: 1} {type:'setColors', colors:{...}} {type:'pause'} {type:'resume'} {type:'getState'}
 ```
 
-**Hayvan → uygulama** (JSON string; `{source:'pet', type, data}`):
-| type | data |
-|---|---|
-| `ready` | ilk durum |
-| `stats` | `{species, stats, sleeping, mood, lastUpdate}`, saniyede bir gelir; kaydetmek için ideal |
-| `mood` | `{mood, previous}` |
-| `action` | `{name:'eat'|'drink'|'sleep'|'wake'|..., phase:'start'|'end'}` |
-| `pet` | `{phase:'start'|'end'}` |
-| `sleep` / `wake` | `{}` |
-| `state` | her komuttan sonra güncel durum |
+**Hayvan → uygulama** (`{source:'pet', type, data}` JSON):
+`ready`, `stats` (saniyede bir), `mood`, `action` (`eat`/`drink`/`bath`/`shakeDry`/`sleep`/`wake`… start/end), `drag` (araç sürükleme),
+`pet` (sevme başladı/bitti), `sleep`, `wake`, `state`.
 
-## Durumu kaydetme (uygulama kapalıyken geçen süre)
+## Durumu kaydetme
 
-`stats` olayıyla gelen objeyi olduğu gibi saklayın (AsyncStorage / SharedPreferences / UserDefaults).
-Uygulama yeniden açıldığında `setState(kayıt)` gönderin. İçindeki `lastUpdate` sayesinde aradaki süre
-(en fazla 72 saat) hesaplanır: hayvan acıkmış, susamış, yorulmuş olur. Uyurken kapatıldıysa enerjisi dolmuş olur.
+`stats` olayıyla gelen objeyi saklayın, uygulama açılınca `setState` ile geri verin. `lastUpdate` sayesinde
+uygulama kapalıyken geçen süre (en fazla 72 saat) hesaplanır: hayvan acıkmış, susamış, kirlenmiş olur.
 
 ## Ayarlar
 
 `new PetEngine(el, options)`:
+
 | Seçenek | Varsayılan | Açıklama |
 |---|---|---|
-| `species` | `'dog'` | `'dog'` veya `'cat'` |
-| `timeScale` | `1` | 1 = gerçek zaman. `3600` → 1 saniye = 1 saat (test için) |
-| `autoWake` | `true` | enerji dolunca kendiliğinden uyanır |
-| `decay` | `{fullness:6, hydration:8, energy:5, energyRegen:22, happiness:3, lowStatPenalty:3}` | saat başına azalma/artış puanları |
-| `colors` | — | renk değiştirme (ör. farklı cins/renk seçenekleri sunmak için) |
-| `stats`, `state` | — | başlangıç değerleri |
+| `species` | `'dog'` | `'dog'` / `'cat'` |
+| `tools` | `true` | alt tepsideki Mama / Su / Duş araçları |
+| `background` | `true` | oda arka planı (pencere, halı, zemin). `false` → şeffaf |
+| `walk` | `true` | ekranda rastgele yürüme |
+| `quality` | `'high'` | `'low'` → tüy detayı kapalı (çok eski telefonlar için) |
+| `petScale` | `1` | hayvan boyutu |
+| `labels` | `{food:'Mama', water:'Su', shower:'Duş'}` | araç yazıları |
+| `timeScale` | `1` | test için zamanı hızlandırma (`3600` → 1 sn = 1 saat) |
+| `decay` | `{fullness:6, hydration:8, energy:5, energyRegen:22, happiness:3, cleanliness:4}` | saat başına değişim |
+| `colors` | — | renkler, ör. `{ cat:{ fur:'#3a3a3a', furShade:'#222', stripe:'#2a2a2a', light:'#fff', iris:'#f2c94c' } }` |
 
-Varsayılan hızlarla tokluk yaklaşık 8 saatte 80'den 30'a düşer, yani hayvan günde 2-3 kez beslenmek ister.
-Oyunun temposunu `decay` ile ayarlayabilirsiniz.
-
-Renk örneği (siyah-beyaz kedi):
-```js
-pet.setColors({ cat: { fur:'#3a3a3a', furShade:'#222', stripe:'#2a2a2a', light:'#fff', iris:'#f2c94c', brow:'#555' } });
-```
+Hayvan alanı en/boy oranına göre kendini ayarlar. **3:4 civarı dikey bir alan** önerilir.

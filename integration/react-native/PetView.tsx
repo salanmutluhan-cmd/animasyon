@@ -6,13 +6,15 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import petHtml from './petHtml';
 
 export type Species = 'dog' | 'cat';
-export type Mood = 'happy' | 'neutral' | 'hungry' | 'thirsty' | 'tired' | 'sad' | 'sleeping';
+export type Mood = 'happy' | 'neutral' | 'hungry' | 'thirsty' | 'tired' | 'dirty' | 'sad' | 'sleeping';
 
-export interface PetStats { fullness: number; hydration: number; energy: number; happiness: number; }
+export interface PetStats { fullness: number; hydration: number; energy: number; happiness: number; cleanliness: number; }
 export interface PetState { species: Species; stats: PetStats; sleeping: boolean; mood: Mood | null; lastUpdate: number; }
 
 export interface PetViewHandle {
   feed(): void;
+  feedTreat(): void;
+  bathe(): void;
   giveWater(): void;
   sleep(): void;
   wake(): void;
@@ -49,6 +51,8 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
 
   useImperativeHandle(ref, () => ({
     feed: () => send({ type: 'feed' }),
+    feedTreat: () => send({ type: 'treat' }),
+    bathe: () => send({ type: 'bath' }),
     giveWater: () => send({ type: 'water' }),
     sleep: () => send({ type: 'sleep' }),
     wake: () => send({ type: 'wake' }),
@@ -119,7 +123,7 @@ function PetScreen() {
         ref={pet}
         species="dog"
         initialState={saved ?? undefined}
-        style={{ width: '100%', aspectRatio: 400 / 420 }}
+        style={{ width: '100%', aspectRatio: 3 / 4 }}
         onStats={s => AsyncStorage.setItem('pet', JSON.stringify(s))}
       />
       <Button title="Besle" onPress={() => pet.current?.feed()} />

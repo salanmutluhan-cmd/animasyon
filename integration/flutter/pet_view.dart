@@ -22,6 +22,8 @@ class PetController {
   }
 
   Future<void> feed() => send({'type': 'feed'});
+  Future<void> feedTreat() => send({'type': 'treat'});
+  Future<void> bathe() => send({'type': 'bath'});
   Future<void> giveWater() => send({'type': 'water'});
   Future<void> sleep() => send({'type': 'sleep'});
   Future<void> wake() => send({'type': 'wake'});
@@ -102,7 +104,7 @@ class _PetViewState extends State<PetView> {
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
-      aspectRatio: 400 / 420,
+      aspectRatio: 3 / 4,
       child: WebViewWidget(controller: _web),
     );
   }
