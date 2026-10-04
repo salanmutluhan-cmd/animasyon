@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pet</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: transparent; }
+  body { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+  #pet { position: absolute; inset: 0; }
+</style>
+</head>
+<body>
+<div id="pet"></div>
+<script>
+/*__PET_ENGINE__*/
+</script>
+<script>
+/*
+ * WebView köprüsü
+ * Gelen komutlar (JSON string ya da obje):
+ *   {type:'feed'} {type:'water'} {type:'sleep'} {type:'wake'} {type:'yawn'} {type:'celebrate'} {type:'pet'}
+ *   {type:'setSpecies', species:'dog'|'cat'}
+ *   {type:'setState', state:{stats:{...}, sleeping:false, lastUpdate:1700000000000}}
+ *   {type:'getState'}  {type:'setTimeScale', value:1}  {type:'setColors', colors:{...}}
+ *   {type:'pause'} {type:'resume'} {type:'play', name:'growl'}
+ * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'sleep'|'wake'|'state', data:{...}}
+ */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.get('bg')) document.body.style.background = q.get('bg') === 'transparent' ? 'transparent' : '#' + q.get('bg').replace('#', '');
+
+  var pet = new PetEngine(document.getElementById('pet'), {
+    species: q.get('species') || 'dog',
+    timeScale: parseFloat(q.get('timeScale') || '1')
+  });
+  window.pet = pet;
+
+  function send(type, data) {
+    var msg = JSON.stringify({ source: 'pet', type: type, data: data });
+    try { if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(msg); } catch (e) {}
+    try { if (window.PetBridge && window.PetBridge.postMessage) window.PetBridge.postMessage(msg); } catch (e) {}       // Flutter JavaScriptChannel
+    try { if (window.AndroidPet && window.AndroidPet.postMessage) window.AndroidPet.postMessage(msg); } catch (e) {}     // Android @JavascriptInterface
+    try { if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.petBridge) window.webkit.messageHandlers.petBridge.postMessage(msg); } catch (e) {} // iOS WKWebView
+    try { if (window.parent && window.parent !== window) window.parent.postMessage(msg, '*'); } catch (e) {}           // iframe
+  }
+
+  pet.on('*', function (ev, data) { send(ev, data); });
+
+  function handle(cmd) {
+    if (typeof cmd === 'string') { try { cmd = JSON.parse(cmd); } catch (e) { return; } }
+    if (!cmd || !cmd.type) return;
+    switch (cmd.type) {
+      case 'feed': pet.feed(); break;
+      case 'water': pet.giveWater(); break;
+      case 'sleep': pet.sleep(); break;
+      case 'wake': pet.wake(); break;
+      case 'yawn': pet.yawn(); break;
+      case 'celebrate': pet.celebrate(); break;
+      case 'pet': pet.petOnce(); break;
+      case 'play': pet.play(cmd.name); break;
+      case 'setSpecies': pet.setSpecies(cmd.species); break;
+      case 'setState': pet.setState(cmd.state); break;
+      case 'setColors': pet.setColors(cmd.colors); break;
+      case 'setTimeScale': pet.setTimeScale(cmd.value); break;
+      case 'pause': pet.pause(); break;
+      case 'resume': pet.resume(); break;
+      case 'getState': break;
+    }
+    send('state', pet.getState());
+  }
+
+  window.petCommand = handle;
+  window.addEventListener('message', function (e) { if (e.source !== window) handle(e.data); });
+  document.addEventListener('message', function (e) { handle(e.data); }); // React Native Android
+
+  send('ready', pet.getState());
+})();
+</script>
+</body>
+</html>
