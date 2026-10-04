@@ -12,7 +12,7 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 |---|---|---|
 | ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-**Yakın plan:** Gövde yumuşak, yuvarlak ve pofuduk. Tüylü görünüm sadece dış çizgiden gelmiyor; gövdenin, kafanın, kolların, bacakların ve kuyruğun içinde üst üste binen tüy tutamları var. Her tutamın altında gölge, üstünde parlama var. Bunlara ek olarak sol üstten gelen yumuşak bir ışık, kenarlarda hafif bir koyulaşma ve kolların gövdeye düşen gölgesi var.
+**Yakın plan:** Çizim tarzı sevimli yavru çizimleri gibi. Gözler koyu ve parlak, büyük parlama noktaları var, göz akı neredeyse görünmüyor. Yanaklar hafif pembe. Kafa büyük, gövde tombul ve yuvarlak (armut biçiminde), kol ve bacaklar kısa ve tombul. Patiler karnın önünde duruyor. Gölgelendirme temiz ve yumuşak: sol üstten ışık, kenarlarda hafif koyulaşma, kolların gövdeye düşen gölgesi.
 
 ![](docs/yakin-plan.png)
 
