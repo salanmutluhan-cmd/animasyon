@@ -199,17 +199,18 @@
   };
 
   // ================================================================ Gövde tipleri ve cinse göre kafa/vücut hatları
+  // Yumuşak, pofuduk gövde tipleri: chest = göğüs genişliği, belly = karın (en geniş yer). Bel çukuru yok.
   const BODY_TYPES = {
-    athletic: { top: 210, bottom: 402, neck: 40, chest: 68, waist: 50, hip: 60, arm: [21, 15, 12], leg: [29, 18, 14], L1: 48, L2: 46 },
-    slim:     { top: 210, bottom: 394, neck: 35, chest: 60, waist: 43, hip: 54, arm: [18, 13, 10.5], leg: [26, 16, 12.5], L1: 50, L2: 48 },
-    large:    { top: 212, bottom: 404, neck: 46, chest: 78, waist: 60, hip: 68, arm: [24, 17.5, 14], leg: [32, 21, 16], L1: 48, L2: 46 },
-    stocky:   { top: 214, bottom: 414, neck: 56, chest: 90, waist: 64, hip: 62, arm: [26, 20, 15.5], leg: [30, 22, 17], L1: 42, L2: 40, bowed: 1 },
-    chubby:   { top: 212, bottom: 414, neck: 48, chest: 72, waist: 74, hip: 70, arm: [21, 16, 13], leg: [27, 19, 15], L1: 44, L2: 42 },
-    compact:  { top: 210, bottom: 408, neck: 42, chest: 66, waist: 54, hip: 62, arm: [20, 15, 12], leg: [27, 18, 14], L1: 46, L2: 44 },
-    muscular: { top: 212, bottom: 402, neck: 52, chest: 86, waist: 56, hip: 64, arm: [25, 18.5, 14.5], leg: [32, 21, 16], L1: 48, L2: 46 },
-    fluffy:   { top: 210, bottom: 410, neck: 46, chest: 72, waist: 62, hip: 64, arm: [20, 15, 12], leg: [26, 18, 14], L1: 44, L2: 42 },
-    cat:      { top: 212, bottom: 404, neck: 38, chest: 60, waist: 46, hip: 60, arm: [18, 13, 10.5], leg: [27, 17, 12.5], L1: 48, L2: 46 },
-    catBig:   { top: 212, bottom: 406, neck: 44, chest: 70, waist: 58, hip: 68, arm: [21, 15, 12], leg: [30, 19, 14], L1: 46, L2: 44 }
+    athletic: { top: 210, bottom: 408, neck: 42, chest: 64, belly: 72, arm: [17, 14, 12], leg: [27, 18, 14], L1: 48, L2: 46 },
+    slim:     { top: 210, bottom: 400, neck: 38, chest: 58, belly: 64, arm: [15.5, 12.5, 10.5], leg: [25, 16, 12.5], L1: 50, L2: 48 },
+    large:    { top: 212, bottom: 410, neck: 46, chest: 72, belly: 82, arm: [19, 15.5, 13], leg: [30, 20, 15.5], L1: 48, L2: 46 },
+    stocky:   { top: 214, bottom: 414, neck: 52, chest: 80, belly: 88, arm: [20, 17, 14.5], leg: [29, 21, 16.5], L1: 42, L2: 40, bowed: 1 },
+    chubby:   { top: 212, bottom: 414, neck: 48, chest: 70, belly: 86, arm: [17.5, 14.5, 12.5], leg: [27, 19, 15], L1: 44, L2: 42 },
+    compact:  { top: 210, bottom: 410, neck: 42, chest: 64, belly: 74, arm: [16.5, 13.5, 11.5], leg: [26, 18, 14], L1: 46, L2: 44 },
+    muscular: { top: 212, bottom: 408, neck: 48, chest: 74, belly: 80, arm: [19.5, 16, 13.5], leg: [30, 20, 15.5], L1: 48, L2: 46 },
+    fluffy:   { top: 210, bottom: 412, neck: 46, chest: 70, belly: 82, arm: [17, 14, 12], leg: [25, 18, 14], L1: 44, L2: 42 },
+    cat:      { top: 212, bottom: 406, neck: 40, chest: 60, belly: 70, arm: [15.5, 12.5, 10.5], leg: [25, 17, 12.5], L1: 48, L2: 46 },
+    catBig:   { top: 212, bottom: 410, neck: 44, chest: 68, belly: 80, arm: [17.5, 14, 12], leg: [28, 19, 14], L1: 46, L2: 44 }
   };
   // Kuyruk şekilleri (orta çizgi noktaları + kalınlık)
   const TAILS = {
@@ -239,26 +240,42 @@
     british:    { body: 'catBig' }, mainecoon: { body: 'catBig' }
   };
 
+  // Fasulye / armut biçimli yumuşak gövde: boyundan göğse, oradan dolgun karna, yuvarlak alt
   function torsoD(bt) {
-    const t = bt.top, btm = bt.bottom, c = 200;
-    const yc = t + 54, yw = t + (btm - t) * 0.56, yh = btm - 50;
-    const side = (s) => {
-      const X = (v) => f(c + s * v);
-      // omuz → göğüs (dışbükey), göğüs → bel (içe), bel → kalça (dışa), kalça → yuvarlak alt
-      return [[X(bt.neck + 16), t + 10, X(bt.chest + 2), yc - 36, X(bt.chest), yc],
-              [X(bt.chest - 2), yc + 30, X(bt.waist), yw - 30, X(bt.waist), yw],
-              [X(bt.waist), yw + 26, X(bt.hip + 2), yh - 26, X(bt.hip), yh],
-              [X(bt.hip - 2), btm - 14, X(bt.hip * 0.55), btm + 4, c, btm]];
-    };
+    const t = bt.top, b = bt.bottom, c = 200, h = b - t;
+    const yc = t + h * 0.3, yb = t + h * 0.72;
+    const X = (sg, v) => f(c + sg * v);
+    const side = (sg) => [
+      [X(sg, bt.neck + 16), t + 10, X(sg, bt.chest), f(yc - h * 0.16), X(sg, bt.chest), f(yc)],
+      [X(sg, bt.chest), f(yc + h * 0.2), X(sg, bt.belly), f(yb - h * 0.2), X(sg, bt.belly), f(yb)],
+      [X(sg, bt.belly), f(b - h * 0.05), X(sg, bt.belly * 0.55), b + 3, c, b]];
     const L = side(-1), R = side(1);
     let d = 'M' + f(c - bt.neck) + ' ' + t;
     L.forEach((q) => { d += ' C' + q.join(' '); });
     for (let i = R.length - 1; i >= 0; i--) {
-      const q = R[i], prev = i > 0 ? R[i - 1] : null;
-      const end = prev ? [prev[4], prev[5]] : [f(c + bt.neck), t];
+      const q = R[i], end = i > 0 ? [R[i - 1][4], R[i - 1][5]] : [f(c + bt.neck), t];
       d += ' C' + q[2] + ' ' + q[3] + ' ' + q[0] + ' ' + q[1] + ' ' + end[0] + ' ' + end[1];
     }
     return d + ' Q' + c + ' ' + (t - 8) + ' ' + f(c - bt.neck) + ' ' + t + 'Z';
+  }
+  // Pofuduk tüy tutamları: her tutamda altta gölge kavsi, üstte parlama kavsi.
+  // Tek bir gölge ve tek bir parlama yolu döner (performans için).
+  function furLocks(x0, y0, x1, y1, step, seed, sc) {
+    let sh = '', hi = '', row = 0;
+    for (let y = y0; y < y1; y += step * 0.78, row++) {
+      for (let x = x0 + (row % 2) * step / 2; x < x1; x += step) {
+        const h1 = hash(x * 0.131 + y * 0.717 + seed), h2 = hash(x * 1.71 + y * 0.29 + seed * 3);
+        sh += lockArcs(x + (h1 - 0.5) * step * 0.45, y + (h2 - 0.5) * step * 0.3, (h1 - 0.5) * 0.5, sc * (0.8 + h2 * 0.45));
+        hi += lockArcs.hi;
+      }
+    }
+    return { sh, hi };
+  }
+  function lockArcs(px, py, ang, sc) {
+    const ux = Math.cos(ang), uy = Math.sin(ang), nx = -uy, ny = ux, a = 8 * sc;
+    const P = (dx, dn) => f(px + ux * dx + nx * dn) + ' ' + f(py + uy * dx + ny * dn);
+    lockArcs.hi = 'M' + P(-a * 0.7, -6 * sc) + ' Q' + P(0, -0.5 * sc) + ' ' + P(a * 0.7, -6 * sc);
+    return 'M' + P(-a, -2 * sc) + ' Q' + P(0, 7 * sc) + ' ' + P(a, -2 * sc);
   }
   function dogHeadD(sh) {
     const c = 200, t = sh.top, m = sh.eyeY + 6, bt = sh.bot, w = sh.hw, j = sh.cheek;
@@ -273,7 +290,8 @@
     const isDog = b.species === 'dog';
     const sh = Object.assign({ hw: 88, top: 64, bot: 212, cheek: 0.86, eyeDx: 34, eyeY: 132, eyeRx: 18, eyeRy: 21, noseY: 155, noseS: 1, mz: [48, 32, 180],
       body: isDog ? 'athletic' : 'cat', tail: isDog ? 'plume' : 'cat' }, SHAPES[id] || {});
-    const bt = BODY_TYPES[sh.body];
+    const bt = Object.assign({}, BODY_TYPES[sh.body]);
+    bt.waist = bt.belly; bt.hip = bt.belly * 0.86; // eski adlarla uyumluluk
     const g = { sh, bt, L1: bt.L1, L2: bt.L2, tail: TAILS[sh.tail] };
     if (isDog) {
       g.eyes = [{ cx: 200 - sh.eyeDx, cy: sh.eyeY, rx: sh.eyeRx, ry: sh.eyeRy }, { cx: 200 + sh.eyeDx, cy: sh.eyeY, rx: sh.eyeRx, ry: sh.eyeRy }];
@@ -287,8 +305,8 @@
       g.headD = 'M200 72 C258 72 294 104 294 148 C294 162 302 168 306 174 C296 176 290 178 286 182 C272 206 240 216 200 216 C160 216 128 206 114 182 C110 178 104 176 94 174 C98 168 106 162 106 148 C106 104 142 72 200 72 Z';
     }
     g.bodyD = torsoD(bt);
-    g.bellyD = torsoD({ top: bt.top + 16, bottom: bt.bottom - 12, neck: bt.neck * 0.72, chest: bt.chest * 0.66, waist: bt.waist * 0.6, hip: bt.hip * 0.56 });
-    const shY = bt.top + 40, shX = bt.chest - 12;
+    g.bellyD = torsoD({ top: bt.top + 16, bottom: bt.bottom - 12, neck: bt.neck * 0.7, chest: bt.chest * 0.64, belly: bt.belly * 0.62 });
+    const shY = bt.top + 40, shX = bt.chest - 18;
     g.shoulder = [[200 - shX, shY], [200 + shX, shY]];
     const reach = (bt.L1 + bt.L2) * 0.95;
     const dy = Math.sqrt(reach * reach - 18 * 18);
@@ -558,15 +576,25 @@
     const strands = (d, col, w, op) => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" opacity="' + (op || 0.6) + '"/>';
     const furOr = (d, o) => hq ? fur(d, o) : d;
     const clipped = (id, d, inner) => inner ? '<clipPath id="' + uid + '-' + id + '"><path d="' + d + '"/></clipPath><g clip-path="url(#' + uid + '-' + id + ')">' + inner + '</g>' : '';
+    const lockSh = mix(C.fur, '#000000', lum(C.fur) < 0.25 ? 0.5 : 0.28), lockHi = mix(C.fur, '#ffffff', 0.55);
+    const lockPaths = (L, shc, hic, op) => '<path d="' + L.sh + '" fill="none" stroke="' + shc + '" stroke-width="2.6" stroke-linecap="round" opacity="' + (op || 0.32) + '"/>' +
+      '<path d="' + L.hi + '" fill="none" stroke="' + hic + '" stroke-width="2.4" stroke-linecap="round" opacity="' + ((op || 0.32) * 0.85) + '"/>';
+    const locks = (box, seed, sc, shc, hic, op) => hq ? lockPaths(furLocks(box[0], box[1], box[2], box[3], 26 * sc, seed, sc), shc, hic, op) : '';
+    const vol = (d) => '<path d="' + d + '" fill="url(#' + uid + '-gVolSh)"/><path d="' + d + '" fill="url(#' + uid + '-gVolHi)"/>';
 
     // ---- kuyruk
     const TL = geo.tail;
     const tt = tube(catmull(TL.pts, 6), (t) => lerp(TL.w[0], TL.w[1], t) * (t > 0.9 ? Math.sqrt(1 - (t - 0.9) / 0.11) * 0.6 + 0.4 : 1));
     const tailAmt = tt.meta.map((m) => (m.t > 0.25 && TL.fur > 0 ? 1 : 0));
     const tailFur = hq && TL.fur > 0 ? furD(tt.pts, { amountArr: tailAmt, h: 3.2 * TL.fur * fl, hv: 1.5, flow: 0.5, seed: 11 }) : polyD(tt.pts);
-    const tail = '<path d="' + tailFur + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(tailFur, 0.4) +
-      clipped('tailClip', tailFur, patternMarkup('tail', b, C, uid, geo)) +
-      '<path d="' + tailFur + '" fill="none"' + st + '/>';
+    let tailLocks = { sh: '', hi: '' };
+    for (let k = 3; k < tt.c.length - 2; k += 3) {
+      const a = tt.c[k - 1], q = tt.c[k + 1], ang = Math.atan2(q[1] - a[1], q[0] - a[0]);
+      tailLocks.sh += lockArcs(tt.c[k][0], tt.c[k][1], ang, 0.8); tailLocks.hi += lockArcs.hi;
+    }
+    const tail = '<path d="' + tailFur + '" fill="url(#' + uid + '-gBody)"/>' + tex(tailFur, 0.3) +
+      clipped('tailClip', tailFur, patternMarkup('tail', b, C, uid, geo) + (hq ? lockPaths(tailLocks, lockSh, lockHi, 0.4) : '')) +
+      vol(tailFur) + '<path d="' + tailFur + '" fill="none"' + st + '/>';
 
     // ---- bacaklar (her karede güncellenir) + ayaklar
     const fsc = Math.round(bt.leg[2] / 14 * 100) / 100;
@@ -579,9 +607,13 @@
         '<path d="M-14 8 Q-16 -2 0 -2 Q16 -2 14 8 Q12 16 0 16 Q-12 16 -14 8 Z" fill="' + C.pad + '"/>' +
         '<ellipse cx="-14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="0" cy="-15" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/></g>';
     const limb = (name, i) => '<g data-r="' + name + i + '">' +
+      (name === 'arm' ? '<path data-r="armA' + i + '" fill="#000" opacity="0.09" transform="translate(' + (i ? -4 : 4) + ' 6)"/>' : '') +
       '<path data-r="' + name + 'F' + i + '" fill="url(#' + uid + '-gLimb' + i + ')"/>' +
       (b.pattern.includes('points') ? '<path data-r="' + name + 'P' + i + '" fill="' + C.point + '" opacity="0.88"/>' : '') +
       '<g data-r="' + name + 'D' + i + '"></g>' +
+      '<path data-r="' + name + 'K' + i + '" fill="none" stroke="' + lockSh + '" stroke-width="2.4" stroke-linecap="round" opacity="0.42"/>' +
+      '<path data-r="' + name + 'J' + i + '" fill="none" stroke="' + lockHi + '" stroke-width="2.2" stroke-linecap="round" opacity="0.38"/>' +
+      '<path data-r="' + name + 'V' + i + '" fill="url(#' + uid + '-gVolSh)"/>' +
       '<path data-r="' + name + 'H' + i + '" fill="none" stroke="#ffffff" stroke-linecap="round" opacity="0.16"/>' +
       '<path data-r="' + name + 'S' + i + '" fill="none" stroke="' + C.furDeep + '" stroke-width="2.2" stroke-linecap="round" opacity="0.45"/>' +
       '<path data-r="' + name + 'O' + i + '" fill="none" stroke="' + L + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
@@ -590,22 +622,21 @@
     const soles = soleMk(0) + soleMk(1);
 
     // ---- gövde
-    const yc = bt.top + 52, yw = bt.top + (bt.bottom - bt.top) * 0.58;
-    const bodyFur = furOr(geo.bodyD, { step: 15, h: 3.2 * fl, hv: 1.5, flow: 0.8, seed: 3, amount: (x, y, nx, ny) => (y > yc - 20 && y < yc + 40 && Math.abs(nx) > 0.7 ? 1 : y > yw + 10 && y < bt.bottom - 20 && Math.abs(nx) > 0.8 ? 0.7 : 0) });
+    const yc = bt.top + 52, yw = bt.top + (bt.bottom - bt.top) * 0.6;
+    const bodyFur = furOr(geo.bodyD, { step: 15, h: 3.2 * fl, hv: 1.5, flow: 0.8, seed: 3, amount: (x, y, nx, ny) => (y > bt.top + 40 && ny < 0.6 && Math.abs(nx) > 0.75 ? 1 : 0) });
     const bellyD = furOr(geo.bellyD, { step: 12, h: 4.2 * fl, hv: 2, flow: 0.9, seed: 8, amount: (x, y, nx, ny) => (y < yc + 30 && ny > -0.2 ? 1 : 0) });
-    // anatomik detay: göğüs kası, kaburga/bel gölgesi, karın çizgisi
-    const anatomy = strands('M' + f(200 - bt.chest * 0.55) + ' ' + f(yc + 22) + ' Q200 ' + f(yc + 38) + ' ' + f(200 + bt.chest * 0.55) + ' ' + f(yc + 22), C.lightShade, 2.4, 0.9) +
-      '<path d="M' + f(200 - bt.chest + 6) + ' ' + f(yc + 10) + ' Q' + f(200 - bt.waist - 4) + ' ' + f(yw) + ' ' + f(200 - bt.hip + 8) + ' ' + f(bt.bottom - 40) + '" stroke="' + C.furDeep + '" stroke-width="10" fill="none" opacity="0.13" stroke-linecap="round"/>' +
-      '<path d="M' + f(200 + bt.chest - 6) + ' ' + f(yc + 10) + ' Q' + f(200 + bt.waist + 4) + ' ' + f(yw) + ' ' + f(200 + bt.hip - 8) + ' ' + f(bt.bottom - 40) + '" stroke="' + C.furDeep + '" stroke-width="10" fill="none" opacity="0.13" stroke-linecap="round"/>';
+    const bellySh = mix(C.light, '#7A5A40', 0.3);
+    const anatomy = '';
     const mud = (cx, cy, r, seed) => '<path d="' + fur(ellipseD(cx, cy, r, r * 0.75), { step: 9, h: 3.5, hv: 2, seed }) + '" fill="' + P.mud + '" opacity="0.9"/>' +
       '<circle cx="' + (cx + r * 0.9) + '" cy="' + (cy + r * 0.6) + '" r="' + (r * 0.25) + '" fill="' + P.mud + '"/>';
     const body = '<g data-r="body">' +
-      '<path d="' + bodyFur + '" fill="url(#' + uid + '-gBody)"/>' + tex(bodyFur, 0.45) +
-      clipped('bodyClip', bodyFur, patternMarkup('body', b, C, uid, geo)) +
-      '<path d="' + bellyD + '" fill="url(#' + uid + '-gLight)"/>' + anatomy +
+      '<path d="' + bodyFur + '" fill="url(#' + uid + '-gBody)"/>' + tex(bodyFur, 0.3) +
+      clipped('bodyClip', bodyFur, patternMarkup('body', b, C, uid, geo) + locks([200 - bt.belly - 10, bt.top + 14, 200 + bt.belly + 10, bt.bottom], 5, 1, lockSh, lockHi)) +
+      '<path d="' + bellyD + '" fill="url(#' + uid + '-gLight)"/>' +
+      clipped('bellyClip', bellyD, locks([140, bt.top + 30, 260, bt.bottom], 7, 0.9, bellySh, '#ffffff', 0.32)) + anatomy +
       strands('M' + f(186) + ' ' + f(yc - 6) + ' q4 8 0 15 M200 ' + f(yc) + ' q4 8 0 15 M214 ' + f(yc - 6) + ' q4 8 0 15', C.lightShade, 2.6, 1) +
       '<ellipse cx="200" cy="' + (bt.top + 8) + '" rx="' + bt.neck * 1.4 + '" ry="12" fill="#000" opacity="0.07"/>' +           // kafanın gölgesi
-      '<path d="M' + f(200 - bt.chest + 16) + ' ' + f(yc - 10) + ' Q' + f(200 - bt.chest + 8) + ' ' + f(yc + 40) + ' ' + f(200 - bt.waist + 6) + ' ' + f(yw + 10) + '" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.13"/>' + // parlama
+      vol(bodyFur) +
       '<g data-r="mudBody" opacity="0">' + mud(150, 300, 18, 21) + mud(252, 262, 14, 22) + mud(258, 352, 16, 23) + mud(214, 330, 10, 25) + '</g>' +
       '<path d="' + bodyFur + '" fill="none"' + st + '/>' +
       '</g>';
@@ -713,9 +744,9 @@
     const head = '<g data-r="head">' +
       (earsBehind ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
       headTuft +
-      '<path d="' + headFur + '" fill="url(#' + uid + '-gHead)"' + st + '/>' + tex(headFur, 0.35) +
-      clipped('headClip', headFur, patternMarkup('head', b, C, uid, geo)) +
-      '<path d="' + headFur + '" fill="none"' + st + '/>' +
+      '<path d="' + headFur + '" fill="url(#' + uid + '-gHead)"/>' + tex(headFur, 0.25) +
+      clipped('headClip', headFur, patternMarkup('head', b, C, uid, geo) + locks([200 - (isDog ? sh.hw : 100) - 8, (isDog ? sh.top : 72) + 6, 200 + (isDog ? sh.hw : 100) + 8, isDog ? sh.bot : 216], 9, 0.95, lockSh, lockHi, 0.24)) +
+      vol(headFur) + '<path d="' + headFur + '" fill="none"' + st + '/>' +
       strands(isDog ? 'M126 152 q7 6 9 16 M274 152 q-7 6 -9 16' : 'M118 166 q8 2 12 8 M282 166 q-8 2 -12 8', C.furDeep, 2.4, 0.4) +
       '<ellipse cx="200" cy="96" rx="44" ry="16" fill="#fff" opacity="0.13"/>' +
       '<g data-r="mudHead" opacity="0">' + mud(150, 102, 13, 31) + mud(262, 168, 10, 32) + '</g>' +
@@ -747,6 +778,8 @@
       '<radialGradient id="' + uid + '-gNose" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="' + mix(C.nose, '#ffffff', 0.3) + '"/><stop offset="1" stop-color="' + C.nose + '"/></radialGradient>' +
       '<linearGradient id="' + uid + '-gLimb0" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + C.furShade + '"/><stop offset="0.45" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.fur + '"/></linearGradient>' +
       '<linearGradient id="' + uid + '-gLimb1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + C.fur + '"/><stop offset="0.55" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></linearGradient>' +
+      '<radialGradient id="' + uid + '-gVolSh" cx="50%" cy="42%" r="62%"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="' + (lum(C.fur) < 0.25 ? 0.3 : 0.2) + '"/></radialGradient>' +
+      '<radialGradient id="' + uid + '-gVolHi" cx="34%" cy="24%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity="' + (lum(C.fur) < 0.25 ? 0.22 : 0.34) + '"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + uid + '-gEar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + C.ear + '"/><stop offset="1" stop-color="' + C.earShade + '"/></linearGradient>' +
       '<radialGradient id="' + uid + '-mask" cx="50%" cy="62%" r="50%"><stop offset="0.55" stop-color="' + (C.mask || C.furDeep) + '"/><stop offset="1" stop-color="' + (C.mask || C.furDeep) + '" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="' + uid + '-point" cx="50%" cy="60%" r="50%"><stop offset="0.35" stop-color="' + (C.point || C.furDeep) + '"/><stop offset="1" stop-color="' + (C.point || C.furDeep) + '" stop-opacity="0"/></radialGradient>' +
@@ -1775,6 +1808,17 @@
       const d = this.hq ? furD(tb.pts, { amountArr: amt, h: (isLeg ? 4.2 : 3.6) * Math.min(fl, 1.6), hv: 1.5, flow: 0.9, seed: (isLeg ? 60 : 50) + i }) : polyD(tb.pts);
       r[name + 'F' + i].setAttribute('d', d);
       r[name + 'O' + i].setAttribute('d', d);
+      r[name + 'V' + i].setAttribute('d', d);
+      if (r['armA' + i] && name === 'arm') r['armA' + i].setAttribute('d', d);
+      if (this.hq) { // uzuv boyunca pofuduk tüy tutamları
+        let ls = '', lh = '';
+        for (let k = 2; k < c.length - 2; k += 2) {
+          const a = c[k - 1], q = c[k + 1], ang = Math.atan2(q[1] - a[1], q[0] - a[0]) + (k % 4 ? 0.25 : -0.25);
+          const off = (k % 4 ? 1 : -1) * wf(k / (c.length - 1)) * 0.35;
+          ls += lockArcs(c[k][0] - Math.sin(ang) * off, c[k][1] + Math.cos(ang) * off, ang, 0.7); lh += lockArcs.hi;
+        }
+        r[name + 'K' + i].setAttribute('d', ls); r[name + 'J' + i].setAttribute('d', lh);
+      }
       const pp = r[name + 'P' + i];
       if (pp) { const k0 = Math.floor(c.length * 0.55); pp.setAttribute('d', polyD(tube(c.slice(k0), (t) => wf(0.55 + t * 0.45) * 0.97).pts)); }
       // parlama (ışık sol üstten) ve kas/eklem çizgisi
@@ -1856,7 +1900,7 @@
         const Sx = S.shoulder[i][0], Sy = S.shoulder[i][1] + shY;
         const res = ik(Sx, Sy, P['h' + i + 'x'], P['h' + i + 'y'], S.L1, S.L2, i === 0 ? 1 : -1);
         const aw = bt.arm;
-        this._limb('arm', i, [[Sx, Sy], [res.ex, res.ey], [res.hx, res.hy]], profile([[0, aw[0]], [0.22, aw[0] * 1.06], [0.5, aw[1]], [0.84, aw[2] * 1.08], [1, aw[2]]]), false);
+        this._limb('arm', i, [[Sx, Sy], [res.ex, res.ey], [res.hx, res.hy]], profile([[0, aw[0]], [0.5, aw[1]], [0.84, aw[2] * 1.06], [1, aw[2]]]), false);
         const ang = Math.atan2(res.hy - res.ey, res.hx - res.ex) * 57.3;
         r['hand' + i].setAttribute('transform', 'translate(' + f(res.hx) + ' ' + f(res.hy) + ') rotate(' + f(ang - 90) + ')');
         hands.push([res.hx, res.hy]);

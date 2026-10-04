@@ -12,7 +12,7 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 |---|---|---|
 | ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-**Yakın plan:** Kollar ve bacaklar kıvrımlı ve tüylü. Omuz ve uyluk kalın, bilek ve ayak bileği ince. Dirsek, bilek ve uylukta tüy püskülleri var. Gövdede göğüs, bel ve kalça hatları var.
+**Yakın plan:** Gövde yumuşak, yuvarlak ve pofuduk. Tüylü görünüm sadece dış çizgiden gelmiyor; gövdenin, kafanın, kolların, bacakların ve kuyruğun içinde üst üste binen tüy tutamları var. Her tutamın altında gölge, üstünde parlama var. Bunlara ek olarak sol üstten gelen yumuşak bir ışık, kenarlarda hafif bir koyulaşma ve kolların gövdeye düşen gölgesi var.
 
 ![](docs/yakin-plan.png)
 
