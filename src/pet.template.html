@@ -19,12 +19,12 @@
 /*
  * WebView köprüsü
  * Gelen komutlar (JSON string ya da obje):
- *   {type:'feed'} {type:'water'} {type:'sleep'} {type:'wake'} {type:'yawn'} {type:'celebrate'} {type:'pet'}
- *   {type:'setSpecies', species:'dog'|'cat'}
+ *   {type:'treat'} {type:'feed'} {type:'water'} {type:'bath'} {type:'ball'} {type:'sleep'} {type:'wake'} {type:'yawn'} {type:'celebrate'} {type:'pet'}
+ *   {type:'setSpecies', species:'dog'|'cat'}  {type:'setBreed', breed:'dalmatian'}  {type:'setEyes', eyes:'blue'}  {type:'getBreeds', species:'cat'}
  *   {type:'setState', state:{stats:{...}, sleeping:false, lastUpdate:1700000000000}}
  *   {type:'getState'}  {type:'setTimeScale', value:1}  {type:'setColors', colors:{...}}
  *   {type:'pause'} {type:'resume'} {type:'play', name:'growl'}
- * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'sleep'|'wake'|'state', data:{...}}
+ * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'sleep'|'wake'|'breed'|'breeds'|'state', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -32,6 +32,8 @@
 
   var pet = new PetEngine(document.getElementById('pet'), {
     species: q.get('species') || 'dog',
+    breed: q.get('breed') || undefined,
+    eyes: q.get('eyes') || undefined,
     timeScale: parseFloat(q.get('timeScale') || '1')
   });
   window.pet = pet;
@@ -55,7 +57,10 @@
       case 'water': pet.giveWater(); break;
       case 'treat': pet.feedTreat(); break;
       case 'bath': pet.bathe(); break;
-      case 'walkTo': pet.walkTo(cmd.x); break;
+      case 'ball': pet.throwBall(); break;
+      case 'setBreed': pet.setBreed(cmd.breed); break;
+      case 'setEyes': pet.setEyes(cmd.eyes); break;
+      case 'getBreeds': send('breeds', pet.getBreeds(cmd.species)); return;
       case 'sleep': pet.sleep(); break;
       case 'wake': pet.wake(); break;
       case 'yawn': pet.yawn(); break;

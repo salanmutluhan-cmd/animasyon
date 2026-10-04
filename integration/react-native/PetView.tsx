@@ -9,12 +9,15 @@ export type Species = 'dog' | 'cat';
 export type Mood = 'happy' | 'neutral' | 'hungry' | 'thirsty' | 'tired' | 'dirty' | 'sad' | 'sleeping';
 
 export interface PetStats { fullness: number; hydration: number; energy: number; happiness: number; cleanliness: number; }
-export interface PetState { species: Species; stats: PetStats; sleeping: boolean; mood: Mood | null; lastUpdate: number; }
+export interface PetState { species: Species; breed: string; eyes: string | null; stats: PetStats; sleeping: boolean; mood: Mood | null; lastUpdate: number; }
 
 export interface PetViewHandle {
   feed(): void;
   feedTreat(): void;
   bathe(): void;
+  throwBall(): void;
+  setBreed(breed: string): void;
+  setEyes(eyes: string | null): void;
   giveWater(): void;
   sleep(): void;
   wake(): void;
@@ -31,6 +34,10 @@ export interface PetViewHandle {
 
 interface Props {
   species?: Species;
+  /** golden, kangal, dalmatian, husky, bulldog, beagle, pug, labrador, collie, shiba, rottweiler, pomeranian,
+   *  tabby, van, ankara, british, siamese, tuxedo, calico, black, silver, mainecoon, scottish */
+  breed?: string;
+  eyes?: string;
   /** Kaydedilmiş durum (AsyncStorage vb.). lastUpdate verilirse aradan geçen süre uygulanır. */
   initialState?: Partial<PetState>;
   style?: StyleProp<ViewStyle>;
@@ -53,6 +60,9 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     feed: () => send({ type: 'feed' }),
     feedTreat: () => send({ type: 'treat' }),
     bathe: () => send({ type: 'bath' }),
+    throwBall: () => send({ type: 'ball' }),
+    setBreed: (breed) => send({ type: 'setBreed', breed }),
+    setEyes: (eyes) => send({ type: 'setEyes', eyes }),
     giveWater: () => send({ type: 'water' }),
     sleep: () => send({ type: 'sleep' }),
     wake: () => send({ type: 'wake' }),
@@ -74,7 +84,9 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     const d = msg.data;
     switch (msg.type) {
       case 'ready':
-        if (props.species) send({ type: 'setSpecies', species: props.species });
+        if (props.breed) send({ type: 'setBreed', breed: props.breed });
+        else if (props.species) send({ type: 'setSpecies', species: props.species });
+        if (props.eyes) send({ type: 'setEyes', eyes: props.eyes });
         if (props.initialState) send({ type: 'setState', state: props.initialState });
         props.onReady?.(d);
         break;

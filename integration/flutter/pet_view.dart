@@ -24,6 +24,9 @@ class PetController {
   Future<void> feed() => send({'type': 'feed'});
   Future<void> feedTreat() => send({'type': 'treat'});
   Future<void> bathe() => send({'type': 'bath'});
+  Future<void> throwBall() => send({'type': 'ball'});
+  Future<void> setBreed(String breed) => send({'type': 'setBreed', 'breed': breed});
+  Future<void> setEyes(String? eyes) => send({'type': 'setEyes', 'eyes': eyes});
   Future<void> giveWater() => send({'type': 'water'});
   Future<void> sleep() => send({'type': 'sleep'});
   Future<void> wake() => send({'type': 'wake'});

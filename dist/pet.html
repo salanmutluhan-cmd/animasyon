@@ -14,14 +14,15 @@
 <div id="pet"></div>
 <script>
 /*!
- * PetEngine — 2D cartoon köpek & kedi bakım animasyon motoru
+ * PetEngine v3 — iki ayak üstünde duran 2D cartoon köpek & kedi bakım animasyon motoru
  * Bağımlılık yok. SVG + requestAnimationFrame ile prosedürel animasyon.
  *
- *   const pet = new PetEngine(document.getElementById('pet'), { species: 'dog' });
- *   pet.feed(); pet.feedTreat(); pet.giveWater(); pet.bathe(); pet.sleep(); pet.wake();
+ *   const pet = new PetEngine(document.getElementById('pet'), { breed: 'golden' });
+ *   pet.feed(); pet.feedTreat(); pet.giveWater(); pet.bathe(); pet.throwBall(); pet.sleep(); pet.wake();
+ *   pet.setBreed('dalmatian'); pet.setEyes('blue');
  *   pet.on('stats', s => console.log(s));
  *
- * Ekrandaki araçlar (alt tepsi): Mama (ağza götür), Su (hayvanın önüne bırak), Duş (hayvanın üstüne götür).
+ * Ekrandaki araçlar (alt tepsi): Mama (ağza götür), Su (hayvana ver), Top (fırlat), Duş (hayvanın üstüne götür).
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -30,14 +31,13 @@
   'use strict';
 
   const SVGNS = 'http://www.w3.org/2000/svg';
-  const G = 372; // hayvanın yerel koordinatlarında zemin çizgisi
+  const G = 460; // hayvanın yerel koordinatlarında zemin
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lerp = (a, b, t) => a + (b - a) * t;
   const smooth01 = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const rand = (a, b) => a + Math.random() * (b - a);
   const f = (n) => Math.round(n * 10) / 10;
-  // [a,b] aralığında 0→1→0 tepe eğrisi
   function bump(p, a, b, edge) {
     edge = edge || 0.15;
     if (p < a || p > b) return 0;
@@ -46,14 +46,24 @@
   }
   function hash(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
 
-  // ================================================================ Geometri: yol örnekleme + tüy
+  // ---------------------------------------------------------------- renk yardımcıları
+  function hexRgb(h) {
+    h = h.replace('#', '');
+    if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+    const n = parseInt(h, 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+  const rgbHex = (r, g, b) => '#' + [r, g, b].map((v) => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, '0')).join('');
+  function mix(a, b, t) { const A = hexRgb(a), B = hexRgb(b); return rgbHex(lerp(A[0], B[0], t), lerp(A[1], B[1], t), lerp(A[2], B[2], t)); }
+  function lum(c) { const [r, g, b] = hexRgb(c); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; }
+
+  // ================================================================ Geometri
   function parsePath(d) {
     const segs = [], re = /([MLCQZ])([^MLCQZ]*)/gi;
     let m;
     while ((m = re.exec(d))) segs.push([m[1].toUpperCase(), (m[2].match(/-?\d*\.?\d+(?:e-?\d+)?/g) || []).map(Number)]);
     return segs;
   }
-  // Kapalı bir yolu eşit aralıklı N noktaya (ya da `step` aralığına) böler
   function samplePath(d, step, count) {
     const raw = [];
     let cx = 0, cy = 0, sx = 0, sy = 0;
@@ -95,7 +105,7 @@
     }
     return out;
   }
-  // Noktalardan tüylü (sivri tutamlı) kapalı yol üretir
+  // Yumuşak tüy: yuvarlak kabarık tutamlar, uçları hafifçe aşağı akar (sivri diken yok)
   function furD(pts, o) {
     const n = pts.length;
     let area = 0;
@@ -108,15 +118,15 @@
       const tx = B[0] - A[0], ty = B[1] - A[1], len = Math.hypot(tx, ty) || 1;
       const ux = tx / len, uy = ty / len;
       const nx = uy * sgn, ny = -ux * sgn; // dışa bakan normal
-      const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2;
-      const k = o.amount ? o.amount(mx, my, nx, ny, i, n) : 1;
+      const k = o.amount ? o.amount((A[0] + B[0]) / 2, (A[1] + B[1]) / 2, nx, ny, i, n) : 1;
       if (k <= 0.02) { d += ' L' + f(B[0]) + ' ' + f(B[1]); continue; }
       const h = (o.h + hash(i * 7.3 + seed) * (o.hv || 0)) * k;
-      const fl = o.flow || 0;
-      // yuvarlak tutam: dışa doğru kabaran, ucu hafif sivri ve aşağı akan kıvrım
-      const tipx = B[0] + nx * h * 0.75 + ux * len * 0.2, tipy = B[1] + ny * h * 0.75 + uy * len * 0.2 + h * fl * 0.5;
-      d += ' Q' + f(mx + nx * h * 0.95) + ' ' + f(my + ny * h * 0.95 + h * fl * 0.25) + ' ' + f(tipx) + ' ' + f(tipy) +
-           ' Q' + f(B[0] + nx * h * 0.2 - ux * len * 0.12) + ' ' + f(B[1] + ny * h * 0.2 - uy * len * 0.12) + ' ' + f(B[0]) + ' ' + f(B[1]);
+      const fl = (o.flow || 0) * h;
+      const tx2 = B[0] + nx * h * 0.3 + ux * len * 0.06, ty2 = B[1] + ny * h * 0.3 + uy * len * 0.06 + fl * 0.55;
+      d += ' C' + f(A[0] + nx * h * 1.15 + ux * len * 0.05) + ' ' + f(A[1] + ny * h * 1.15 + uy * len * 0.05 + fl * 0.3) +
+           ' ' + f(B[0] + nx * h * 1.05 - ux * len * 0.15) + ' ' + f(B[1] + ny * h * 1.05 - uy * len * 0.15 + fl * 0.6) +
+           ' ' + f(tx2) + ' ' + f(ty2) +
+           ' Q' + f(B[0] + nx * h * 0.05) + ' ' + f(B[1] + ny * h * 0.05 + fl * 0.1) + ' ' + f(B[0]) + ' ' + f(B[1]);
     }
     return d + 'Z';
   }
@@ -129,10 +139,9 @@
       ' C' + (cx - k * rx) + ' ' + (cy + ry) + ' ' + (cx - rx) + ' ' + (cy + k * ry) + ' ' + (cx - rx) + ' ' + cy + 'Z';
   }
   const fur = (d, o) => furD(samplePath(d, o.step || 10, o.count), o);
-
-  // Pati: kubbe + 4 parmak çıkıntısı (alt kenar y = zemin)
+  // Ön pati (ayak): kubbe + 4 parmak çıkıntısı, alt kenar y
   function pawD(x, y, w) {
-    let d = 'M' + f(x + w) + ' ' + f(y - 5) + ' C' + f(x + w) + ' ' + f(y - 25) + ' ' + f(x - w) + ' ' + f(y - 25) + ' ' + f(x - w) + ' ' + f(y - 5);
+    let d = 'M' + f(x + w) + ' ' + f(y - 5) + ' C' + f(x + w) + ' ' + f(y - 26) + ' ' + f(x - w) + ' ' + f(y - 26) + ' ' + f(x - w) + ' ' + f(y - 5);
     const tw = (2 * w) / 4;
     for (let j = 0; j < 4; j++) {
       const x1 = x - w + j * tw, x2 = x1 + tw;
@@ -146,50 +155,131 @@
     for (let j = 1; j < 4; j++) { const xx = x - w + j * tw; d += 'M' + f(xx) + ' ' + f(y - 3) + ' L' + f(xx + (j - 2) * 0.8) + ' ' + f(y - 11) + ' '; }
     return d;
   }
-  function legShape(x, top, wrist, w1, w2) {
-    const h = wrist - top;
-    return 'M' + f(x - w1) + ' ' + f(top) +
-      ' C' + f(x - w1 - 4) + ' ' + f(top + h * 0.42) + ' ' + f(x - w2 - 2) + ' ' + f(top + h * 0.62) + ' ' + f(x - w2) + ' ' + f(wrist) +
-      ' L' + f(x + w2) + ' ' + f(wrist) +
-      ' C' + f(x + w2 + 2) + ' ' + f(top + h * 0.62) + ' ' + f(x + w1 + 4) + ' ' + f(top + h * 0.42) + ' ' + f(x + w1) + ' ' + f(top) +
-      ' Q' + f(x) + ' ' + f(top - 17) + ' ' + f(x - w1) + ' ' + f(top) + 'Z';
+  // İki kemikli kol/bacak için ters kinematik (dirsek dışa doğru)
+  function ik(sx, sy, tx, ty, L1, L2, sign) {
+    let dx = tx - sx, dy = ty - sy, d = Math.hypot(dx, dy);
+    const max = L1 + L2 - 0.5;
+    if (d > max) { dx *= max / d; dy *= max / d; d = max; }
+    if (d < 12) { const k = 12 / (d || 1); dx *= k; dy *= k; d = 12; }
+    const a = Math.atan2(dy, dx);
+    const A = Math.acos(clamp((L1 * L1 + d * d - L2 * L2) / (2 * L1 * d), -1, 1));
+    const ang = a + sign * A;
+    return { ex: sx + Math.cos(ang) * L1, ey: sy + Math.sin(ang) * L1, hx: sx + dx, hy: sy + dy };
   }
 
-  // ================================================================ Renkler
-  const PALETTES = {
-    dog: {
-      fur: '#E8AE6E', furShade: '#C98A4B', furDeep: '#A86C35', light: '#FFF4E4', lightShade: '#EAD3B4',
-      ear: '#9E5E31', earShade: '#7A4422', patch: '#B8763F', nose: '#3A2622', line: '#4A2C22',
-      pupil: '#1E1411', iris: '#6B4226', cheek: '#FF8FA3', tongue: '#FF7E95', mouth: '#8E2F3C', brow: '#8A5530'
-    },
-    cat: {
-      fur: '#F5A85C', furShade: '#D9802F', furDeep: '#B9651E', light: '#FFF7EC', lightShade: '#EED9C2',
-      ear: '#F5A85C', earShade: '#D9802F', earInner: '#FFB5C3', stripe: '#D47528', nose: '#FF8597', line: '#4A2C22',
-      pupil: '#1F1A17', iris: '#8BC34A', cheek: '#FF8FA3', tongue: '#FF7E95', mouth: '#8E2F3C', brow: '#C46A22'
-    },
-    props: {
-      foodBowl: '#F06C8B', foodBowlShade: '#C94A6A', kibble: '#A8582B', kibble2: '#C7773D',
-      waterBowl: '#4FA9D6', waterBowlShade: '#2F7FAE', water: '#9EDCFA',
-      heart: '#FF5E86', zzz: '#7C8BE0', drop: '#6CC3F0', shadow: 'rgba(60,30,20,0.16)', mud: '#7E5233',
-      treat: '#E8B26A', fish: '#F7A0B4', chrome: '#D4DDE6', chromeDark: '#8E9BA8', hose: '#A9B8C6',
-      foamEdge: '#B9DDF2', stink: '#8BA35A'
-    },
-    scene: {
-      wallTop: '#FFE6EE', wallBottom: '#FFF3EC', floor: '#F4DCC0', floorLine: '#E8C9A6',
-      rug: '#F9CCD7', rugEdge: '#F2A9BC', tray: 'rgba(255,255,255,0.9)', trayEdge: '#F3CFD9', text: '#8E5E55'
-    }
+  // ================================================================ Cinsler ve göz renkleri
+  const EYES = {
+    brown:    { name: 'Kahverengi', c: '#7A4A26' },
+    darkbrown:{ name: 'Koyu kahve', c: '#3E2414' },
+    hazel:    { name: 'Ela', c: '#9A7A34' },
+    green:    { name: 'Yeşil', c: '#76B33C' },
+    emerald:  { name: 'Zümrüt', c: '#2E9E6A' },
+    blue:     { name: 'Mavi', c: '#3F92DE' },
+    iceblue:  { name: 'Buz mavisi', c: '#8ED0F2' },
+    amber:    { name: 'Kehribar', c: '#E0A229' },
+    yellow:   { name: 'Sarı', c: '#E6C532' },
+    copper:   { name: 'Bakır', c: '#D97A2B' },
+    grey:     { name: 'Gri', c: '#8E99A6' },
+    odd:      { name: 'Ela-Mavi (Van)', l: '#3F92DE', r: '#E0A229' },
+    oddgreen: { name: 'Mavi-Yeşil', l: '#3F92DE', r: '#76B33C' }
   };
+
+  // Gerçek cinslere göre renk ve desen kombinasyonları
+  const BREEDS = {
+    // ---- köpekler
+    golden:     { species: 'dog', name: 'Golden Retriever', eyes: 'brown', ears: 'floppy', fluff: 1.35, muzzle: 'light', paws: 'fur', pattern: [],
+                  colors: { fur: '#E6AE5E', furShade: '#C98C3C', light: '#F8E2BC', ear: '#D69A45' } },
+    kangal:     { species: 'dog', name: 'Kangal', eyes: 'amber', ears: 'floppy', fluff: 1, muzzle: 'mask', paws: 'fur', pattern: ['mask'],
+                  colors: { fur: '#E4CF9E', furShade: '#C6AE78', light: '#F3E8CA', ear: '#3B302A', mask: '#3B302A' } },
+    dalmatian:  { species: 'dog', name: 'Dalmaçyalı', eyes: 'brown', ears: 'floppy', fluff: 0.8, muzzle: 'fur', paws: 'fur', pattern: ['spots'],
+                  colors: { fur: '#FAF9F5', furShade: '#DCDAD3', light: '#FFFFFF', ear: '#2A2726', spot: '#272322', nose: '#272322' } },
+    husky:      { species: 'dog', name: 'Sibirya Kurdu (Husky)', eyes: 'iceblue', ears: 'pointy', fluff: 1.3, muzzle: 'light', paws: 'light', pattern: ['husky'],
+                  colors: { fur: '#7E8898', furShade: '#5E6878', light: '#FFFFFF', ear: '#6C7686', earInner: '#F4CBD3', nose: '#2A2628' } },
+    bulldog:    { species: 'dog', name: 'İngiliz Bulldog', eyes: 'darkbrown', ears: 'floppySmall', fluff: 0.7, muzzle: 'light', paws: 'light', pattern: ['blaze', 'wrinkles'],
+                  colors: { fur: '#D6A267', furShade: '#B67F45', light: '#FBF4EA', ear: '#B9824A' } },
+    beagle:     { species: 'dog', name: 'Beagle', eyes: 'brown', ears: 'floppy', fluff: 0.8, muzzle: 'light', paws: 'light', pattern: ['saddle', 'blaze'],
+                  colors: { fur: '#C9853F', furShade: '#A8692C', light: '#FFFFFF', ear: '#9C5B26', saddle: '#2E2622' } },
+    pug:        { species: 'dog', name: 'Pug', eyes: 'darkbrown', ears: 'floppySmall', fluff: 0.7, muzzle: 'mask', paws: 'fur', pattern: ['mask', 'wrinkles'],
+                  colors: { fur: '#E6CA97', furShade: '#C8A973', light: '#F2E2C0', ear: '#2B2420', mask: '#2B2420' } },
+    labrador:   { species: 'dog', name: 'Siyah Labrador', eyes: 'brown', ears: 'floppy', fluff: 0.9, muzzle: 'fur', paws: 'fur', pattern: [],
+                  colors: { fur: '#33302E', furShade: '#211E1D', light: '#46413E', ear: '#2A2726', nose: '#141010', pad: '#4A3E3E' } },
+    collie:     { species: 'dog', name: 'Border Collie', eyes: 'hazel', ears: 'floppySmall', fluff: 1.3, muzzle: 'light', paws: 'light', pattern: ['blaze'],
+                  colors: { fur: '#2C2826', furShade: '#1C1918', light: '#FFFFFF', ear: '#2C2826', nose: '#1A1414' } },
+    shiba:      { species: 'dog', name: 'Shiba Inu', eyes: 'darkbrown', ears: 'pointy', fluff: 1.1, muzzle: 'light', paws: 'light', pattern: ['urajiro'],
+                  colors: { fur: '#D9873F', furShade: '#B86A28', light: '#FBF0DC', ear: '#D9873F', earInner: '#F8DCC0' } },
+    rottweiler: { species: 'dog', name: 'Rottweiler', eyes: 'darkbrown', ears: 'floppySmall', fluff: 0.8, muzzle: 'light', paws: 'light', pattern: ['tan'],
+                  colors: { fur: '#2A2422', furShade: '#1A1615', light: '#B8692E', tan: '#B8692E', ear: '#231E1D', nose: '#141010', pad: '#4A3E3E' } },
+    pomeranian: { species: 'dog', name: 'Pomeranian', eyes: 'darkbrown', ears: 'pointy', fluff: 1.8, muzzle: 'light', paws: 'fur', pattern: [],
+                  colors: { fur: '#F0A44C', furShade: '#D4862F', light: '#FCE3BE', ear: '#E89A40', earInner: '#F8D2B0' } },
+    // ---- kediler
+    tabby:      { species: 'cat', name: 'Sarman (Tekir)', eyes: 'green', ears: 'pointy', fluff: 1, muzzle: 'light', paws: 'light', pattern: ['tabby'],
+                  colors: { fur: '#F5A85C', furShade: '#D9802F', light: '#FFF7EC', stripe: '#D47528' } },
+    van:        { species: 'cat', name: 'Van Kedisi', eyes: 'odd', ears: 'pointy', fluff: 1.35, muzzle: 'light', paws: 'fur', pattern: ['van'],
+                  colors: { fur: '#FBF8F2', furShade: '#E4DCCE', light: '#FFFFFF', patch: '#D88A48' } },
+    ankara:     { species: 'cat', name: 'Ankara Kedisi', eyes: 'blue', ears: 'pointy', fluff: 1.7, muzzle: 'light', paws: 'fur', pattern: [],
+                  colors: { fur: '#FFFFFF', furShade: '#E5E2EC', light: '#FFFFFF', earInner: '#FFC4D0' } },
+    british:    { species: 'cat', name: 'British Shorthair', eyes: 'copper', ears: 'pointy', fluff: 1.1, muzzle: 'fur', paws: 'fur', pattern: [],
+                  colors: { fur: '#8E98A7', furShade: '#6F798A', light: '#A9B2BF', earInner: '#CFA8B2', nose: '#6E7382', pad: '#8C7F86' } },
+    siamese:    { species: 'cat', name: 'Siyam', eyes: 'blue', ears: 'pointy', fluff: 0.8, muzzle: 'fur', paws: 'point', pattern: ['points'],
+                  colors: { fur: '#F3E6D2', furShade: '#D9C5A6', light: '#FBF4E8', point: '#4A362C', ear: '#4A362C', earInner: '#8A6A5C', nose: '#4A362C' } },
+    tuxedo:     { species: 'cat', name: 'Smokin (Siyah-Beyaz)', eyes: 'amber', ears: 'pointy', fluff: 1, muzzle: 'light', paws: 'light', pattern: ['catBlaze'],
+                  colors: { fur: '#2A2626', furShade: '#191616', light: '#FFFFFF', earInner: '#B88894', nose: '#FF8FA3' } },
+    calico:     { species: 'cat', name: 'Üç Renkli (Calico)', eyes: 'amber', ears: 'pointy', fluff: 1, muzzle: 'light', paws: 'light', pattern: ['calico'],
+                  colors: { fur: '#FFFFFF', furShade: '#E7E1D8', light: '#FFFFFF', patchA: '#E8963F', patchB: '#2E2724' } },
+    black:      { species: 'cat', name: 'Siyah Kedi', eyes: 'yellow', ears: 'pointy', fluff: 1, muzzle: 'fur', paws: 'fur', pattern: [],
+                  colors: { fur: '#272325', furShade: '#151314', light: '#38323A', nose: '#4A4045', earInner: '#5C4A52', pad: '#4A3E44' } },
+    silver:     { species: 'cat', name: 'Gri Tekir', eyes: 'green', ears: 'pointy', fluff: 1, muzzle: 'light', paws: 'light', pattern: ['tabby'],
+                  colors: { fur: '#AEB4BD', furShade: '#8A919C', light: '#F1F2F5', stripe: '#515862', nose: '#C98A95' } },
+    mainecoon:  { species: 'cat', name: 'Maine Coon', eyes: 'amber', ears: 'pointy', fluff: 1.8, muzzle: 'light', paws: 'light', pattern: ['tabby', 'earTufts'],
+                  colors: { fur: '#9A7552', furShade: '#76573A', light: '#EDE1CF', stripe: '#4A3424' } },
+    scottish:   { species: 'cat', name: 'Scottish Fold', eyes: 'copper', ears: 'folded', fluff: 1.1, muzzle: 'light', paws: 'light', pattern: [],
+                  colors: { fur: '#CBC3B8', furShade: '#AAA095', light: '#F4F0EA' } }
+  };
+  const DEFAULT_BREED = { dog: 'golden', cat: 'tabby' };
+
+  function resolveColors(b, eyesId, custom) {
+    const C = Object.assign({}, b.colors, custom || {});
+    C.line = C.line || '#4A2C22';
+    C.furShade = C.furShade || mix(C.fur, '#000000', 0.18);
+    C.furDeep = C.furDeep || mix(C.furShade, '#000000', 0.2);
+    C.light = C.light || mix(C.fur, '#ffffff', 0.7);
+    C.lightShade = C.lightShade || mix(C.light, '#8A6A50', 0.16);
+    C.ear = C.ear || C.fur;
+    C.earShade = C.earShade || mix(C.ear, '#000000', 0.22);
+    C.earInner = C.earInner || '#F7B5C3';
+    C.nose = C.nose || (b.species === 'cat' ? '#FF8597' : '#3A2622');
+    C.pupil = '#1A1210'; C.cheek = '#FF8FA3'; C.tongue = '#FF7E95'; C.mouth = '#8E2F3C';
+    C.pad = C.pad || '#F4A3B4';
+    C.stripe = C.stripe || C.furDeep;
+    const dark = lum(C.fur) < 0.25;
+    C.brow = C.brow || (dark ? mix(C.fur, '#ffffff', 0.4) : mix(C.fur, '#000000', 0.32));
+    C.muzzle = b.muzzle === 'mask' ? C.mask : b.muzzle === 'fur' ? mix(C.fur, C.light, 0.35) : C.light;
+    C.paw = b.paws === 'light' ? C.light : b.paws === 'point' ? C.point : C.fur;
+    C.lineFace = dark ? '#E9DAD0' : C.line;
+    C.lineMouth = lum(C.muzzle) < 0.25 ? '#E9DAD0' : C.line;
+    C.tex = dark ? mix(C.fur, '#ffffff', 0.12) : C.furShade;
+    const E = EYES[eyesId] || EYES[b.eyes] || EYES.brown;
+    C.irisL = E.l || E.c; C.irisR = E.r || E.c;
+    return C;
+  }
 
   const SPECIES = {
     dog: {
       eyes: [{ cx: 166, cy: 132, rx: 18, ry: 21 }, { cx: 234, cy: 132, rx: 18, ry: 21 }],
-      mouth: { x: 200, y: 176, hw: 18, depth: 36 }, tongueW: 11, legs: [174, 226], cheekY: 176, headCY: 140
+      mouth: { x: 200, y: 176, hw: 18, depth: 36 }, tongueW: 11, cheekY: 176, headCY: 140
     },
     cat: {
       eyes: [{ cx: 162, cy: 136, rx: 21, ry: 22 }, { cx: 238, cy: 136, rx: 21, ry: 22 }],
-      mouth: { x: 200, y: 176, hw: 13, depth: 28 }, tongueW: 8, legs: [177, 223], cheekY: 180, headCY: 142
+      mouth: { x: 200, y: 176, hw: 13, depth: 28 }, tongueW: 8, cheekY: 180, headCY: 142
     }
   };
+  // Kol / bacak iskeleti (yerel koordinat)
+  const SHOULDER = [[146, 250], [254, 250]];
+  const L1 = 48, L2 = 46, ARM_W = 17;
+  const REST = [[128, 338], [272, 338]];
+  const HIP = [[170, 384], [230, 384]];
+  const FOOT = [[164, G], [236, G]];
+  const SIT_DROP = 48;
 
   // ================================================================ Poz parametreleri
   const POSE_DEFAULT = {
@@ -197,29 +287,35 @@
     lookX: 0, lookY: 0, eyeOpen: 1, squint: 0, closedCurve: 1, pupil: 0.3,
     brow: 0, browY: 0, smile: 0.4, mouthOpen: 0, tongue: 0, tongueX: 0,
     earLift: 0, tailBase: 0, wagFreq: 1.2, wagAmp: 8,
-    lie: 0, blush: 0, breathRate: 0.33, breathAmp: 1, whisker: 0
+    sit: 0, blush: 0, breathRate: 0.33, breathAmp: 1, whisker: 0,
+    h0x: REST[0][0], h0y: REST[0][1], h1x: REST[1][0], h1y: REST[1][1],
+    foot0: 0, foot1: 0, itemTilt: 0
   };
   const POSE_SPEED = {
     mouthOpen: 16, tongue: 14, tongueX: 14, eyeOpen: 12, squint: 10, closedCurve: 14,
-    lie: 2.6, headY: 7, headX: 7, tilt: 6, lookX: 9, lookY: 9, smile: 8, brow: 6, faceX: 6,
-    wagFreq: 4, wagAmp: 4, tailBase: 4, breathRate: 2, breathAmp: 2, blush: 4
+    sit: 3, headY: 8, headX: 8, tilt: 7, lookX: 9, lookY: 9, smile: 8, brow: 6, faceX: 7,
+    wagFreq: 4, wagAmp: 4, tailBase: 4, breathRate: 2, breathAmp: 2, blush: 4,
+    h0x: 11, h0y: 11, h1x: 11, h1y: 11, foot0: 14, foot1: 14, itemTilt: 8
   };
   const MOOD_POSES = {
     happy:   { smile: 0.9, earLift: 0.35, tailBase: -10, wagFreq: 2.2, wagAmp: 18, pupil: 0.5 },
     neutral: { smile: 0.4, earLift: 0.05, tailBase: 0, wagFreq: 1.1, wagAmp: 8 },
-    hungry:  { smile: -0.45, brow: 0.85, earLift: -0.45, tailBase: 18, wagFreq: 0.6, wagAmp: 3, lookY: 0.25, headY: 4 },
+    hungry:  { smile: -0.45, brow: 0.85, earLift: -0.45, tailBase: 18, wagFreq: 0.6, wagAmp: 3, lookY: 0.25, headY: 4,
+               h0x: 180, h0y: 330, h1x: 222, h1y: 336 },
     thirsty: { smile: 0.15, brow: 0.45, mouthOpen: 0.38, tongue: 0.75, breathRate: 2.3, breathAmp: 1.3, earLift: -0.2, tailBase: 10, wagFreq: 0.8, wagAmp: 4 },
-    tired:   { eyeOpen: 0.42, brow: 0.55, headY: 12, tilt: 5, earLift: -0.65, tailBase: 28, wagFreq: 0.4, wagAmp: 2, smile: 0, breathRate: 0.24, breathAmp: 1.3, lookY: 0.35 },
+    tired:   { eyeOpen: 0.42, brow: 0.55, headY: 10, tilt: 5, earLift: -0.65, tailBase: 28, wagFreq: 0.4, wagAmp: 2, smile: 0, breathRate: 0.24, breathAmp: 1.3, lookY: 0.35,
+               h0x: 146, h0y: 352, h1x: 254, h1y: 352 },
     dirty:   { smile: 0, brow: 0.35, earLift: -0.25, tailBase: 12, wagFreq: 0.7, wagAmp: 5 },
-    sad:     { smile: -0.7, brow: 1, earLift: -0.85, tailBase: 32, wagFreq: 0.3, wagAmp: 0, headY: 8, lookY: 0.45, pupil: 0.7 },
-    sleeping:{ lie: 1, eyeOpen: 0, closedCurve: -1, smile: 0.2, earLift: -0.7, tailBase: 58, wagFreq: 0.25, wagAmp: 1.5,
-               breathRate: 0.21, breathAmp: 2.4, tilt: 8, headX: -6 }
+    sad:     { smile: -0.7, brow: 1, earLift: -0.85, tailBase: 32, wagFreq: 0.3, wagAmp: 0, headY: 8, lookY: 0.45, pupil: 0.7,
+               h0x: 186, h0y: 366, h1x: 214, h1y: 366 },
+    sleeping:{ sit: 1, eyeOpen: 0, closedCurve: -1, smile: 0.2, earLift: -0.7, tailBase: 40, wagFreq: 0.25, wagAmp: 1.5,
+               breathRate: 0.21, breathAmp: 2.2, tilt: 10, headY: 8, headX: -4, h0x: 168, h0y: 376, h1x: 232, h1y: 376 }
   };
   const DEFAULT_DECAY = { fullness: 6, hydration: 8, energy: 5, energyRegen: 22, happiness: 3, cleanliness: 4, lowStatPenalty: 3 };
 
   let uidCounter = 0;
 
-  // ================================================================ SVG: hayvan
+  // ================================================================ SVG parçaları
   function eyeMarkup(e, i, C, uid) {
     const id = uid + '-eye' + i;
     return '' +
@@ -228,7 +324,7 @@
         '<g clip-path="url(#' + id + ')">' +
           '<ellipse cx="' + e.cx + '" cy="' + e.cy + '" rx="' + e.rx + '" ry="' + e.ry + '" fill="#fff"/>' +
           '<ellipse cx="' + e.cx + '" cy="' + (e.cy - e.ry * 0.75) + '" rx="' + e.rx + '" ry="' + (e.ry * 0.45) + '" fill="#E9E3F0"/>' +
-          '<ellipse data-r="iris' + i + '" rx="' + (e.rx * 0.74) + '" ry="' + (e.ry * 0.78) + '" fill="url(#' + uid + '-gIris)"/>' +
+          '<ellipse data-r="iris' + i + '" rx="' + (e.rx * 0.74) + '" ry="' + (e.ry * 0.78) + '" fill="url(#' + uid + '-iris' + i + ')"/>' +
           '<ellipse data-r="pupil' + i + '" rx="6" ry="10" fill="' + C.pupil + '"/>' +
           '<circle data-r="hl' + i + 'a" r="5" fill="#fff"/>' +
           '<circle data-r="hl' + i + 'b" r="2.3" fill="#fff"/>' +
@@ -239,11 +335,10 @@
         '</g>' +
         '<ellipse cx="' + e.cx + '" cy="' + e.cy + '" rx="' + e.rx + '" ry="' + e.ry + '" fill="none" stroke="' + C.line + '" stroke-width="3.5"/>' +
       '</g>' +
-      '<path data-r="closed' + i + '" fill="none" stroke="' + C.line + '" stroke-width="4.5" stroke-linecap="round" display="none"/>';
+      '<path data-r="closed' + i + '" fill="none" stroke="' + C.lineFace + '" stroke-width="4.5" stroke-linecap="round" display="none"/>';
   }
 
   function treatMarkup(sp, P, line) {
-    // İki geçiş: önce kalın kontur, sonra dolgu → birleşik dış çizgi
     if (sp === 'cat') {
       const shapes = '<ellipse cx="-4" cy="0" rx="18" ry="11"/><path d="M10 0 L26 -11 L24 0 L26 11 Z"/>';
       return '<g fill="' + line + '" stroke="' + line + '" stroke-width="7" stroke-linejoin="round">' + shapes + '</g>' +
@@ -258,11 +353,28 @@
       '<path d="M-12 -2 L12 -2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>' +
       '<circle cx="-6" cy="3" r="1.4" fill="#B98040"/><circle cx="5" cy="2" r="1.4" fill="#B98040"/>';
   }
-  function waterIconMarkup(P, line) {
-    return '<ellipse cx="0" cy="-6" rx="31" ry="8" fill="' + P.waterBowlShade + '" stroke="' + line + '" stroke-width="3.5"/>' +
-      '<ellipse cx="0" cy="-5" rx="25" ry="5" fill="' + P.water + '"/>' +
-      '<path d="M-31 -6 L-24 14 Q0 21 24 14 L31 -6 Q0 3 -31 -6 Z" fill="' + P.waterBowl + '" stroke="' + line + '" stroke-width="3.5" stroke-linejoin="round"/>' +
-      '<circle cx="0" cy="9" r="3" fill="#fff" opacity="0.8"/>';
+  function bowlMarkup(col, colShade, inner, line) {
+    return '<ellipse cx="0" cy="-6" rx="31" ry="8" fill="' + colShade + '" stroke="' + line + '" stroke-width="3.5"/>' + inner +
+      '<path d="M-31 -6 L-24 14 Q0 21 24 14 L31 -6 Q0 3 -31 -6 Z" fill="' + col + '" stroke="' + line + '" stroke-width="3.5" stroke-linejoin="round"/>' +
+      '<g fill="#fff" opacity="0.8"><ellipse cx="0" cy="9" rx="3.6" ry="3"/><circle cx="-4.5" cy="4.5" r="1.6"/><circle cx="0" cy="3.5" r="1.6"/><circle cx="4.5" cy="4.5" r="1.6"/></g>';
+  }
+  function waterIconMarkup(P, line) { return bowlMarkup(P.waterBowl, P.waterBowlShade, '<ellipse data-r="waterLvl" cx="0" cy="-5" rx="25" ry="5" fill="' + P.water + '"/>', line); }
+  function foodIconMarkup(P, line) {
+    let k = '';
+    [[-14, -9], [-4, -11], [6, -10], [15, -8], [-9, -6], [2, -6], [11, -5]].forEach((p, i) => {
+      k += '<ellipse data-r="kib' + i + '" cx="' + p[0] + '" cy="' + p[1] + '" rx="5" ry="3.6" fill="' + (i % 2 ? P.kibble : P.kibble2) + '" stroke="' + line + '" stroke-width="1.5"/>';
+    });
+    return bowlMarkup(P.foodBowl, P.foodBowlShade, k, line);
+  }
+  function ballMarkup(line) {
+    // renkli plaj topu
+    return '<circle r="24" fill="#FFFFFF" stroke="' + line + '" stroke-width="3.5"/>' +
+      '<path d="M0 -24 C-16 -14 -16 14 0 24 C-26 18 -26 -18 0 -24 Z" fill="#FF6F91"/>' +
+      '<path d="M0 -24 C16 -14 16 14 0 24 C26 18 26 -18 0 -24 Z" fill="#5BC0EB"/>' +
+      '<path d="M-6 -23 C-2 -10 -2 10 -6 23 M6 -23 C2 -10 2 10 6 23" stroke="#FFD166" stroke-width="5" fill="none"/>' +
+      '<circle r="24" fill="none" stroke="' + line + '" stroke-width="3.5"/>' +
+      '<circle r="5" fill="#fff" stroke="' + line + '" stroke-width="2"/>' +
+      '<ellipse cx="-9" cy="-11" rx="6" ry="3.5" fill="#fff" opacity="0.6" transform="rotate(-35 -9 -11)"/>';
   }
   function showerMarkup(P, line) {
     return '<path d="M16 -14 L58 -58" stroke="' + line + '" stroke-width="17" stroke-linecap="round"/>' +
@@ -275,110 +387,160 @@
       '<circle cx="20" cy="2" r="2"/><circle cx="-12" cy="5" r="2"/><circle cx="0" cy="5.5" r="2"/><circle cx="12" cy="5" r="2"/></g>';
   }
 
-  function buildPet(sp, C, P, uid, hq) {
-    const S = SPECIES[sp], L = C.line, isDog = sp === 'dog';
+  // Desenler (cinse göre). Kafa / gövde / kuyruk katmanları, ilgili şekle kırpılır.
+  function patternMarkup(part, b, C, uid) {
+    const pt = b.pattern || [], dog = b.species === 'dog';
+    let s = '';
+    const el = (cx, cy, rx, ry, fill, op) => '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="' + fill + '"' + (op ? ' opacity="' + op + '"' : '') + '/>';
+    const softBlob = (cx, cy, rx, ry, fill, seed) => '<path d="' + fur(ellipseD(cx, cy, rx, ry), { step: 12, h: 4, hv: 3, flow: 0.4, seed }) + '" fill="' + fill + '"/>';
+    if (part === 'head') {
+      if (pt.includes('spots')) [[148, 92, 10], [254, 172, 8], [226, 76, 7], [128, 150, 7], [272, 116, 9], [178, 70, 6], [118, 120, 5]].forEach((p) => { s += el(p[0], p[1], p[2], p[2] * 0.9, C.spot); });
+      if (pt.includes('calico')) s += softBlob(140, 104, 58, 46, C.patchA, 3) + softBlob(270, 96, 44, 38, C.patchB, 4);
+      if (pt.includes('van')) s += softBlob(146, 92, 40, 26, C.patch, 5) + softBlob(254, 92, 40, 26, C.patch, 6);
+      if (pt.includes('husky')) s += '<path d="M200 106 C226 106 260 124 270 158 C278 192 246 218 200 218 C154 218 122 192 130 158 C140 124 174 106 200 106 Z" fill="' + C.light + '"/>' +
+        el(168, 104, 8, 6, C.light) + el(232, 104, 8, 6, C.light) + '<path d="M200 64 L188 118 L200 128 L212 118 Z" fill="' + C.furShade + '" opacity="0.7"/>';
+      if (pt.includes('blaze')) s += '<path d="M200 60 C210 60 213 98 214 128 C215 148 185 148 186 128 C187 98 190 60 200 60 Z" fill="' + C.light + '"/>';
+      if (pt.includes('catBlaze')) s += '<path d="M200 96 C214 120 236 150 240 178 C242 210 158 210 160 178 C164 150 186 120 200 96 Z" fill="' + C.light + '"/>';
+      if (pt.includes('urajiro')) s += el(148, 178, 36, 28, C.light) + el(252, 178, 36, 28, C.light) + el(170, 104, 6, 5, C.light) + el(230, 104, 6, 5, C.light);
+      if (pt.includes('tan')) s += el(168, 102, 8, 6, C.tan) + el(232, 102, 8, 6, C.tan) + el(148, 186, 22, 16, C.tan) + el(252, 186, 22, 16, C.tan);
+      if (pt.includes('mask')) s += '<ellipse cx="200" cy="158" rx="86" ry="70" fill="url(#' + uid + '-mask)"/>';
+      if (pt.includes('points')) s += '<ellipse cx="200" cy="168" rx="92" ry="78" fill="url(#' + uid + '-point)"/>';
+      if (pt.includes('tabby')) s += '<path d="M200 76 L200 100 M184 79 L188 98 M216 79 L212 98 M108 150 L126 148 M292 150 L274 148 M110 162 L126 158 M290 162 L274 158" stroke="' + C.stripe + '" stroke-width="6" stroke-linecap="round"/>';
+      if (pt.includes('wrinkles')) s += '<path d="M176 96 q24 -10 48 0 M182 108 q18 -7 36 0" stroke="' + C.furDeep + '" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.7"/>';
+    } else if (part === 'body') {
+      if (pt.includes('spots')) [[150, 268, 11], [248, 250, 9], [140, 330, 10], [262, 320, 12], [182, 392, 8], [236, 396, 9], [214, 228, 6], [132, 292, 6], [270, 370, 7]].forEach((p) => { s += el(p[0], p[1], p[2], p[2] * 0.9, C.spot); });
+      if (pt.includes('calico')) s += softBlob(146, 300, 50, 60, C.patchA, 7) + softBlob(264, 352, 42, 48, C.patchB, 8);
+      if (pt.includes('saddle')) s += softBlob(108, 316, 50, 96, C.saddle, 9) + softBlob(292, 316, 50, 96, C.saddle, 10);
+      if (pt.includes('tan')) s += el(176, 244, 18, 12, C.tan) + el(224, 244, 18, 12, C.tan);
+      if (pt.includes('tabby')) s += '<path d="M126 272 L152 278 M122 306 L150 308 M126 342 L152 338 M274 272 L248 278 M278 306 L250 308 M274 342 L248 338" stroke="' + C.stripe + '" stroke-width="6" stroke-linecap="round"/>';
+    } else if (part === 'tail') {
+      if (pt.includes('spots')) s += el(300, 362, 7, 6, C.spot) + el(324, 330, 6, 5, C.spot);
+      if (pt.includes('tabby')) s += dog ? '' : '<path d="M296 302 L322 296 M304 330 L330 332 M290 362 L310 374" stroke="' + C.stripe + '" stroke-width="6" stroke-linecap="round"/>';
+      if (pt.includes('points')) s += '<rect x="200" y="200" width="200" height="260" fill="' + C.point + '" opacity="0.92"/>';
+      if (pt.includes('van')) s += '<rect x="200" y="200" width="200" height="260" fill="' + C.patch + '"/><path d="M294 300 L322 294 M302 330 L330 330 M288 362 L310 372" stroke="' + mix(C.patch, '#000000', 0.25) + '" stroke-width="6" stroke-linecap="round"/>';
+      if (pt.includes('saddle')) s += '<rect x="200" y="200" width="200" height="260" fill="' + C.saddle + '"/>' + el(dog ? 328 : 320, dog ? 316 : 290, 16, 14, C.light);
+      if (pt.includes('calico')) s += '<rect x="280" y="200" width="120" height="260" fill="' + C.patchB + '"/>';
+    }
+    return s;
+  }
+
+  function buildPet(b, C, P, uid, hq) {
+    const sp = b.species, S = SPECIES[sp], L = C.line, isDog = sp === 'dog', fl = b.fluff || 1;
     const st = ' stroke="' + L + '" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"';
-    const tex = (d, op) => hq ? '<path d="' + d + '" fill="url(#' + uid + '-tex)" opacity="' + (op || 0.55) + '"/>' : '';
-    const strands = (d, col, w, op) => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.6) + '" stroke-linecap="round" opacity="' + (op || 0.75) + '"/>';
-    const furOrPlain = (d, o) => hq ? fur(d, o) : d;
+    const tex = (d, op) => hq ? '<path d="' + d + '" fill="url(#' + uid + '-tex)" opacity="' + (op || 0.5) + '"/>' : '';
+    const strands = (d, col, w, op) => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" opacity="' + (op || 0.6) + '"/>';
+    const furOr = (d, o) => hq ? fur(d, o) : d;
+    const clipped = (id, d, inner) => inner ? '<clipPath id="' + uid + '-' + id + '"><path d="' + d + '"/></clipPath><g clip-path="url(#' + uid + '-' + id + ')">' + inner + '</g>' : '';
 
     // ---- kuyruk
     const tailD = isDog
-      ? 'M246 354 C302 354 338 326 342 278 C344 258 320 256 318 276 C314 312 290 332 244 336 Z'
-      : 'M248 358 C318 362 342 312 328 252 C324 234 302 236 306 254 C318 304 306 338 246 340 Z';
-    const tailFur = furOrPlain(tailD, { step: 14, h: isDog ? 8 : 5, hv: 3, flow: 0.3, seed: 11, amount: (x) => (x < 270 ? 0 : 1) });
-    let tail = '<path d="' + tailFur + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(tailFur, 0.4);
-    tail += isDog
-      ? '<path d="' + furOrPlain('M342 280 C344 262 322 258 319 276 C318 286 330 292 342 280 Z', { step: 11, h: 5, hv: 2, seed: 4 }) + '" fill="' + C.light + '" stroke="' + L + '" stroke-width="3"/>' +
-        strands('M300 322 q10 -4 16 -14 M318 300 q8 -6 10 -16', C.furDeep)
-      : '<path d="M309 270 L327 266 M314 296 L333 296 M300 322 L318 332" stroke="' + C.stripe + '" stroke-width="5" stroke-linecap="round"/>';
+      ? 'M232 400 C292 402 332 372 338 322 C340 302 316 298 313 318 C309 352 284 376 232 380 Z'
+      : 'M234 404 C306 410 340 360 328 292 C324 272 300 276 303 294 C314 348 300 384 234 384 Z';
+    const tailFur = furOr(tailD, { step: 16, h: (isDog ? 3.5 : 2.5) * fl, hv: 1.5, flow: 0.5, seed: 11, amount: (x, y, nx) => (x < 280 || nx < 0 ? 0 : 1) });
+    const tail = '<path d="' + tailFur + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(tailFur, 0.4) +
+      clipped('tailClip', tailFur, patternMarkup('tail', b, C, uid)) +
+      '<path d="' + tailFur + '" fill="none"' + st + '/>';
+
+    // ---- bacaklar (her karede güncellenir) + ayaklar
+    const footMk = (i) => '<g data-r="foot' + i + '">' +
+        '<path d="' + pawD(0, 0, 25) + '" fill="' + C.paw + '"' + st + '/>' +
+        '<path d="M-14 -16 Q0 -23 14 -16" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.35"/>' +
+        '<path d="' + toeLines(0, 0, 25) + '" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/></g>';
+    const soleMk = (i) => '<g data-r="sole' + i + '" opacity="0">' +
+        '<ellipse cx="0" cy="0" rx="27" ry="23" fill="' + C.paw + '"' + st + '/>' +
+        '<path d="M-14 8 Q-16 -2 0 -2 Q16 -2 14 8 Q12 16 0 16 Q-12 16 -14 8 Z" fill="' + C.pad + '"/>' +
+        '<ellipse cx="-14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="0" cy="-15" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/></g>';
+    const limb = (name, i) => '<g data-r="' + name + i + '">' +
+      '<path data-r="' + name + 'O' + i + '" fill="none" stroke="' + L + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path data-r="' + name + 'F' + i + '" fill="none" stroke="' + C.fur + '" stroke-linecap="round" stroke-linejoin="round"/>' +
+      (b.pattern.includes('points') ? '<path data-r="' + name + 'P' + i + '" fill="none" stroke="' + C.point + '" stroke-linecap="round" opacity="0.85"/>' : '') +
+      '<path data-r="' + name + 'H' + i + '" fill="none" stroke="#ffffff" stroke-linecap="round" opacity="0.13"/>' +
+      '<g data-r="' + name + 'D' + i + '"></g>' +
+      '</g>';
+    const legs = limb('leg', 0) + limb('leg', 1) + footMk(0) + footMk(1);
+    const soles = soleMk(0) + soleMk(1);
 
     // ---- gövde
-    const bodyD = 'M160 205 C128 232 114 300 122 366 Q200 380 278 366 C286 300 272 232 240 205 Z';
-    const bodyFur = furOrPlain(bodyD, { step: 17, h: 8, hv: 4, flow: 0.7, seed: 3, amount: (x, y, nx, ny) => (y < 228 || ny > 0.6 ? 0 : 1) });
-    const hauL = furOrPlain(ellipseD(138, 330, 37, 41), { step: 15, h: 7, hv: 3, flow: 0.6, seed: 5, amount: (x, y, nx, ny) => (nx < -0.45 && ny < 0.6 ? 1 : 0) });
-    const hauR = furOrPlain(ellipseD(262, 330, 37, 41), { step: 15, h: 7, hv: 3, flow: 0.6, seed: 6, amount: (x, y, nx, ny) => (nx > 0.45 && ny < 0.6 ? 1 : 0) });
-    const bibD = furOrPlain(ellipseD(200, 248, 47, 44), { step: 15, h: 10, hv: 4, flow: 1, seed: 8, amount: (x, y, nx, ny) => (ny > 0.15 ? 1 : 0) });
-    const footCol = isDog ? 'url(#' + uid + '-gBody)' : C.light;
-    const rfoot = (i, x, rot) => '<g data-r="rfoot' + i + '"><g transform="rotate(' + rot + ' ' + x + ' ' + G + ')">' +
-      '<path d="' + pawD(x, G, 24) + '" fill="' + footCol + '"' + st + '/>' +
-      '<path d="' + toeLines(x, G, 24) + '" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/></g></g>';
-    const mud = (cx, cy, r, seed) => '<path d="' + fur(ellipseD(cx, cy, r, r * 0.75), { step: 9, h: 4, hv: 3, seed: seed }) + '" fill="' + P.mud + '" opacity="0.9"/>' +
+    const bodyD = 'M156 216 C126 240 118 292 124 342 C130 392 166 414 200 414 C234 414 270 392 276 342 C282 292 274 240 244 216 C230 206 170 206 156 216 Z';
+    const bodyFur = furOr(bodyD, { step: 18, h: 3.5 * fl, hv: 1.5, flow: 0.7, seed: 3, amount: (x, y, nx, ny) => (y > 290 && y < 380 && Math.abs(nx) > 0.8 ? 1 : 0) });
+    const bellyD = furOr('M200 238 C232 238 252 278 250 328 C248 376 228 402 200 402 C172 402 152 376 150 328 C148 278 168 238 200 238 Z',
+      { step: 13, h: 4.5 * fl, hv: 2, flow: 0.7, seed: 8, amount: (x, y, nx, ny) => (y < 300 ? 1 : 0) });
+    const mud = (cx, cy, r, seed) => '<path d="' + fur(ellipseD(cx, cy, r, r * 0.75), { step: 9, h: 3.5, hv: 2, seed }) + '" fill="' + P.mud + '" opacity="0.9"/>' +
       '<circle cx="' + (cx + r * 0.9) + '" cy="' + (cy + r * 0.6) + '" r="' + (r * 0.25) + '" fill="' + P.mud + '"/>';
     const body = '<g data-r="body">' +
-      '<path d="' + hauL + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(hauL, 0.45) +
-      '<path d="' + hauR + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(hauR, 0.45) +
-      strands('M114 328 q9 -9 20 -5 M286 328 q-9 -9 -20 -5', C.furDeep, 2.4, 0.5) +
-      rfoot(0, 117, -10) + rfoot(1, 283, 10) +
-      '<path d="' + bodyFur + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(bodyFur, 0.5) +
-      '<ellipse cx="200" cy="318" rx="38" ry="44" fill="' + C.light + '"/>' +
-      '<path d="' + bibD + '" fill="url(#' + uid + '-gLight)" stroke="' + C.lightShade + '" stroke-width="2"/>' +
-      strands('M186 264 q4 8 0 15 M200 270 q4 8 0 15 M214 264 q4 8 0 15', C.lightShade, 2.6, 1) +
-      strands('M142 272 q-5 9 -3 18 M258 272 q5 9 3 18', C.furDeep, 2.4, 0.5) +
-      (isDog ? '' : '<path d="M135 250 L152 256 M128 282 L148 285 M265 250 L248 256 M272 282 L252 285" stroke="' + C.stripe + '" stroke-width="5" stroke-linecap="round"/>') +
-      '<g data-r="mudBody" opacity="0">' + mud(148, 300, 19, 21) + mud(250, 262, 15, 22) + mud(262, 336, 17, 23) + mud(132, 346, 12, 24) + mud(214, 318, 10, 25) + '</g>' +
+      '<path d="' + bodyFur + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + tex(bodyFur, 0.45) +
+      clipped('bodyClip', bodyFur, patternMarkup('body', b, C, uid)) +
+      '<path d="' + bellyD + '" fill="url(#' + uid + '-gLight)"/>' +
+      strands('M186 262 q4 8 0 15 M200 268 q4 8 0 15 M214 262 q4 8 0 15', C.lightShade, 2.6, 1) +
+      strands('M140 290 q-4 9 -2 18 M260 290 q4 9 2 18', C.furDeep, 2.4, 0.45) +
+      '<ellipse cx="200" cy="218" rx="62" ry="12" fill="#000" opacity="0.06"/>' +           // kafanın gövdeye düşen gölgesi
+      '<path d="M144 250 Q136 290 140 330" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.12"/>' + // parlama
+      '<g data-r="mudBody" opacity="0">' + mud(150, 300, 18, 21) + mud(252, 262, 14, 22) + mud(258, 352, 16, 23) + mud(214, 330, 10, 25) + '</g>' +
+      '<path d="' + bodyFur + '" fill="none"' + st + '/>' +
       '</g>';
-
-    // ---- ön bacaklar (yol her karede yeniden üretilir)
-    const leg = (i, x) => '<g data-r="leg' + i + '">' +
-      '<path data-r="legPath' + i + '" fill="url(#' + uid + '-gBody)"' + st + '/>' +
-      '<path data-r="legStr' + i + '" fill="none" stroke="' + C.furDeep + '" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>' +
-      '<g data-r="paw' + i + '">' +
-        '<path d="' + pawD(x, G, 21) + '" fill="' + (isDog ? C.fur : C.light) + '"' + st + '/>' +
-        '<path d="M' + (x - 12) + ' ' + (G - 15) + ' Q' + x + ' ' + (G - 21) + ' ' + (x + 12) + ' ' + (G - 15) + '" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.35"/>' +
-        '<path d="' + toeLines(x, G, 21) + '" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/>' +
-      '</g></g>';
 
     // ---- kafa
     const headD = isDog
       ? 'M200 64 C256 64 290 96 288 142 C287 186 250 212 200 212 C150 212 113 186 112 142 C110 96 144 64 200 64 Z'
       : 'M200 72 C258 72 294 104 294 148 C294 162 302 168 306 174 C296 176 290 178 286 182 C272 206 240 216 200 216 C160 216 128 206 114 182 C110 178 104 176 94 174 C98 168 106 162 106 148 C106 104 142 72 200 72 Z';
-    const headFur = furOrPlain(headD, isDog
-      ? { step: 15, h: 9, hv: 3, flow: 0.7, seed: 9, amount: (x, y) => (y > 150 && Math.abs(x - 200) > 55 ? 1 : 0) }
-      : { step: 14, h: 5, hv: 2, flow: 0.5, seed: 9, amount: (x, y) => (y > 186 && Math.abs(x - 200) > 40 && Math.abs(x - 200) < 80 ? 1 : 0) });
+    const headFur = furOr(headD, isDog
+      ? { step: 14, h: 4.5 * fl, hv: 2, flow: 0.6, seed: 9, amount: (x, y) => (y > 150 && Math.abs(x - 200) > 55 ? 1 : fl > 1.5 && y < 90 ? 0.5 : 0) }
+      : { step: 13, h: 3.5 * fl, hv: 1.5, flow: 0.5, seed: 9, amount: (x, y) => (y > 186 && Math.abs(x - 200) < 80 ? 1 : fl > 1.5 && y < 100 ? 0.45 : 0) });
 
-    let earL, earR;
-    if (isDog) {
-      const earD = furOrPlain('M140 76 C104 60 70 92 74 148 C76 180 96 198 113 186 C127 174 126 128 148 100 Z',
-        { step: 13, h: 8, hv: 3, flow: 0.9, seed: 13, amount: (x, y) => (y > 155 ? 1 : 0) });
-      const ear = '<path d="' + earD + '" fill="url(#' + uid + '-gEar)"' + st + '/>' + tex(earD, 0.4) +
-        '<path d="M132 84 C108 78 88 104 90 146 C92 168 102 178 110 172 C118 160 118 126 136 102 Z" fill="' + C.earShade + '" opacity="0.45"/>' +
-        strands('M96 112 q-4 14 -2 30 M106 128 q-2 14 0 26', C.earShade, 2.4, 0.8);
+    let earL, earR, earsBehind = !isDog || b.ears === 'pointy';
+    const earTufts = b.pattern.includes('earTufts') ? '<path d="M120 34 L114 14 M120 34 L124 12 M120 34 L108 22" stroke="' + C.furDeep + '" stroke-width="3" stroke-linecap="round"/>' : '';
+    if (b.ears === 'floppy' || b.ears === 'floppySmall') {
+      const earD = furOr('M140 76 C104 60 70 92 74 148 C76 180 96 198 113 186 C127 174 126 128 148 100 Z',
+        { step: 12, h: 5 * fl, hv: 2, flow: 0.8, seed: 13, amount: (x, y) => (y > 158 ? 1 : 0) });
+      let ear = '<path d="' + earD + '" fill="url(#' + uid + '-gEar)"' + st + '/>' + tex(earD, 0.35) +
+        '<path d="M132 84 C108 78 88 104 90 146 C92 168 102 178 110 172 C118 160 118 126 136 102 Z" fill="' + C.earShade + '" opacity="0.4"/>';
+      if (b.pattern.includes('spots')) ear += '<ellipse cx="96" cy="130" rx="6" ry="5" fill="' + mix(C.ear, '#000000', 0.3) + '"/>';
+      if (b.ears === 'floppySmall') ear = '<g transform="translate(140 80) scale(0.68) translate(-140 -80)">' + ear + '</g>';
       earL = '<g data-r="ear0">' + ear + '</g>';
       earR = '<g transform="translate(400 0) scale(-1 1)"><g data-r="ear1">' + ear + '</g></g>';
+    } else if (b.ears === 'folded') {
+      const fe = '<path d="M134 102 C126 84 134 66 152 64 C168 64 178 76 180 90 Z" fill="url(#' + uid + '-gEar)"' + st + '/>' +
+        '<path d="M144 92 C142 82 148 74 158 74 C166 76 170 82 170 88 Z" fill="' + C.earInner + '" opacity="0.7"/>';
+      earL = '<g data-r="ear0">' + fe + '</g>';
+      earR = '<g transform="translate(400 0) scale(-1 1)"><g data-r="ear1">' + fe + '</g></g>';
     } else {
-      const cEar = '<path d="M130 116 C118 88 114 58 120 32 C146 40 168 58 182 82 Z" fill="url(#' + uid + '-gHead)"' + st + '/>' +
-        '<path d="M136 102 C129 82 127 64 130 48 C146 56 158 66 166 80 Z" fill="' + C.earInner + '"/>' +
-        '<path d="M128 56 L141 66 M126 68 L139 75 M132 80 L144 84" stroke="' + C.light + '" stroke-width="2.6" stroke-linecap="round"/>';
-      earL = '<g data-r="ear0">' + cEar + '</g>';
-      earR = '<g transform="translate(400 0) scale(-1 1)"><g data-r="ear1">' + cEar + '</g></g>';
+      const pe = (isDog
+        ? '<path d="M134 112 C122 84 122 54 132 34 C156 44 172 62 182 86 Z" fill="url(#' + uid + '-gEar)"' + st + '/>' +
+          '<path d="M140 100 C133 80 133 62 139 48 C154 57 164 68 170 82 Z" fill="' + C.earInner + '"/>'
+        : '<path d="M130 116 C118 88 114 58 120 32 C146 40 168 58 182 82 Z" fill="url(#' + uid + '-gEar)"' + st + '/>' +
+          '<path d="M136 102 C129 82 127 64 130 48 C146 56 158 66 166 80 Z" fill="' + C.earInner + '"/>') +
+        '<path d="M128 58 L140 67 M126 70 L138 76 M132 82 L144 85" stroke="' + mix(C.light, '#ffffff', 0.5) + '" stroke-width="2.4" stroke-linecap="round" opacity="0.9"/>' + earTufts;
+      earL = '<g data-r="ear0">' + pe + '</g>';
+      earR = '<g transform="translate(400 0) scale(-1 1)"><g data-r="ear1">' + pe + '</g></g>';
     }
 
     let face = '';
+    const mz = C.muzzle;
     if (isDog) {
-      face += '<ellipse cx="236" cy="124" rx="30" ry="28" fill="' + C.patch + '" opacity="0.85"/>';
-      face += '<path d="' + furOrPlain(ellipseD(200, 180, 48, 32), { step: 13, h: 5, hv: 2, flow: 0.6, seed: 17, amount: (x, y, nx, ny) => (ny > 0.4 ? 1 : 0) }) + '" fill="url(#' + uid + '-gLight)"/>';
-      face += '<g fill="' + C.lightShade + '"><circle cx="176" cy="180" r="2"/><circle cx="168" cy="187" r="2"/><circle cx="180" cy="190" r="2"/>' +
+      if (!b.pattern.length || b.pattern.every((p) => p === 'wrinkles')) face += '<ellipse cx="236" cy="124" rx="28" ry="26" fill="' + C.furShade + '" opacity="0.45"/>';
+      face += '<path d="' + furOr(ellipseD(200, 180, 48, 32), { step: 13, h: 3.5, hv: 1.5, flow: 0.6, seed: 17, amount: (x, y, nx, ny) => (ny > 0.45 ? 1 : 0) }) + '" fill="' + mz + '"/>';
+      face += '<g fill="' + mix(mz, '#6A4A30', 0.25) + '"><circle cx="176" cy="180" r="2"/><circle cx="168" cy="187" r="2"/><circle cx="180" cy="190" r="2"/>' +
               '<circle cx="224" cy="180" r="2"/><circle cx="232" cy="187" r="2"/><circle cx="220" cy="190" r="2"/></g>';
+      if (b.pattern.includes('wrinkles')) face += '<path d="M156 176 q-4 12 6 20 M244 176 q4 12 -6 20" stroke="' + mix(mz, '#000000', 0.25) + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
     } else {
-      face += '<path d="M200 76 L200 98 M184 79 L188 96 M216 79 L212 96" stroke="' + C.stripe + '" stroke-width="6" stroke-linecap="round"/>';
-      face += '<path d="M108 150 L124 148 M292 150 L276 148 M110 162 L124 158 M290 162 L276 158" stroke="' + C.stripe + '" stroke-width="4.5" stroke-linecap="round"/>';
-      face += '<path d="' + furOrPlain(ellipseD(186, 182, 21, 15), { step: 11, h: 4, hv: 2, flow: 0.5, seed: 18, amount: (x, y, nx, ny) => (ny > 0.3 ? 1 : 0) }) + '" fill="' + C.light + '"/>';
-      face += '<path d="' + furOrPlain(ellipseD(214, 182, 21, 15), { step: 11, h: 4, hv: 2, flow: 0.5, seed: 19, amount: (x, y, nx, ny) => (ny > 0.3 ? 1 : 0) }) + '" fill="' + C.light + '"/>';
-      face += '<ellipse cx="200" cy="194" rx="14" ry="9" fill="' + C.light + '"/>';
-      face += '<g fill="' + C.lightShade + '"><circle cx="180" cy="181" r="1.8"/><circle cx="173" cy="186" r="1.8"/><circle cx="220" cy="181" r="1.8"/><circle cx="227" cy="186" r="1.8"/></g>';
+      [[186, 182, 18], [214, 182, 19]].forEach((p) => {
+        face += '<path d="' + furOr(ellipseD(p[0], p[1], 21, 15), { step: 11, h: 3, hv: 1.5, flow: 0.5, seed: p[2], amount: (x, y, nx, ny) => (ny > 0.35 ? 1 : 0) }) + '" fill="' + mz + '"/>';
+      });
+      face += '<ellipse cx="200" cy="194" rx="14" ry="9" fill="' + mz + '"/>';
+      face += '<g fill="' + mix(mz, '#6A4A30', 0.25) + '"><circle cx="180" cy="181" r="1.8"/><circle cx="173" cy="186" r="1.8"/><circle cx="220" cy="181" r="1.8"/><circle cx="227" cy="186" r="1.8"/></g>';
     }
 
     const eyes = eyeMarkup(S.eyes[0], 0, C, uid) + eyeMarkup(S.eyes[1], 1, C, uid);
     const browW = isDog ? 6 : 4;
     const brows = '<path data-r="brow0" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round"/>' +
                   '<path data-r="brow1" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round"/>';
+    const LM = C.lineMouth;
     const nose = isDog
-      ? '<path d="M200 168 L200 176" stroke="' + L + '" stroke-width="3.5" stroke-linecap="round"/>' +
+      ? '<path d="M200 168 L200 176" stroke="' + LM + '" stroke-width="3.5" stroke-linecap="round"/>' +
         '<path d="M183 152 Q200 141 217 152 Q218 164 200 169 Q182 164 183 152 Z" fill="url(#' + uid + '-gNose)"' + st + '/>' +
         '<path d="M190 158 q3 -2 5 1 M205 159 q2 -3 5 -1" stroke="#1B1210" stroke-width="2.4" stroke-linecap="round" fill="none"/>' +
         '<ellipse cx="194" cy="150" rx="6" ry="2.6" fill="#fff" opacity="0.6"/>'
-      : '<path d="M200 169 L200 176" stroke="' + L + '" stroke-width="3" stroke-linecap="round"/>' +
+      : '<path d="M200 169 L200 176" stroke="' + LM + '" stroke-width="3" stroke-linecap="round"/>' +
         '<path d="M191 160 Q200 155 209 160 Q206 168 200 170 Q194 168 191 160 Z" fill="' + C.nose + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>' +
         '<ellipse cx="197" cy="159.5" rx="3" ry="1.4" fill="#fff" opacity="0.7"/>';
     const mouth =
@@ -386,69 +548,150 @@
       '<g clip-path="url(#' + uid + '-mouth)"><ellipse data-r="mouthTongue" fill="' + C.tongue + '"/></g>' +
       '<g data-r="tongueOut"><path data-r="tongue" fill="' + C.tongue + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>' +
       '<path data-r="tongueLine" stroke="#E0607A" stroke-width="2.5" stroke-linecap="round" fill="none"/></g>' +
-      '<path data-r="mouthLine" fill="none" stroke="' + L + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>';
+      '<path data-r="mouthLine" fill="none" stroke="' + LM + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>';
+    const wcol = lum(C.fur) < 0.3 ? '#E9DAD0' : L;
     const wh = '<path d="M170 178 L120 170"/><path d="M170 185 L118 186"/><path d="M172 191 L124 202"/>';
     const whiskers = isDog ? '' :
-      '<g data-r="whisk0" stroke="' + L + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8">' + wh + '</g>' +
-      '<g transform="translate(400 0) scale(-1 1)"><g data-r="whisk1" stroke="' + L + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8">' + wh + '</g></g>';
+      '<g data-r="whisk0" stroke="' + wcol + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8">' + wh + '</g>' +
+      '<g transform="translate(400 0) scale(-1 1)"><g data-r="whisk1" stroke="' + wcol + '" stroke-width="2.2" stroke-linecap="round" opacity="0.8">' + wh + '</g></g>';
     const cheeks = '<g data-r="cheeks" opacity="0">' +
       '<ellipse cx="146" cy="' + S.cheekY + '" rx="15" ry="9" fill="' + C.cheek + '"/>' +
       '<ellipse cx="254" cy="' + S.cheekY + '" rx="15" ry="9" fill="' + C.cheek + '"/></g>';
     const headTuft = isDog
-      ? '<path d="M186 70 Q190 52 199 64 Q203 48 210 66 Q216 56 216 72" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"/>'
-      : '<path d="M190 76 Q194 62 200 72 Q206 60 210 76" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>';
-    const headStr = isDog
-      ? strands('M126 152 q7 6 9 16 M274 152 q-7 6 -9 16', C.furDeep, 2.4, 0.5)
-      : strands('M118 166 q8 2 12 8 M282 166 q-8 2 -12 8', C.furDeep, 2.2, 0.55);
+      ? '<path d="M188 70 Q192 56 199 66 Q204 52 210 68 Q215 60 214 74" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"/>'
+      : '<path d="M190 78 Q194 66 200 74 Q206 64 210 78" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>';
 
     const head = '<g data-r="head">' +
-      (isDog ? '' : '<g data-r="ears">' + earL + earR + '</g>') +
+      (earsBehind ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
       headTuft +
-      '<path d="' + headFur + '" fill="url(#' + uid + '-gHead)"' + st + '/>' + tex(headFur, 0.4) + headStr +
+      '<path d="' + headFur + '" fill="url(#' + uid + '-gHead)"' + st + '/>' + tex(headFur, 0.35) +
+      clipped('headClip', headFur, patternMarkup('head', b, C, uid)) +
+      '<path d="' + headFur + '" fill="none"' + st + '/>' +
+      strands(isDog ? 'M126 152 q7 6 9 16 M274 152 q-7 6 -9 16' : 'M118 166 q8 2 12 8 M282 166 q-8 2 -12 8', C.furDeep, 2.4, 0.4) +
       '<ellipse cx="200" cy="96" rx="44" ry="16" fill="#fff" opacity="0.13"/>' +
-      '<g data-r="mudHead" opacity="0">' + mud(150, 102, 14, 31) + mud(264, 166, 11, 32) + mud(218, 84, 8, 33) + '</g>' +
+      '<g data-r="mudHead" opacity="0">' + mud(150, 102, 13, 31) + mud(262, 168, 10, 32) + '</g>' +
       '<g data-r="face">' + face + cheeks + eyes + brows + nose + mouth + whiskers + '</g>' +
-      (isDog ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
+      (!earsBehind ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
       '<g data-r="foamHead"></g>' +
       '</g>';
 
-    // ---- kaplar
-    let kibbles = '';
-    const kp = [[200, 322], [186, 325], [214, 325], [172, 329], [228, 329], [193, 330], [207, 330], [158, 333], [242, 333], [180, 334], [220, 334], [200, 335]];
-    kp.forEach((k, i) => {
-      kibbles += '<ellipse data-r="kib' + i + '" cx="' + k[0] + '" cy="' + k[1] + '" rx="8" ry="6" fill="' + (i % 2 ? P.kibble : P.kibble2) + '" stroke="' + L + '" stroke-width="2"/>';
-    });
-    const bowlBody = (c, cs) => '<path d="M124 336 L140 388 Q200 400 260 388 L276 336 Z" fill="' + c + '"' + st + '/>' +
-      '<path d="M134 352 Q200 362 266 352" stroke="' + cs + '" stroke-width="4" fill="none" opacity="0.6"/>' +
-      '<g fill="#fff" opacity="0.75"><ellipse cx="200" cy="374" rx="9" ry="7"/><circle cx="189" cy="363" r="3.6"/><circle cx="200" cy="360" r="3.6"/><circle cx="211" cy="363" r="3.6"/></g>';
-    const foodBowl = '<g data-r="foodBowl" display="none">' +
-      '<ellipse cx="200" cy="336" rx="76" ry="16" fill="' + P.foodBowlShade + '"' + st + '/>' +
-      kibbles + bowlBody(P.foodBowl, P.foodBowlShade) + '</g>';
-    const waterBowl = '<g data-r="waterBowl" display="none">' +
-      '<ellipse cx="200" cy="336" rx="76" ry="16" fill="' + P.waterBowlShade + '"' + st + '/>' +
-      '<ellipse data-r="water" cx="200" cy="338" rx="66" ry="11" fill="' + P.water + '"/>' +
-      '<g data-r="ripples"></g>' + bowlBody(P.waterBowl, P.waterBowlShade) + '</g>';
+    // ---- kollar (her karede güncellenir)
+    const hand = (i) => '<g data-r="hand' + i + '">' +
+      '<ellipse cx="0" cy="0" rx="19" ry="17" fill="' + C.paw + '"' + st + '/>' +
+      '<path d="M-8 6 L-8 15 M0 8 L0 17 M8 6 L8 15" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<path d="M-10 -8 Q0 -14 10 -8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.3"/></g>';
+    const arms = limb('arm', 0) + hand(0) + limb('arm', 1) + hand(1);
 
+    // ---- elde tutulan nesneler (kap, mama)
+    const handItem = '<g data-r="handItem" display="none">' +
+      '<g data-r="itemFood" display="none"><g transform="scale(1.7)">' + foodIconMarkup(P, L).replace(/data-r="kib/g, 'data-r="hk') + '</g></g>' +
+      '<g data-r="itemWater" display="none"><g transform="scale(1.7)">' + waterIconMarkup(P, L).replace('data-r="waterLvl"', 'data-r="handWater"') + '</g></g>' +
+      '<g data-r="itemTreat" display="none"><g data-r="itemTreatS">' + treatMarkup(sp, P, L) + '</g></g>' +
+      '</g>';
+
+    const iris = (i, c) => '<radialGradient id="' + uid + '-iris' + i + '" cx="50%" cy="60%" r="60%"><stop offset="0.25" stop-color="' + mix(c, '#ffffff', 0.25) + '"/><stop offset="0.7" stop-color="' + c + '"/><stop offset="1" stop-color="' + mix(c, '#000000', 0.55) + '"/></radialGradient>';
     const defs =
       '<radialGradient id="' + uid + '-gHead" cx="50%" cy="36%" r="64%"><stop offset="0.6" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></radialGradient>' +
-      '<radialGradient id="' + uid + '-gBody" cx="50%" cy="28%" r="72%"><stop offset="0.5" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></radialGradient>' +
+      '<radialGradient id="' + uid + '-gBody" cx="45%" cy="30%" r="75%"><stop offset="0.45" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></radialGradient>' +
       '<radialGradient id="' + uid + '-gLight" cx="50%" cy="35%" r="65%"><stop offset="0.6" stop-color="' + C.light + '"/><stop offset="1" stop-color="' + C.lightShade + '"/></radialGradient>' +
-      '<radialGradient id="' + uid + '-gIris" cx="50%" cy="60%" r="60%"><stop offset="0.3" stop-color="' + C.iris + '"/><stop offset="1" stop-color="' + C.pupil + '"/></radialGradient>' +
-      '<radialGradient id="' + uid + '-gNose" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="#6A4A42"/><stop offset="1" stop-color="' + C.nose + '"/></radialGradient>' +
+      iris(0, C.irisL) + iris(1, C.irisR) +
+      '<radialGradient id="' + uid + '-gNose" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="' + mix(C.nose, '#ffffff', 0.3) + '"/><stop offset="1" stop-color="' + C.nose + '"/></radialGradient>' +
       '<linearGradient id="' + uid + '-gEar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + C.ear + '"/><stop offset="1" stop-color="' + C.earShade + '"/></linearGradient>' +
+      '<radialGradient id="' + uid + '-mask" cx="50%" cy="62%" r="50%"><stop offset="0.55" stop-color="' + (C.mask || C.furDeep) + '"/><stop offset="1" stop-color="' + (C.mask || C.furDeep) + '" stop-opacity="0"/></radialGradient>' +
+      '<radialGradient id="' + uid + '-point" cx="50%" cy="60%" r="50%"><stop offset="0.35" stop-color="' + (C.point || C.furDeep) + '"/><stop offset="1" stop-color="' + (C.point || C.furDeep) + '" stop-opacity="0"/></radialGradient>' +
       '<pattern id="' + uid + '-tex" width="24" height="24" patternUnits="userSpaceOnUse">' +
-        '<path d="M4 3 q2 3 0 7 M16 12 q2 3 0 7" stroke="' + C.furShade + '" stroke-width="1.5" fill="none" stroke-linecap="round"/></pattern>' +
+        '<path d="M4 3 q2 3 0 7 M16 12 q2 3 0 7" stroke="' + C.tex + '" stroke-width="1.5" fill="none" stroke-linecap="round"/></pattern>' +
       '<clipPath id="' + uid + '-mouth"><path data-r="mouthClip"/></clipPath>';
 
     const pet =
-      '<ellipse data-r="shadow" cx="200" cy="' + (G + 2) + '" rx="112" ry="14" fill="' + P.shadow + '"/>' +
+      '<ellipse data-r="shadow" cx="200" cy="' + (G + 2) + '" rx="96" ry="13" fill="' + P.shadow + '"/>' +
       '<g data-r="root">' +
         '<g data-r="tail">' + tail + '</g>' +
-        body + leg(0, S.legs[0]) + leg(1, S.legs[1]) +
-        '<g data-r="foamBody"></g>' +
-        head +
-      '</g>' + foodBowl + waterBowl;
+        legs +
+        '<g data-r="upper">' + body + '<g data-r="foamBody"></g>' + head + handItem + arms + '</g>' + soles +
+      '</g>';
     return { defs, pet };
+  }
+
+  // ================================================================ Oda (arka plan)
+  const SCENE = {
+    wallTop: '#FFE6EE', wallBottom: '#FFF3EC', floor: '#F2D9BC', floorLine: '#E5C5A2', base: '#FFFFFF',
+    rug: '#F9CCD7', rugEdge: '#F2A9BC', tray: 'rgba(255,255,255,0.92)', trayEdge: '#F3CFD9', text: '#8E5E55',
+    sofa: '#A9CDBF', sofaLight: '#C1DED3', sofaDark: '#88B3A4', sofaLine: '#5F8678', wood: '#C99A6B', woodDark: '#9C7049'
+  };
+  function roomMarkup(Wv, Hv, fy, gy, SC, uid) {
+    const L = '#6B4B3E';
+    let s = '<rect x="0" y="0" width="' + f(Wv) + '" height="' + f(fy) + '" fill="url(#' + uid + '-wall)"/>';
+    // duvar kağıdı: küçük kalpler/benekler
+    let dots = '';
+    for (let y = 36, row = 0; y < fy - 20; y += 64, row++) for (let x = (row % 2) * 40 + 22; x < Wv; x += 80) dots += '<circle cx="' + x + '" cy="' + y + '" r="5"/>';
+    s += '<g fill="#fff" opacity="0.55">' + dots + '</g>';
+    // koltuk ölçüleri
+    const cx = Wv / 2, W = Math.min(Wv * 0.9, 640), sb = fy + 46, seat = sb - 66, back = sb - 196, arm = sb - 116;
+    // pencere
+    const wy = back - 130;
+    if (wy > 80) {
+      const wx = Wv * 0.2;
+      s += '<g transform="translate(' + f(wx) + ' ' + f(wy) + ')">' +
+        '<rect x="-74" y="-66" width="148" height="132" rx="16" fill="#fff" stroke="' + SC.trayEdge + '" stroke-width="6"/>' +
+        '<rect x="-62" y="-54" width="124" height="108" rx="9" fill="#CFEAFB"/>' +
+        '<circle cx="34" cy="-24" r="15" fill="#FFE08A"/>' +
+        '<path d="M-56 28 q14 -14 30 -4 q14 -12 30 2 q12 -8 22 2 L-8 54 L-62 54 Z" fill="#fff" opacity="0.9"/>' +
+        '<path d="M0 -54 V54 M-62 0 H62" stroke="#fff" stroke-width="7"/>' +
+        '<path d="M-80 -74 Q-56 -10 -82 72 L-98 72 Q-90 -10 -98 -74 Z M80 -74 Q56 -10 82 72 L98 72 Q90 -10 98 -74 Z" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="3"/>' +
+        '<rect x="-106" y="-82" width="212" height="10" rx="5" fill="' + SC.rugEdge + '"/></g>';
+    }
+    // raf: kitaplar, saksı, çerçeve
+    const shy = back - 92;
+    if (shy > 90) {
+      const sx = Math.min(Wv * 0.8, Wv - 100);
+      const books = [['#F28AA4', 18, 52], ['#7FC8F8', 14, 44], ['#FFD166', 16, 56], ['#9B8DE8', 12, 40]];
+      let bx = -78, bk = '';
+      books.forEach((bkk) => { bk += '<rect x="' + bx + '" y="' + (-bkk[2]) + '" width="' + bkk[1] + '" height="' + bkk[2] + '" rx="3" fill="' + bkk[0] + '" stroke="' + L + '" stroke-width="2.5"/>' +
+        '<path d="M' + (bx + 3) + ' ' + (-bkk[2] + 8) + ' h' + (bkk[1] - 6) + '" stroke="#fff" stroke-width="2" opacity="0.7"/>'; bx += bkk[1] + 1; });
+      s += '<g transform="translate(' + f(sx) + ' ' + f(shy) + ')">' + bk +
+        '<g transform="rotate(14 -14 0)"><rect x="-18" y="-44" width="12" height="44" rx="3" fill="#8FD3B6" stroke="' + L + '" stroke-width="2.5"/></g>' +
+        '<path d="M18 0 L22 -26 L44 -26 L48 0 Z" fill="#E59E6D" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+        '<path d="M33 -26 C24 -46 14 -50 10 -60 M33 -26 C34 -50 40 -58 36 -70 M33 -26 C42 -44 54 -48 58 -58" stroke="#5FA36A" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+        '<ellipse cx="11" cy="-58" rx="8" ry="4" fill="#7CC48A" transform="rotate(-30 11 -58)"/><ellipse cx="36" cy="-68" rx="5" ry="8" fill="#7CC48A"/><ellipse cx="57" cy="-56" rx="8" ry="4" fill="#7CC48A" transform="rotate(30 57 -56)"/>' +
+        '<rect x="60" y="-40" width="34" height="40" rx="4" fill="#fff" stroke="' + SC.rugEdge + '" stroke-width="3"/>' +
+        '<path d="M77 -12 C65 -20 69 -31 77 -25 C85 -31 89 -20 77 -12 Z" fill="#FF6F91"/>' +
+        '<rect x="-92" y="0" width="196" height="12" rx="4" fill="' + SC.wood + '" stroke="' + L + '" stroke-width="2.5"/>' +
+        '<path d="M-70 12 L-70 28 L-56 12 M82 12 L82 28 L68 12" fill="' + SC.woodDark + '" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round"/></g>';
+    }
+    // zemin
+    s += '<rect x="0" y="' + f(fy - 10) + '" width="' + f(Wv) + '" height="10" fill="' + SC.base + '"/>';
+    s += '<rect x="0" y="' + f(fy) + '" width="' + f(Wv) + '" height="' + f(Hv - fy) + '" fill="' + SC.floor + '"/>';
+    let bd = '';
+    for (let y = fy + 34, k = 0; y < Hv; y += 42, k++) {
+      bd += '<path d="M0 ' + f(y) + ' L' + f(Wv) + ' ' + f(y) + '"/>';
+      for (let x = (k % 2) * 90 + 60; x < Wv; x += 180) bd += '<path d="M' + x + ' ' + f(y - 42) + ' V' + f(y) + '"/>';
+    }
+    s += '<g stroke="' + SC.floorLine + '" stroke-width="2.5">' + bd + '</g>';
+    // koltuk
+    const sl = SC.sofaLine;
+    const x0 = cx - W / 2;
+    s += '<g stroke="' + sl + '" stroke-width="3.5" stroke-linejoin="round">' +
+      '<rect x="' + f(x0 + 42) + '" y="' + f(sb) + '" width="10" height="16" rx="3" fill="' + SC.woodDark + '"/>' +
+      '<rect x="' + f(x0 + W - 52) + '" y="' + f(sb) + '" width="10" height="16" rx="3" fill="' + SC.woodDark + '"/>' +
+      '<rect x="' + f(x0 + 34) + '" y="' + f(back) + '" width="' + f(W - 68) + '" height="' + f(sb - back - 20) + '" rx="44" fill="' + SC.sofa + '"/>' +
+      '<rect x="' + f(x0 + 64) + '" y="' + f(back + 16) + '" width="' + f((W - 140) / 2) + '" height="96" rx="30" fill="' + SC.sofaLight + '"/>' +
+      '<rect x="' + f(cx + 6) + '" y="' + f(back + 16) + '" width="' + f((W - 140) / 2) + '" height="96" rx="30" fill="' + SC.sofaLight + '"/>' +
+      '<rect x="' + f(x0 + 44) + '" y="' + f(seat) + '" width="' + f(W - 88) + '" height="52" rx="20" fill="' + SC.sofaLight + '"/>' +
+      '<rect x="' + f(x0 + 44) + '" y="' + f(seat + 38) + '" width="' + f(W - 88) + '" height="' + f(sb - seat - 34) + '" rx="12" fill="' + SC.sofaDark + '"/>' +
+      '<rect x="' + f(x0) + '" y="' + f(arm) + '" width="74" height="' + f(sb - arm + 4) + '" rx="32" fill="' + SC.sofa + '"/>' +
+      '<rect x="' + f(x0 + W - 74) + '" y="' + f(arm) + '" width="74" height="' + f(sb - arm + 4) + '" rx="32" fill="' + SC.sofa + '"/>' +
+      '</g>' +
+      '<path d="M' + f(x0 + 16) + ' ' + f(arm + 22) + ' q20 -10 42 0 M' + f(x0 + W - 58) + ' ' + f(arm + 22) + ' q20 -10 42 0" stroke="#fff" stroke-width="5" opacity="0.4" fill="none" stroke-linecap="round"/>' +
+      // yastıklar
+      '<g transform="translate(' + f(x0 + 110) + ' ' + f(seat - 26) + ') rotate(-12)"><rect x="-34" y="-30" width="68" height="60" rx="18" fill="#F7A9BC" stroke="' + sl + '" stroke-width="3.5"/>' +
+        '<path d="M0 12 C-16 2 -10 -14 0 -6 C10 -14 16 2 0 12 Z" fill="#fff" opacity="0.85"/></g>' +
+      '<g transform="translate(' + f(x0 + W - 110) + ' ' + f(seat - 24) + ') rotate(10)"><rect x="-32" y="-28" width="64" height="56" rx="18" fill="#FFD98A" stroke="' + sl + '" stroke-width="3.5"/>' +
+        '<circle cx="0" cy="0" r="9" fill="#fff" opacity="0.8"/></g>';
+    // halı
+    s += '<ellipse cx="' + f(cx) + '" cy="' + f(gy + 4) + '" rx="' + f(Wv * 0.42) + '" ry="46" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="5" stroke-dasharray="2 11" stroke-linecap="round"/>';
+    s += '<ellipse cx="' + f(cx) + '" cy="' + f(gy + 4) + '" rx="' + f(Wv * 0.32) + '" ry="30" fill="none" stroke="#fff" stroke-width="3" opacity="0.6"/>';
+    return s;
   }
 
   // ================================================================ Motor
@@ -456,17 +699,19 @@
     constructor(container, options) {
       options = options || {};
       this.container = container;
-      this.species = options.species === 'cat' ? 'cat' : 'dog';
-      this.timeScale = options.timeScale || 1;           // 1 = gerçek zaman. 3600 → 1 sn = 1 saat
+      const sp = options.species === 'cat' ? 'cat' : 'dog';
+      this.breed = BREEDS[options.breed] ? options.breed : DEFAULT_BREED[sp];
+      this.species = BREEDS[this.breed].species;
+      this.eyes = options.eyes && EYES[options.eyes] ? options.eyes : null; // null → cinsin varsayılanı
+      this.timeScale = options.timeScale || 1;
       this.autoWake = options.autoWake !== false;
       this.decay = Object.assign({}, DEFAULT_DECAY, options.decay || {});
-      this.customColors = options.colors || {};
-      this.showTools = options.tools !== false;          // alt tepsideki sürüklenebilir araçlar
-      this.showBackground = options.background !== false; // oda arka planı
-      this.wander = options.walk !== false;              // ekranda rastgele yürüme
-      this.hq = options.quality !== 'low';               // tüy detayı
-      this.s = options.petScale || 1;
-      this.labels = Object.assign({ food: 'Mama', water: 'Su', shower: 'Duş' }, options.labels || {});
+      this.customColors = options.colors || null;
+      this.showTools = options.tools !== false;
+      this.showBackground = options.background !== false;
+      this.hq = options.quality !== 'low';
+      this.scaleOpt = options.petScale || 0;
+      this.labels = Object.assign({ food: 'Mama', water: 'Su', ball: 'Top', shower: 'Duş' }, options.labels || {});
       this.listeners = {};
       this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80 }, options.stats || {});
       this.sleeping = false;
@@ -477,12 +722,12 @@
       this.blink = { next: rand(1.5, 4), t: -1, dur: 0.18 };
       this.look = { x: 0, y: 0, next: 2 };
       this.earTwitch = { next: rand(3, 7), t: -1, side: 0 };
-      this.idleNext = rand(5, 9);
+      this.idleNext = rand(4, 7);
       this.action = null; this.queue = [];
       this.pet = { level: 0, moving: 0, heartDist: 0, x: 200, y: 150, purr: 0 };
-      this.bowls = { food: 0, water: 0, foodTarget: 0, waterTarget: 0, foodAmount: 1, waterAmount: 1 };
-      this.walk = { x: 0, target: 0, moving: false, pause: rand(1, 3), dir: 1, speed: 70, amt: 0, phase: 0 };
+      this.item = { type: null, show: 0, amount: 1, scale: 1 };
       this.drag = null; this.auto = null;
+      this.ball = { active: false, held: false, x: 0, y: 0, vx: 0, vy: 0, r: 24, rot: 0, hist: [], cool: 0, rest: 0 };
       this.wet = 0; this.showering = false; this.foam = [];
       this.particles = [];
       this.fx = { z: 0, sweat: rand(2, 4), drip: 0, foam: 0, spray: 0, stink: rand(2, 4) };
@@ -492,17 +737,11 @@
 
       if (options.state) this.setState(options.state);
       this._build();
-      this.walk.x = this.Wv / 2; this.walk.target = this.walk.x;
       this._loop = this._loop.bind(this);
       this._last = null;
       this._raf = requestAnimationFrame(this._loop);
-      if (typeof ResizeObserver !== 'undefined') {
-        this._ro = new ResizeObserver(() => this._layout());
-        this._ro.observe(container);
-      } else {
-        this._onResize = () => this._layout();
-        window.addEventListener('resize', this._onResize);
-      }
+      if (typeof ResizeObserver !== 'undefined') { this._ro = new ResizeObserver(() => this._layout()); this._ro.observe(container); }
+      else { this._onResize = () => this._layout(); window.addEventListener('resize', this._onResize); }
     }
 
     // ---------------------------------------------------------------- olaylar
@@ -515,25 +754,18 @@
     }
 
     // ---------------------------------------------------------------- kurulum
-    _colors() {
-      const base = Object.assign({}, PALETTES[this.species]);
-      const c = this.customColors || {};
-      if (c[this.species]) Object.assign(base, c[this.species]);
-      Object.keys(c).forEach((k) => { if (typeof c[k] === 'string') base[k] = c[k]; });
-      return base;
-    }
-
     _build() {
       this.uid = 'pet' + (++uidCounter);
-      const C = this._colors();
-      const P = Object.assign({}, PALETTES.props, this.customColors.props || {});
-      const SC = Object.assign({}, PALETTES.scene, this.customColors.scene || {});
-      const built = buildPet(this.species, C, P, this.uid, this.hq);
+      const b = BREEDS[this.breed];
+      const C = this.C = resolveColors(b, this.eyes, this.customColors);
+      const P = Object.assign({}, PALETTES_PROPS);
+      const SC = SCENE;
+      const built = buildPet(b, C, P, this.uid, this.hq);
       const u = this.uid;
       const slot = (name, icon, label) => '<g data-r="slot' + name + '">' +
-        '<rect x="-46" y="-46" width="92" height="92" rx="24" fill="' + SC.tray + '" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+        '<rect x="-42" y="-44" width="84" height="88" rx="22" fill="' + SC.tray + '" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
         '<g data-r="icon' + name + '" transform="translate(0 -8)">' + icon + '</g>' +
-        '<text y="35" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="15" font-weight="700" fill="' + SC.text + '">' + label + '</text></g>';
+        '<text y="34" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="' + SC.text + '">' + label + '</text></g>';
 
       this.container.innerHTML =
         '<svg xmlns="' + SVGNS + '" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid meet" ' +
@@ -541,34 +773,16 @@
         '<defs>' + built.defs +
           '<linearGradient id="' + u + '-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + SC.wallTop + '"/><stop offset="1" stop-color="' + SC.wallBottom + '"/></linearGradient>' +
         '</defs>' +
-        (this.showBackground ? '<g data-r="bg">' +
-          '<rect data-r="wall" x="0" y="0" width="10" height="10" fill="url(#' + u + '-wall)"/>' +
-          '<g data-r="wallDots" fill="#fff" opacity="0.55"></g>' +
-          '<g data-r="window">' +
-            '<rect x="-80" y="-70" width="160" height="140" rx="18" fill="#fff" stroke="' + SC.trayEdge + '" stroke-width="6"/>' +
-            '<rect x="-68" y="-58" width="136" height="116" rx="10" fill="#CFEAFB"/>' +
-            '<circle cx="38" cy="-28" r="16" fill="#FFE08A"/>' +
-            '<path d="M-60 30 q14 -14 30 -4 q14 -12 30 2 q12 -8 22 2 L-8 58 L-68 58 Z" fill="#fff" opacity="0.9"/>' +
-            '<path d="M0 -58 V58 M-68 0 H68" stroke="#fff" stroke-width="7"/>' +
-            '<path d="M-86 -78 Q-60 -10 -88 76 L-104 76 Q-96 -10 -104 -78 Z M86 -78 Q60 -10 88 76 L104 76 Q96 -10 104 -78 Z" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="3"/>' +
-            '<rect x="-112" y="-86" width="224" height="10" rx="5" fill="' + SC.rugEdge + '"/>' +
-          '</g>' +
-          '<g data-r="frame">' +
-            '<rect x="-38" y="-34" width="76" height="68" rx="10" fill="#fff" stroke="' + SC.rugEdge + '" stroke-width="5"/>' +
-            '<path d="M0 16 C-24 0 -16 -22 0 -10 C16 -22 24 0 0 16 Z" fill="' + PALETTES.props.heart + '" opacity="0.85"/>' +
-            '<path d="M0 -34 L-14 -52 M0 -34 L14 -52" stroke="' + SC.text + '" stroke-width="2.5" opacity="0.6"/>' +
-          '</g>' +
-          '<rect data-r="floor" x="0" y="0" width="10" height="10" fill="' + SC.floor + '"/>' +
-          '<rect data-r="base" x="0" y="0" width="10" height="8" fill="#fff" opacity="0.8"/>' +
-          '<g data-r="boards" stroke="' + SC.floorLine + '" stroke-width="3"></g>' +
-          '<ellipse data-r="rug" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="5" stroke-dasharray="2 10" stroke-linecap="round"/>' +
-          '</g>' : '') +
+        (this.showBackground ? '<g data-r="room"></g>' : '') +
+        '<ellipse data-r="ballShadow" fill="' + P.shadow + '" display="none"/>' +
         '<g data-r="pet">' + built.pet + '</g>' +
+        '<g data-r="ball" display="none">' + ballMarkup(C.line) + '</g>' +
         (this.showTools ? '<path data-r="hose" fill="none" stroke="' + P.hose + '" stroke-width="8" stroke-linecap="round"/>' +
           '<g data-r="tools">' +
-            slot('Food', treatMarkup(this.species, P, C.line), this.labels.food) +
+            slot('Food', '<g transform="scale(0.95)">' + treatMarkup(this.species, P, C.line) + '</g>', this.labels.food) +
             slot('Water', waterIconMarkup(P, C.line), this.labels.water) +
-            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.8)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
+            slot('Ball', '<g transform="scale(0.85)">' + ballMarkup(C.line) + '</g>', this.labels.ball) +
+            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
           '</g>' +
           '<g data-r="held" style="pointer-events:none">' +
             '<g data-r="heldFood" display="none"><g transform="scale(1.25)">' + treatMarkup(this.species, P, C.line) + '</g></g>' +
@@ -584,10 +798,24 @@
         (r[k + 'All'] = r[k + 'All'] || []).push(n);
         if (!r[k]) r[k] = n;
       });
+      // desen noktaları (kol/bacak)
+      this._limbDeco();
       this.particles = []; this.foam = [];
       this._bindPointer();
-      this._updateKibbles(true);
       this._layout();
+    }
+
+    _limbDeco() {
+      const b = BREEDS[this.breed], C = this.C, r = this.r;
+      const spots = b.pattern.includes('spots'), tabby = b.pattern.includes('tabby');
+      ['arm', 'leg'].forEach((nm) => [0, 1].forEach((i) => {
+        const g = r[nm + 'D' + i];
+        let s = '';
+        if (spots) s = '<circle r="5.5" fill="' + C.spot + '"/><circle r="4.5" fill="' + C.spot + '"/>';
+        else if (tabby) s = '<path d="M-9 0 L9 0" stroke="' + C.stripe + '" stroke-width="5" stroke-linecap="round"/><path d="M-9 0 L9 0" stroke="' + C.stripe + '" stroke-width="5" stroke-linecap="round"/>';
+        g.innerHTML = s;
+      }));
+      this._decoKind = spots ? 'spots' : tabby ? 'tabby' : null;
     }
 
     _layout() {
@@ -596,50 +824,49 @@
       const Wv = Math.max(680, 600 * w / h), Hv = Wv * h / w;
       this.Wv = Wv; this.Hv = Hv;
       this.svg.setAttribute('viewBox', '0 0 ' + f(Wv) + ' ' + f(Hv));
-      this.trayH = this.showTools ? 120 : 0;
-      this.groundY = Hv - this.trayH - 34;
-      const r = this.r, s = this.s;
-      if (r.wall) {
-        const fy = this.groundY - 70 * s;
-        r.wall.setAttribute('width', f(Wv)); r.wall.setAttribute('height', f(fy));
-        r.floor.setAttribute('y', f(fy)); r.floor.setAttribute('width', f(Wv)); r.floor.setAttribute('height', f(Hv - fy));
-        r.base.setAttribute('y', f(fy - 8)); r.base.setAttribute('width', f(Wv));
-        let b = '';
-        for (let y = fy + 40; y < Hv; y += 46) b += '<path d="M0 ' + f(y) + ' L' + f(Wv) + ' ' + f(y) + '"/>';
-        r.boards.innerHTML = b;
-        let dots = '';
-        for (let y = 40, row = 0; y < fy - 30; y += 70, row++) for (let x = (row % 2) * 45 + 30; x < Wv; x += 90) dots += '<circle cx="' + x + '" cy="' + y + '" r="6"/>';
-        r.wallDots.innerHTML = dots;
-        const wy = Math.max(110, fy * 0.5);
-        r.window.setAttribute('transform', 'translate(' + f(Wv * 0.27) + ' ' + f(wy) + ')');
-        r.frame.setAttribute('transform', 'translate(' + f(Wv * 0.76) + ' ' + f(wy - 20) + ')');
-        r.window.setAttribute('display', fy > 260 ? 'inline' : 'none');
-        r.frame.setAttribute('display', fy > 200 ? 'inline' : 'none');
-        r.rug.setAttribute('cx', f(Wv / 2)); r.rug.setAttribute('cy', f(this.groundY - 6));
-        r.rug.setAttribute('rx', f(Wv * 0.44)); r.rug.setAttribute('ry', f(42 * s + 10));
-      }
+      this.trayH = this.showTools ? 112 : 0;
+      this.groundY = Hv - this.trayH - (this.showTools ? 44 : 30);
+      this.s = this.scaleOpt || clamp(Math.min((this.groundY - 40) / 440, Wv * 0.6 / 330), 0.6, 1.25);
+      this.petX = Wv / 2;
+      const fy = this.groundY - 74;
+      if (this.r.room) this.r.room.innerHTML = roomMarkup(Wv, Hv, fy, this.groundY, SCENE, this.uid);
+      this.floorY = this.groundY + 22; // topun durduğu zemin
       if (this.showTools) {
-        const ty = Hv - this.trayH / 2 - 6;
-        this.slots = { food: { x: 62, y: ty }, water: { x: 166, y: ty }, shower: { x: Wv - 62, y: ty } };
-        r.slotFood.setAttribute('transform', 'translate(62 ' + f(ty) + ')');
-        r.slotWater.setAttribute('transform', 'translate(166 ' + f(ty) + ')');
-        r.slotShower.setAttribute('transform', 'translate(' + f(Wv - 62) + ' ' + f(ty) + ')');
+        const ty = Hv - this.trayH / 2 - 4;
+        this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, ball: { x: 242, y: ty }, shower: { x: Wv - 54, y: ty } };
+        this.r.slotFood.setAttribute('transform', 'translate(54 ' + f(ty) + ')');
+        this.r.slotWater.setAttribute('transform', 'translate(148 ' + f(ty) + ')');
+        this.r.slotBall.setAttribute('transform', 'translate(242 ' + f(ty) + ')');
+        this.r.slotShower.setAttribute('transform', 'translate(' + f(Wv - 54) + ' ' + f(ty) + ')');
       }
-      const m = 200 * s * 0.85 + 10;
-      this.walk.minX = m; this.walk.maxX = Wv - m;
-      this.walk.x = clamp(this.walk.x || Wv / 2, m, Wv - m);
-      this.walk.target = clamp(this.walk.target || this.walk.x, m, Wv - m);
+      const B = this.ball;
+      if (B.active) { B.x = clamp(B.x, B.r, Wv - B.r); B.y = Math.min(B.y, this.floorY - B.r); }
     }
 
+    // ---------------------------------------------------------------- özelleştirme
+    setBreed(id) {
+      if (!BREEDS[id] || id === this.breed) return false;
+      this.breed = id; this.species = BREEDS[id].species;
+      this._rebuild(); this._emit('breed', { breed: id, species: this.species });
+      return true;
+    }
     setSpecies(sp) {
       sp = sp === 'cat' ? 'cat' : 'dog';
       if (sp === this.species) return;
-      this.species = sp;
-      this._rebuild();
-      this._emit('species', sp);
+      this.setBreed(DEFAULT_BREED[sp]);
     }
-    setColors(colors) { this.customColors = colors || {}; this._rebuild(); }
-    _rebuild() { this._unbindPointer(); this.drag = null; this.auto = null; this.showering = false; this._build(); }
+    setEyes(id) { this.eyes = EYES[id] ? id : null; this._rebuild(); this._emit('eyes', { eyes: this.eyes }); }
+    setColors(colors) { this.customColors = colors || null; this._rebuild(); }
+    getBreeds(species) {
+      return Object.keys(BREEDS).filter((k) => !species || BREEDS[k].species === species).map((k) => {
+        const b = BREEDS[k], c = resolveColors(b, null);
+        return { id: k, name: b.name, species: b.species, eyes: b.eyes, swatch: [c.fur, c.light, c.ear, c.spot || c.mask || c.patchA || c.patchB || c.saddle || c.point || c.patch || c.stripe || c.tan || c.furShade] };
+      });
+    }
+    _rebuild() {
+      this._unbindPointer(); this.drag = null; this.auto = null; this.showering = false;
+      const ball = this.ball; this._build(); this.ball = ball;
+    }
     setTimeScale(s) { this.timeScale = Math.max(0, +s || 0); }
     destroy() {
       cancelAnimationFrame(this._raf);
@@ -660,20 +887,21 @@
       const p = pt.matrixTransform(ctm.inverse());
       return { x: p.x, y: p.y };
     }
-    _toWorld(lx, ly) { return { x: this.walk.x + (lx - 200) * this.s, y: this.groundY + (ly - G) * this.s }; }
-    _toLocal(wx, wy) { return { x: 200 + (wx - this.walk.x) / this.s, y: G + (wy - this.groundY) / this.s }; }
-    _headLocal() { const P = this.P; return { x: 200 + P.headX, y: SPECIES[this.species].headCY + P.headY + P.lie * 70 }; }
-    _mouthWorld() {
-      const P = this.P, S = SPECIES[this.species];
-      return this._toWorld(200 + P.headX + P.faceX, S.mouth.y + 8 + P.headY + P.lie * 70 + this.raw.hop);
-    }
+    _toWorld(lx, ly) { return { x: this.petX + (lx - 200) * this.s, y: this.groundY + (ly - G) * this.s }; }
+    _toLocal(wx, wy) { return { x: 200 + (wx - this.petX) / this.s, y: G + (wy - this.groundY) / this.s }; }
+    _upY() { return this.P.sit * SIT_DROP; }
+    // gövde üst çerçevesi (kollar, kafa) için yerel koordinat
+    _toUpper(wx, wy) { const l = this._toLocal(wx, wy); return { x: l.x, y: l.y - this._upY() - this.raw.hop }; }
+    _headLocal() { const P = this.P; return { x: 200 + P.headX, y: SPECIES[this.species].headCY + P.headY + this._upY() }; }
+    _mouthUpper() { const P = this.P; return { x: 200 + P.headX + P.faceX, y: SPECIES[this.species].mouth.y + 6 + P.headY }; }
+    _mouthWorld() { const m = this._mouthUpper(); return this._toWorld(m.x, m.y + this._upY() + this.raw.hop); }
 
     _hit(lx, ly) {
-      const P = this.P, hd = this._headLocal();
+      const hd = this._headLocal();
       let dx = (lx - hd.x) / 100, dy = (ly - hd.y) / 88;
       if (dx * dx + dy * dy < 1) return 'head';
-      const by = lerp(292, 332, P.lie);
-      dx = (lx - 200) / 92; dy = (ly - by) / lerp(85, 50, P.lie);
+      const by = 320 + this._upY();
+      dx = (lx - 200) / 105; dy = (ly - by) / 120;
       if (dx * dx + dy * dy < 1) return 'body';
       return null;
     }
@@ -686,16 +914,23 @@
           const w = this._screenToWorld(e);
           try { svg.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
           e.preventDefault();
+          const B = this.ball;
+          if (B.active && !B.held && Math.hypot(w.x - B.x, w.y - B.y) < B.r + 22) { this._grabBall(w, e.pointerId); return; }
           if (this.showTools && !this.auto && !this.drag) {
-            for (const k of ['food', 'water', 'shower']) {
+            for (const k of ['food', 'water', 'ball', 'shower']) {
               const sl = this.slots[k];
-              if (Math.abs(w.x - sl.x) < 48 && Math.abs(w.y - sl.y) < 48) { this._startDrag(k, w.x, w.y, e.pointerId); return; }
+              if (Math.abs(w.x - sl.x) < 44 && Math.abs(w.y - sl.y) < 46) {
+                if (k === 'ball') { this._grabBall(w, e.pointerId); return; }
+                this._startDrag(k, w.x, w.y, e.pointerId); return;
+              }
             }
           }
           this.pointer = { id: e.pointerId, x: w.x, y: w.y, t0: performance.now(), moved: 0 };
         },
         move: (e) => {
           const w = this._screenToWorld(e);
+          const B = this.ball;
+          if (B.held && B.pid === e.pointerId) { B.fx = w.x; B.fy = w.y; B.hist.push({ t: performance.now(), x: w.x, y: w.y }); if (B.hist.length > 12) B.hist.shift(); e.preventDefault(); return; }
           if (this.drag && this.drag.id === e.pointerId && !this.drag.returning) { this.drag.fx = w.x; this.drag.fy = w.y; e.preventDefault(); return; }
           const ptr = this.pointer; if (!ptr || ptr.id !== e.pointerId) return;
           const d = Math.hypot(w.x - ptr.x, w.y - ptr.y);
@@ -705,6 +940,8 @@
           e.preventDefault();
         },
         up: (e) => {
+          const B = this.ball;
+          if (B.held && B.pid === e.pointerId) { this._throwBall(); return; }
           if (this.drag && this.drag.id === e.pointerId && !this.drag.returning) { this._releaseDrag(); return; }
           const ptr = this.pointer; if (!ptr || ptr.id !== e.pointerId) return;
           if (ptr.moved < 10 && performance.now() - ptr.t0 < 350) {
@@ -729,7 +966,7 @@
     }
 
     _petStroke(wx, wy, d) {
-      if (this.drag || (this.action && this.action.name === 'shakeDry')) return;
+      if (this.drag || this.ball.held || (this.action && this.action.name === 'shakeDry')) return;
       const pet = this.pet, wasLow = pet.level < 0.05;
       pet.level = Math.min(1, pet.level + d * 0.012);
       pet.moving = 0.35;
@@ -740,13 +977,12 @@
         this._spawn('heart', wx + rand(-10, 10), wy - 10, { vx: rand(-15, 15), vy: rand(-70, -45), s: rand(0.8, 1.25) });
       }
       this.stats.happiness = Math.min(100, this.stats.happiness + d * 0.012);
-      this.walk.moving = false;
       if (wasLow) this._emit('pet', { phase: 'start' });
     }
     petOnce() {
       let n = 0;
       const iv = setInterval(() => {
-        const w = this._toWorld(200 + Math.sin(n * 0.5) * 50, 120 + Math.cos(n * 0.3) * 12);
+        const w = this._toWorld(200 + Math.sin(n * 0.5) * 50, 120 + Math.cos(n * 0.3) * 12 + this._upY());
         this._petStroke(w.x, w.y, 9); if (++n > 40) clearInterval(iv);
       }, 30);
     }
@@ -754,8 +990,121 @@
       if (this.action && this.action.busy) return;
       if (this.sleeping) { this._startAction(ACTIONS.stir(this)); return; }
       this._spawn('heart', wx, wy - 8, { vx: 0, vy: -60, s: 1 });
-      this._startAction(part === 'head' ? ACTIONS.boop(this) : ACTIONS.hop(this));
+      this._startAction(part === 'head' ? ACTIONS.boop(this) : ACTIONS.giggle(this));
       this.stats.happiness = Math.min(100, this.stats.happiness + 1);
+    }
+
+    // ---------------------------------------------------------------- top
+    _grabBall(w, pid) {
+      const B = this.ball;
+      B.active = true; B.held = true; B.pid = pid; B.fx = w.x; B.fy = w.y; B.x = w.x; B.y = w.y; B.vx = 0; B.vy = 0;
+      B.hist = [{ t: performance.now(), x: w.x, y: w.y }];
+      this._emit('drag', { tool: 'ball', phase: 'start' });
+    }
+    _throwBall() {
+      const B = this.ball;
+      B.held = false;
+      const now = performance.now();
+      const h = B.hist.filter((p) => now - p.t < 110);
+      if (h.length >= 2) {
+        const a = h[0], z = h[h.length - 1], dt = Math.max(0.016, (z.t - a.t) / 1000);
+        B.vx = clamp((z.x - a.x) / dt, -1600, 1600); B.vy = clamp((z.y - a.y) / dt, -1800, 1600);
+      } else { B.vx = 0; B.vy = 0; }
+      if (this.showTools && B.y > this.Hv - this.trayH - 10 && Math.hypot(B.vx, B.vy) < 300) B.active = false; // tepsiye geri bırakıldı
+      this._emit('drag', { tool: 'ball', phase: 'end', used: B.active });
+    }
+    throwBall() { // programatik: top köşeden hayvana doğru atılır
+      const B = this.ball;
+      B.active = true; B.held = false; B.x = 40; B.y = this.groundY - 260 * this.s;
+      B.vx = (this.petX - 40) * 1.6; B.vy = -380;
+    }
+
+    _updateBall(dt, T) {
+      const B = this.ball, r = this.r;
+      if (!B.active) { r.ball.setAttribute('display', 'none'); r.ballShadow.setAttribute('display', 'none'); if (r.iconBall) r.iconBall.setAttribute('display', 'inline'); return; }
+      if (r.iconBall) r.iconBall.setAttribute('display', 'none');
+      B.cool -= dt;
+      if (B.held) {
+        const k = 1 - Math.exp(-dt * 30);
+        const px = B.x, py = B.y;
+        B.x += (B.fx - B.x) * k; B.y += (B.fy - 20 - B.y) * k;
+        B.rot += (B.x - px) * 2;
+        B.vx = (B.x - px) / Math.max(dt, 0.001); B.vy = (B.y - py) / Math.max(dt, 0.001);
+      } else {
+        B.vy += 1500 * dt;
+        B.x += B.vx * dt; B.y += B.vy * dt;
+        const floor = this.floorY - B.r;
+        if (B.y > floor) {
+          B.y = floor;
+          if (B.vy > 160) { B.vy = -B.vy * 0.62; if (B.vy < -300) this._spawn('dust', B.x, this.floorY, { life: 0.5 }); }
+          else B.vy = 0;
+          B.vx *= Math.pow(0.35, dt);
+        }
+        if (B.x < B.r) { B.x = B.r; B.vx = Math.abs(B.vx) * 0.8; }
+        if (B.x > this.Wv - B.r) { B.x = this.Wv - B.r; B.vx = -Math.abs(B.vx) * 0.8; }
+        if (B.y < B.r) { B.y = B.r; B.vy = Math.abs(B.vy) * 0.5; }
+        B.rot += B.vx * dt / B.r * 57.3;
+        this._ballVsPet();
+      }
+      r.ball.setAttribute('display', 'inline');
+      r.ball.setAttribute('transform', 'translate(' + f(B.x) + ' ' + f(B.y) + ') rotate(' + f(B.rot % 360) + ')');
+      const hgt = clamp((this.floorY - B.r - B.y) / 400, 0, 1);
+      r.ballShadow.setAttribute('display', 'inline');
+      r.ballShadow.setAttribute('cx', f(B.x)); r.ballShadow.setAttribute('cy', f(this.floorY - 2));
+      r.ballShadow.setAttribute('rx', f(B.r * (1 - hgt * 0.5))); r.ballShadow.setAttribute('ry', f(6 * (1 - hgt * 0.5)));
+      r.ballShadow.setAttribute('opacity', f(1 - hgt * 0.7));
+
+      // hayvan topu izler
+      if (!this.sleeping) {
+        const speed = Math.hypot(B.vx, B.vy);
+        if (B.held || speed > 40) this._lookAtWorld(T, B.x, B.y, 0.8);
+        if (B.held && !(this.action && this.action.busy)) { // yakalamaya hazır: kollar havada
+          T.h0x = 140; T.h0y = 262; T.h1x = 260; T.h1y = 262;
+          T.smile = 1; T.mouthOpen = Math.max(T.mouthOpen, 0.3); T.wagFreq = 3.5; T.wagAmp = 22; T.earLift = 0.6; T.pupil = 1;
+        }
+      }
+    }
+    _lookAtWorld(T, x, y, faceAmt) {
+      const hl = this._headLocal(), hw = this._toWorld(hl.x, hl.y);
+      T.lookX = clamp((x - hw.x) / 140, -1, 1); T.lookY = clamp((y - hw.y) / 140, -1, 1);
+      T.faceX = clamp((x - hw.x) / 18, -9, 9) * (faceAmt == null ? 1 : faceAmt);
+    }
+    _ballVsPet() {
+      const B = this.ball;
+      const u = this._toUpper(B.x, B.y);
+      const awake = !this.sleeping && !(this.action && this.action.busy) && this.P.sit < 0.2;
+      const rr = B.r / this.s;
+      if (awake && B.cool <= 0) {
+        // kafa vuruşu
+        const hy = SPECIES[this.species].headCY + this.P.headY;
+        if (u.y < hy - 40 && u.y > hy - 170 && Math.abs(u.x - 200) < 90 && B.vy > 0) { this._startAction(ACTIONS.header(this)); return; }
+        // tekme (top yerde, ayakların yanında)
+        const l = this._toLocal(B.x, B.y);
+        if (l.y > 395 && Math.abs(l.x - 200) < 100 + rr && Math.abs(B.vx) < 600) { this._startAction(ACTIONS.kick(this, l.x < 200 ? 0 : 1)); return; }
+        // pati ile vurma
+        for (let i = 0; i < 2; i++) {
+          const S = SHOULDER[i];
+          if (Math.hypot(u.x - S[0], u.y - S[1]) < 118 + rr && (i === 0 ? u.x < 215 : u.x > 185)) { this._startAction(ACTIONS.swat(this, i)); return; }
+        }
+      }
+      // hayvanın içinden geçmesin: gövdeden sek
+      const l = this._toLocal(B.x, B.y);
+      const by = 300 + this._upY();
+      const dx = (l.x - 200) / (110 + rr), dy = (l.y - by) / (170 + rr);
+      if (dx * dx + dy * dy < 1 && l.y < G + 10) {
+        const side = l.x < 200 ? -1 : 1;
+        B.vx = side * Math.max(Math.abs(B.vx) * 0.7, 220);
+        B.x = this.petX + side * (110 + rr) * this.s * Math.sqrt(Math.max(0, 1 - dy * dy)) + side * 2;
+      }
+    }
+    _hitBall(vx, vy) {
+      const B = this.ball;
+      B.vx = vx; B.vy = vy; B.cool = 0.5;
+      this._spawn('sparkle', B.x, B.y, { vy: -60, s: 0.9, vr: 200, life: 0.6 });
+      this._spawn('text', B.x, B.y - 30, { text: 'boing!', vy: -50, life: 0.8, size: 18, color: '#F06C8B' });
+      this.stats.happiness = Math.min(100, this.stats.happiness + 2.5);
+      this.stats.energy = Math.max(0, this.stats.energy - 0.6);
+      this._emit('play', { kind: 'ball' });
     }
 
     // ---------------------------------------------------------------- sürüklenen araçlar
@@ -770,16 +1119,14 @@
       let used = false;
       if (d.type === 'food') {
         const m = this._mouthWorld();
-        if (Math.hypot(d.x - m.x, d.y - m.y) < 85 * this.s + 20 && this._canInteract()) {
-          if (this.stats.fullness >= 96) { this._startAction(ACTIONS.refuse(this)); }
+        if (Math.hypot(d.x - m.x, d.y - m.y) < 90 * this.s + 24 && this._canInteract()) {
+          if (this.stats.fullness >= 96) this._startAction(ACTIONS.refuse(this));
           else { used = true; this._clearActions(); this._startAction(ACTIONS.nom(this)); }
         }
       } else if (d.type === 'water') {
         const l = this._toLocal(d.x, d.y);
-        if (Math.abs(l.x - 200) < 170 && l.y > 120 && l.y < G + 120 && this._canInteract()) {
-          used = true; this._clearActions();
-          this.bowls.water = 1;
-          this._startAction(ACTIONS.drink(this));
+        if (Math.abs(l.x - 200) < 175 && l.y > 40 && l.y < G + 40 && this._canInteract()) {
+          used = true; this._clearActions(); this._startAction(ACTIONS.drink(this));
         }
       } else if (d.type === 'shower') {
         if (this.showering) this._emit('action', { name: 'bath', phase: 'end' });
@@ -813,28 +1160,22 @@
         d.x = lerp(rt.x0, rt.x1, k); d.y = lerp(rt.y0, rt.y1, k) - Math.sin(k * Math.PI) * 40;
         if (rt.t >= 1) { this.drag = null; this._hideHeld(); this._renderHeld(); return; }
       } else {
-        const tx = d.fx + off[0], ty = d.fy + off[1];
         const k = 1 - Math.exp(-dt * 25);
-        d.x += (tx - d.x) * k; d.y += (ty - d.y) * k;
+        d.x += (d.fx + off[0] - d.x) * k; d.y += (d.fy + off[1] - d.y) * k;
       }
       this._renderHeld();
       if (d.returning) { this.showering = false; return; }
 
       const awake = !this.sleeping && !(this.action && this.action.busy);
-      const hl = this._headLocal(), hw = this._toWorld(hl.x, hl.y);
-      const lookAt = () => {
-        T.lookX = clamp((d.x - hw.x) / 130, -1, 1); T.lookY = clamp((d.y - hw.y) / 130, -1, 1);
-        T.faceX = clamp((d.x - hw.x) / 18, -9, 9);
-      };
       if (d.type === 'food' || d.type === 'water') {
         if (!awake) return;
         const m = this._mouthWorld();
         const dist = Math.hypot(d.x - m.x, d.y - m.y);
-        lookAt();
-        this._approach(d.x, dist);
-        const k = clamp(1 - (dist - 60) / 260, 0, 1);
-        if (d.type === 'food' && this.stats.fullness >= 96) { // tok: başını çevirir
-          T.faceX = -Math.sign(d.x - hw.x || 1) * 9; T.lookX = -T.lookX; T.smile = 0.1; T.mouthOpen = 0; T.tongue = 0; T.brow = 0.3;
+        this._lookAtWorld(T, d.x, d.y);
+        const k = clamp(1 - (dist - 60) / 280, 0, 1);
+        if (d.type === 'food' && this.stats.fullness >= 96) { // tok: başını çevirir, eliyle "hayır" yapar
+          T.faceX = -Math.sign(d.x - m.x || 1) * 9; T.lookX = -T.lookX; T.smile = 0.1; T.mouthOpen = 0; T.tongue = 0; T.brow = 0.3;
+          T.h1x = 250 + Math.sin(this.t * 14) * 14; T.h1y = 240;
           return;
         }
         T.pupil = 1; T.wagFreq = lerp(T.wagFreq, 3, k); T.wagAmp = lerp(T.wagAmp, 22, k); T.tailBase = lerp(T.tailBase, -10, k);
@@ -842,55 +1183,51 @@
         const near = smooth01((k - 0.35) / 0.5);
         T.mouthOpen = Math.max(T.mouthOpen, near * (d.type === 'food' ? 1 : 0.5));
         T.tongue = Math.max(T.tongue, near * (d.type === 'food' ? 0.25 : 0.8));
-        if (d.type === 'food' && near > 0.6 && Math.random() < dt * 2) {
-          this._spawn('drop', m.x + rand(-10, 10), m.y + 20 * this.s, { vy: 30, g: 300, life: 0.8, s: 0.7 }); // salya
+        // kollarını uzatıp almaya çalışır
+        const u = this._toUpper(d.x, d.y);
+        if (k > 0.25) {
+          const reach = smooth01((k - 0.25) / 0.4);
+          T.h0x = lerp(T.h0x, u.x - 22, reach); T.h0y = lerp(T.h0y, u.y + 10, reach);
+          T.h1x = lerp(T.h1x, u.x + 22, reach); T.h1y = lerp(T.h1y, u.y + 10, reach);
         }
+        if (d.type === 'food' && near > 0.6 && Math.random() < dt * 2) this._spawn('drop', m.x + rand(-10, 10), m.y + 20 * this.s, { vy: 30, g: 300, life: 0.8, s: 0.7 });
         return;
       }
-      // duş: su püskürtme
+      // duş
       this.fx.spray -= dt;
       while (this.fx.spray <= 0) {
         this.fx.spray += 1 / 45;
         this._spawn('drop', d.x + rand(-26, 26), d.y + 8, { vx: rand(-25, 25), vy: rand(260, 340), g: 500, life: 0.55, s: rand(0.5, 0.8) });
       }
       const l = this._toLocal(d.x, d.y);
-      const over = Math.abs(l.x - 200) < 150 && l.y < G - 60;
-      if (over !== this.showering) {
-        this.showering = over;
-        if (over) this._emit('action', { name: 'bath', phase: 'start' });
-      }
-      if (!over) { if (awake) lookAt(); return; }
-      this.walk.moving = false;
+      const over = Math.abs(l.x - 200) < 150 && l.y < 330 + this._upY();
+      if (over !== this.showering) { this.showering = over; if (over) this._emit('action', { name: 'bath', phase: 'start' }); }
+      if (!over) { if (awake) this._lookAtWorld(T, d.x, d.y); return; }
       this.wet = Math.min(1, this.wet + dt * 0.45);
       this.stats.cleanliness = Math.min(100, this.stats.cleanliness + dt * 18);
       this.fx.foam -= dt;
       if (this.fx.foam <= 0) { this.fx.foam = 0.07; this._addFoam(l.x); }
-      if (Math.random() < dt * 8) {
-        this._spawnL('drop', clamp(l.x + rand(-40, 40), 120, 280), hl.y - 70, { vx: rand(-90, 90), vy: rand(-140, -60), g: 500, life: 0.6, s: 0.7 }); // sıçrama
-      }
-      if (!this.sleeping && !(this.action && this.action.busy)) {
+      if (Math.random() < dt * 8) this._spawnL('drop', clamp(l.x + rand(-40, 40), 120, 280), this._headLocal().y - 70, { vx: rand(-90, 90), vy: rand(-140, -60), g: 500, life: 0.6, s: 0.7 });
+      if (awake) {
         const dog = this.species === 'dog';
         T.eyeOpen = 0; T.closedCurve = dog ? 0.7 : 0.1; T.squint = 1;
-        T.smile = dog ? 0.7 : -0.4; T.brow = dog ? 0.1 : -0.5; T.mouthOpen = dog ? 0.35 : 0.15; T.tongue = dog ? 0.3 : 0;
+        T.smile = dog ? 0.7 : -0.3; T.brow = dog ? 0.1 : -0.4; T.mouthOpen = dog ? 0.3 : 0.12; T.tongue = dog ? 0.3 : 0;
         T.earLift = -1; T.tailBase = dog ? 5 : 30; T.wagAmp = dog ? 14 : 2; T.wagFreq = dog ? 2.5 : 0.5;
-        T.headY += 6; T.lookY = -0.6; T.blush = dog ? 0.3 : 0;
+        T.headY += 4; T.lookY = -0.6; T.blush = dog ? 0.3 : 0;
+        // elleriyle köpükleri ovalar: biri kafada, biri karnında (ara ara yer değiştirir)
+        const ph = Math.floor(this.t / 1.3) % 2, c = Math.cos(this.t * 13), s2 = Math.sin(this.t * 13);
+        const head = [170 + c * 12, 92 + s2 * 8 + this.P.headY], belly = [215 + c * 14, 318 + s2 * 10];
+        const head2 = [230 + c * 12, 92 + s2 * 8 + this.P.headY], belly2 = [185 + c * 14, 318 + s2 * 10];
+        if (ph === 0) { T.h0x = head[0]; T.h0y = head[1]; T.h1x = belly[0]; T.h1y = belly[1]; }
+        else { T.h0x = belly2[0]; T.h0y = belly2[1]; T.h1x = head2[0]; T.h1y = head2[1]; }
       }
-    }
-
-    _approach(x, dist) {
-      if (!this.wander || this.action || this.sleeping || this.P.lie > 0.1) return;
-      const dx = x - this.walk.x;
-      if (Math.abs(dx) > 110 * this.s + 40 && dist > 120) {
-        this.walk.target = clamp(x, this.walk.minX, this.walk.maxX);
-        this.walk.moving = true; this.walk.speed = 130;
-      } else if (Math.abs(dx) < 60) this.walk.moving = false;
     }
 
     _renderHeld() {
       const r = this.r; if (!this.showTools) return;
       const d = this.drag;
       const sl = this.slots.shower;
-      let hx = sl.x + 33, hy = sl.y - 39; // duş sapının ucu (tepside)
+      let hx = sl.x + 29, hy = sl.y - 33;
       if (d && d.type === 'shower') { hx = d.x + 58; hy = d.y - 58; }
       const ax = this.Wv + 10, ay = this.Hv - 20;
       r.hose.setAttribute('d', 'M' + f(ax) + ' ' + f(ay) + ' C' + f(ax - 30) + ' ' + f(ay - 90) + ' ' + f(hx + 90) + ' ' + f(hy + 20) + ' ' + f(hx) + ' ' + f(hy));
@@ -903,10 +1240,9 @@
       if (d.type === 'shower') r.iconShower.setAttribute('display', 'none');
     }
 
-    // Duş köpüğü (yerel koordinatlarda; kafadakiler kafayla birlikte hareket eder)
     _addFoam(lx) {
       if (this.foam.length > 46) return;
-      const P = this.P, hd = this._headLocal();
+      const P = this.P, hd = this._headLocal(), up = this._upY();
       const onHead = Math.random() < 0.55;
       let x, y, layer, part;
       if (onHead) {
@@ -914,16 +1250,16 @@
         const ex = (x - hd.x) / 85;
         const lim = Math.sqrt(Math.max(0, 1 - ex * ex)) * 70;
         y = hd.y - lim * rand(0.55, 1.05);
-        x -= P.headX; y -= P.headY + P.lie * 70; // kafa grubunun yerel koordinatı
+        x -= P.headX; y -= P.headY + up;
         layer = this.r.foamHead; part = 'head';
       } else {
         x = clamp(lx + rand(-60, 60), 135, 265);
-        y = rand(lerp(230, 300, P.lie), lerp(330, 350, P.lie));
+        y = rand(240, 380);
         layer = this.r.foamBody; part = 'body';
       }
       const g = document.createElementNS(SVGNS, 'g');
-      g.innerHTML = '<circle r="1" fill="#fff" stroke="' + PALETTES.props.foamEdge + '" stroke-width="0.12"/>' +
-        '<circle cx="-0.35" cy="-0.35" r="0.22" fill="#fff"/><path d="M0.25 0.55 A0.6 0.6 0 0 0 0.6 0.2" stroke="' + PALETTES.props.foamEdge + '" stroke-width="0.1" fill="none"/>';
+      g.innerHTML = '<circle r="1" fill="#fff" stroke="' + PALETTES_PROPS.foamEdge + '" stroke-width="0.12"/>' +
+        '<circle cx="-0.35" cy="-0.35" r="0.22" fill="#fff"/><path d="M0.25 0.55 A0.6 0.6 0 0 0 0.6 0.2" stroke="' + PALETTES_PROPS.foamEdge + '" stroke-width="0.1" fill="none"/>';
       layer.appendChild(g);
       this.foam.push({ el: g, x, y, r: 0, rt: rand(6, 15), part, ph: rand(0, 6) });
     }
@@ -937,22 +1273,22 @@
     _popFoam(n) {
       for (let i = 0; i < n && this.foam.length; i++) {
         const b = this.foam.splice(Math.floor(Math.random() * this.foam.length), 1)[0];
-        let lx = b.x, ly = b.y;
-        if (b.part === 'head') { lx += this.P.headX; ly += this.P.headY + this.P.lie * 70; }
+        let lx = b.x, ly = b.y + this._upY();
+        if (b.part === 'head') { lx += this.P.headX; ly += this.P.headY; }
         this._spawnL('bubble', lx, ly, { vx: rand(-60, 60), vy: rand(-120, -50), life: 0.9, s: b.r / 10 });
         b.el.remove();
       }
     }
 
     // ---------------------------------------------------------------- genel API
-    feed() { // kaptan mama
+    feed() {
       if (this.action && this.action.name === 'eat') return false;
       this._clearActions();
       if (this.sleeping) this._enqueue(ACTIONS.wake(this));
-      this._enqueue(ACTIONS.eat(this));
+      this._enqueue(ACTIONS.eatBowl(this));
       return true;
     }
-    feedTreat() { // elle mama: araç otomatik olarak ağza götürülür
+    feedTreat() {
       if (!this.showTools || this.drag || this.sleeping) return this.feed();
       const sl = this.slots.food;
       this._startDrag('food', sl.x, sl.y, -1);
@@ -969,24 +1305,21 @@
       this._enqueue(ACTIONS.drink(this));
       return true;
     }
-    bathe() { // otomatik duş
+    bathe() {
       if (!this.showTools || this.drag) return false;
       if (this.sleeping) this.wake();
       const sl = this.slots.shower;
       this._startDrag('shower', sl.x, sl.y, -1);
-      this.walk.moving = false;
       this.auto = { t: 0, dur: 4.6, path: (t) => {
         const hd = this._toWorld(200, this._headLocal().y - 150);
         const k = smooth01(t / 0.8);
-        const sx = hd.x + 36 + Math.sin(t * 2.6) * 70 * this.s, sy = hd.y - 36;
-        return [lerp(sl.x, sx, k), lerp(sl.y, sy, k)];
+        return [lerp(sl.x, hd.x + 36 + Math.sin(t * 2.6) * 70 * this.s, k), lerp(sl.y, hd.y - 36, k)];
       } };
       return true;
     }
     sleep() {
       if (this.sleeping) return false;
       this._clearActions();
-      this.walk.moving = false;
       this._enqueue(ACTIONS.yawn(this));
       this._enqueue(ACTIONS.fallAsleep(this));
       return true;
@@ -999,11 +1332,7 @@
     }
     yawn() { if (!this.sleeping && !this.action) this._startAction(ACTIONS.yawn(this)); }
     celebrate() { if (!this.sleeping) { this._clearActions(); this._startAction(ACTIONS.celebrate(this)); } }
-    play(name) { if (ACTIONS[name]) { this._clearActions(); this._startAction(ACTIONS[name](this)); } }
-    walkTo(x01) { // 0..1 arası ekran konumuna yürü
-      if (this.sleeping) return;
-      this.walk.target = lerp(this.walk.minX, this.walk.maxX, clamp(x01, 0, 1)); this.walk.moving = true; this.walk.speed = 90;
-    }
+    play(name) { if (ACTIONS[name] && name !== 'swat' && name !== 'kick') { this._clearActions(); this._startAction(ACTIONS[name](this)); } }
 
     _clearActions() {
       if (this.action && this.action.cancel) this.action.cancel();
@@ -1013,7 +1342,6 @@
     _startAction(a) {
       if (this.action && this.action.cancel) this.action.cancel();
       this.action = a; a.t = 0; a.p = 0;
-      if (a.busy) this.walk.moving = false;
       if (a.start) a.start();
       if (!a.silent) this._emit('action', { name: a.name, phase: 'start' });
     }
@@ -1022,7 +1350,7 @@
     getState() {
       const r1 = (v) => Math.round(v * 10) / 10, s = this.stats;
       return {
-        species: this.species,
+        species: this.species, breed: this.breed, eyes: this.eyes,
         stats: { fullness: r1(s.fullness), hydration: r1(s.hydration), energy: r1(s.energy), happiness: r1(s.happiness), cleanliness: r1(s.cleanliness) },
         sleeping: this.sleeping, mood: this.mood, lastUpdate: Date.now()
       };
@@ -1032,11 +1360,13 @@
       if (s.stats) Object.keys(this.stats).forEach((k) => { if (typeof s.stats[k] === 'number') this.stats[k] = clamp(s.stats[k], 0, 100); });
       if (typeof s.sleeping === 'boolean') {
         this.sleeping = s.sleeping;
-        this.P.lie = s.sleeping ? 1 : 0; this.P.eyeOpen = s.sleeping ? 0 : 1;
-        if (s.sleeping) this.walk.moving = false;
+        this.P.sit = s.sleeping ? 1 : 0; this.P.eyeOpen = s.sleeping ? 0 : 1;
       }
-      if (s.species && this.svg && s.species !== this.species) this.setSpecies(s.species);
-      else if (s.species && !this.svg) this.species = s.species === 'cat' ? 'cat' : 'dog';
+      let rebuild = false;
+      if (s.breed && BREEDS[s.breed] && s.breed !== this.breed) { this.breed = s.breed; this.species = BREEDS[s.breed].species; rebuild = true; }
+      else if (!s.breed && s.species && s.species !== this.species) { this.breed = DEFAULT_BREED[s.species === 'cat' ? 'cat' : 'dog']; this.species = BREEDS[this.breed].species; rebuild = true; }
+      if ('eyes' in s && (s.eyes === null || EYES[s.eyes]) && s.eyes !== this.eyes) { this.eyes = s.eyes; rebuild = true; }
+      if (rebuild && this.svg) this._rebuild();
       if (s.lastUpdate) this._tickStats(clamp((Date.now() - s.lastUpdate) / 1000, 0, 72 * 3600), true);
       this._emit('stats', this.getState());
     }
@@ -1065,7 +1395,7 @@
       return 'neutral';
     }
 
-    // ---------------------------------------------------------------- parçacıklar (dünya koordinatları)
+    // ---------------------------------------------------------------- parçacıklar
     _spawnL(type, lx, ly, o) {
       o = Object.assign({}, o || {});
       const w = this._toWorld(lx, ly), s = this.s;
@@ -1075,30 +1405,31 @@
     }
     _spawn(type, x, y, o) {
       o = o || {};
-      const PR = PALETTES.props, pal = this._colors();
-      let el, layer = this.r.fx;
+      const PR = PALETTES_PROPS, line = this.C.line;
+      let el;
       const mk = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
       switch (type) {
-        case 'heart': el = mk('path', { d: 'M0 7 C-14 -3 -9 -16 0 -8 C9 -16 14 -3 0 7 Z', fill: PR.heart, stroke: pal.line, 'stroke-width': 2 }); break;
+        case 'heart': el = mk('path', { d: 'M0 7 C-14 -3 -9 -16 0 -8 C9 -16 14 -3 0 7 Z', fill: PR.heart, stroke: line, 'stroke-width': 2 }); break;
         case 'z': el = mk('path', { d: 'M-8 -9 L8 -9 L-8 9 L8 9', fill: 'none', stroke: PR.zzz, 'stroke-width': 4.5, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }); break;
         case 'text':
-          el = mk('text', { 'font-family': 'Arial Rounded MT Bold, Nunito, Verdana, sans-serif', 'font-weight': 900, 'font-size': o.size || 18, fill: o.color || pal.line, 'text-anchor': 'middle' });
+          el = mk('text', { 'font-family': 'Arial Rounded MT Bold, Nunito, Verdana, sans-serif', 'font-weight': 900, 'font-size': o.size || 18, fill: o.color || line, 'text-anchor': 'middle' });
           el.textContent = o.text || ''; break;
         case 'crumb': el = mk('ellipse', { rx: 4, ry: 3, fill: Math.random() < 0.5 ? PR.kibble : PR.kibble2 }); break;
         case 'drop': el = mk('path', { d: 'M0 -7 C4 -1 5 2 5 4 A5 5 0 0 1 -5 4 C-5 2 -4 -1 0 -7 Z', fill: PR.drop, stroke: '#fff', 'stroke-width': 1.2 }); break;
-        case 'ripple': el = mk('ellipse', { rx: 10, ry: 2.5, fill: 'none', stroke: '#fff', 'stroke-width': 2 }); layer = this.r.ripples; break;
-        case 'sparkle': el = mk('path', { d: 'M0 -9 Q1.5 -1.5 9 0 Q1.5 1.5 0 9 Q-1.5 1.5 -9 0 Q-1.5 -1.5 0 -9 Z', fill: '#FFD166', stroke: pal.line, 'stroke-width': 1.5 }); break;
-        case 'growl': el = mk('path', { d: 'M-14 0 Q-10 -6 -6 0 T2 0 T10 0 T18 0', fill: 'none', stroke: pal.line, 'stroke-width': 3, 'stroke-linecap': 'round' }); break;
+        case 'sparkle': el = mk('path', { d: 'M0 -9 Q1.5 -1.5 9 0 Q1.5 1.5 0 9 Q-1.5 1.5 -9 0 Q-1.5 -1.5 0 -9 Z', fill: '#FFD166', stroke: line, 'stroke-width': 1.5 }); break;
+        case 'growl': el = mk('path', { d: 'M-14 0 Q-10 -6 -6 0 T2 0 T10 0 T18 0', fill: 'none', stroke: line, 'stroke-width': 3, 'stroke-linecap': 'round' }); break;
         case 'stink': el = mk('path', { d: 'M0 10 Q-6 4 0 -2 T0 -14', fill: 'none', stroke: PR.stink, 'stroke-width': 3.5, 'stroke-linecap': 'round' }); break;
+        case 'dust': el = mk('ellipse', { rx: 18, ry: 4, fill: '#fff', opacity: 0.7 }); break;
         case 'bubble':
           el = mk('g', {});
           el.innerHTML = '<circle r="10" fill="#fff" fill-opacity="0.85" stroke="' + PR.foamEdge + '" stroke-width="1.5"/><circle cx="-3.5" cy="-3.5" r="2.2" fill="#fff"/>';
           break;
         default: return;
       }
-      layer.appendChild(el);
+      this.r.fx.appendChild(el);
       this.particles.push({ el, type, x, y, vx: o.vx || 0, vy: o.vy || 0, g: o.g || 0, age: 0, life: o.life || 1.4,
-        s: o.s || 1, rot: o.rot || 0, vr: o.vr || 0, wobble: o.wobble || 0, local: layer !== this.r.fx });
+        s: o.s || 1, rot: o.rot || 0, vr: o.vr || 0, wobble: o.wobble || 0 });
+      if (this.particles.length > 220) { const p = this.particles.shift(); p.el.remove(); }
     }
     _updateParticles(dt) {
       const list = this.particles;
@@ -1106,24 +1437,18 @@
         const p = list[i];
         p.age += dt;
         const k = p.age / p.life;
-        if (k >= 1 || (!p.local && p.type === 'drop' && p.y > this.groundY + 30)) { p.el.remove(); list.splice(i, 1); continue; }
+        if (k >= 1 || (p.type === 'drop' && p.y > this.groundY + 40)) { p.el.remove(); list.splice(i, 1); continue; }
         p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
         const x = p.x + (p.wobble ? Math.sin(p.age * 4) * p.wobble : 0);
         let sc = p.s, op = 1;
-        if (p.type === 'ripple') { sc = 1 + k * 3; op = 1 - k; }
-        else if (p.type === 'heart' || p.type === 'sparkle') { sc = p.s * (k < 0.15 ? smooth01(k / 0.15) : 1); op = 1 - smooth01((k - 0.6) / 0.4); }
+        if (p.type === 'heart' || p.type === 'sparkle') { sc = p.s * (k < 0.15 ? smooth01(k / 0.15) : 1); op = 1 - smooth01((k - 0.6) / 0.4); }
         else if (p.type === 'z') { sc = p.s * (0.6 + k * 0.7); op = k < 0.15 ? k / 0.15 : 1 - smooth01((k - 0.55) / 0.45); }
         else if (p.type === 'bubble') { sc = p.s * (1 + k * 0.4); op = 1 - smooth01((k - 0.5) / 0.5); }
+        else if (p.type === 'dust') { sc = 1 + k * 1.5; op = 0.7 * (1 - k); }
         else op = 1 - smooth01((k - 0.65) / 0.35);
-        p.el.setAttribute('transform', 'translate(' + f(x) + ' ' + f(p.y) + ') rotate(' + f(p.rot) + ') scale(' + f(sc * 100) / 100 + ')');
+        p.el.setAttribute('transform', 'translate(' + f(x) + ' ' + f(p.y) + ') rotate(' + f(p.rot) + ') scale(' + Math.round(sc * 100) / 100 + ')');
         p.el.setAttribute('opacity', f(op));
       }
-    }
-    _updateKibbles(force) {
-      const n = Math.ceil(this.bowls.foodAmount * 12 - 0.001);
-      if (!force && n === this._kibN) return;
-      this._kibN = n;
-      for (let i = 0; i < 12; i++) { const el = this.r['kib' + i]; if (el) el.setAttribute('display', i >= 12 - n ? 'inline' : 'none'); }
     }
 
     // ---------------------------------------------------------------- ana döngü
@@ -1142,8 +1467,8 @@
       if (mood !== this.mood) { const old = this.mood; this.mood = mood; this._emit('mood', { mood, previous: old }); }
 
       const T = Object.assign({}, POSE_DEFAULT, MOOD_POSES[mood]);
+      T.itemShow = 0;
       this._idle(dt, T, mood);
-
       if (this.action) {
         const a = this.action;
         a.t += dt; a.p = a.dur ? clamp(a.t / a.dur, 0, 1) : 0;
@@ -1156,11 +1481,10 @@
         }
       }
       this._updateDrag(dt, T);
-      this._updateWalk(dt, T);
+      this._updateBall(dt, T);
       this._applyPet(dt, T);
       this._smoothPose(dt, T);
-      this._updateBowls(dt);
-      this._render(dt);
+      this._render(dt, T);
       this._updateFoam(dt);
       this._updateParticles(dt);
 
@@ -1179,24 +1503,24 @@
         lk.next = rand(1.2, 3.8);
         if (Math.random() < 0.4) { lk.x = 0; lk.y = 0; } else { lk.x = rand(-1, 1); lk.y = rand(-0.6, 0.6); }
       }
-      if (!this.sleeping) { T.lookX += lk.x * (mood === 'tired' ? 0.4 : 1); T.lookY += lk.y * 0.6; }
+      if (!this.sleeping) { T.lookX += lk.x * (mood === 'tired' ? 0.4 : 1); T.lookY += lk.y * 0.6; T.faceX += lk.x * 3; }
+      // hafif ağırlık aktarma / sallanma
+      T.h0y += Math.sin(this.t * 1.3) * 2; T.h1y += Math.sin(this.t * 1.3 + 1) * 2;
       const et = this.earTwitch;
       et.next -= dt;
       if (et.next <= 0 && et.t < 0) { et.t = 0; et.side = Math.random() < 0.5 ? 0 : 1; }
       if (et.t >= 0) { et.t += dt; if (et.t > 0.35) { et.t = -1; et.next = rand(3, 8); } }
 
-      // ıslakken damlama
       if (this.wet > 0 && !this.showering) {
         this.fx.drip -= dt;
-        if (this.fx.drip <= 0) { this.fx.drip = 0.25 / (this.wet + 0.2); this._spawnL('drop', rand(130, 270), rand(250, 360), { vy: 20, g: 300, life: 0.8, s: 0.7 }); }
+        if (this.fx.drip <= 0) { this.fx.drip = 0.25 / (this.wet + 0.2); this._spawnL('drop', rand(130, 270), rand(260, 420), { vy: 20, g: 300, life: 0.8, s: 0.7 }); }
       }
-      // kirliyken koku
       if (this.stats.cleanliness < 30 && !this.sleeping && !this.drag) {
         this.fx.stink -= dt;
-        if (this.fx.stink <= 0) { this.fx.stink = rand(1.2, 2.2); this._spawnL('stink', rand(130, 270), rand(200, 250), { vy: -40, life: 1.6, wobble: 5 }); }
+        if (this.fx.stink <= 0) { this.fx.stink = rand(1.2, 2.2); this._spawnL('stink', rand(130, 270), rand(230, 290), { vy: -40, life: 1.6, wobble: 5 }); }
       }
 
-      if (this.action || this.pet.level > 0.2 || this.drag) return;
+      if (this.action || this.pet.level > 0.2 || this.drag || this.ball.held) return;
       if (this.sleeping) {
         this.fx.z -= dt;
         if (this.fx.z <= 0) {
@@ -1210,57 +1534,19 @@
         this.fx.sweat -= dt;
         if (this.fx.sweat <= 0) { this.fx.sweat = rand(2.5, 4.5); this._spawnL('drop', 278, 96 + this.P.headY, { vy: 22, g: 40, life: 1.4, s: 1.3 }); }
       }
-      if (this.walk.moving) return;
+      if (this.ball.active && Math.hypot(this.ball.vx, this.ball.vy) > 40) return;
       this.idleNext -= dt;
       if (this.idleNext > 0) return;
-      this.idleNext = rand(6, 11);
+      this.idleNext = rand(5, 9);
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
       switch (mood) {
-        case 'tired': this._startAction(ACTIONS.yawn(this)); this.idleNext = rand(7, 12); break;
-        case 'hungry': this._startAction(Math.random() < 0.6 ? ACTIONS.growl(this) : ACTIONS.lickLips(this)); this.idleNext = rand(4.5, 8); break;
-        case 'thirsty': this._startAction(ACTIONS.lickLips(this)); break;
+        case 'tired': this._startAction(pick([ACTIONS.yawn, ACTIONS.rubEye])(this)); this.idleNext = rand(6, 10); break;
+        case 'hungry': this._startAction(pick([ACTIONS.growl, ACTIONS.lickLips, ACTIONS.growl])(this)); this.idleNext = rand(4.5, 8); break;
+        case 'thirsty': this._startAction(pick([ACTIONS.fan, ACTIONS.lickLips])(this)); break;
         case 'dirty': this._startAction(ACTIONS.scratch(this)); break;
         case 'sad': this._startAction(ACTIONS.sigh(this)); break;
-        case 'happy': this._startAction(Math.random() < 0.5 ? ACTIONS.hop(this) : ACTIONS.headTilt(this)); break;
-        default: this._startAction(Math.random() < 0.5 ? ACTIONS.headTilt(this) : ACTIONS.lickLips(this));
-      }
-    }
-
-    _updateWalk(dt, T) {
-      const w = this.walk;
-      const free = this.wander && !this.sleeping && !(this.action && this.action.busy) && this.pet.level < 0.1 && this.P.lie < 0.1 && !this.showering;
-      if (!free) w.moving = false;
-      if (free && !w.moving && !this.drag) {
-        w.pause -= dt;
-        if (w.pause <= 0 && !this.action) {
-          const span = w.maxX - w.minX;
-          if (span > 30) {
-            let tx = rand(w.minX, w.maxX), tries = 0;
-            while (Math.abs(tx - w.x) < Math.min(90, span * 0.4) && tries++ < 8) tx = rand(w.minX, w.maxX);
-            w.target = tx; w.moving = true;
-            const sp = { happy: 95, neutral: 75, hungry: 65, thirsty: 60, dirty: 60, sad: 42, tired: 38 }[this.mood] || 70;
-            w.speed = sp * rand(0.85, 1.15);
-          }
-        }
-      }
-      if (w.moving) {
-        const dx = w.target - w.x;
-        if (Math.abs(dx) < 3) {
-          w.moving = false;
-          w.pause = { happy: rand(1.5, 4), tired: rand(7, 13), sad: rand(6, 10) }[this.mood] || rand(2.5, 6);
-        } else {
-          w.dir = Math.sign(dx);
-          w.x += w.dir * Math.min(Math.abs(dx), w.speed * dt * smooth01(w.amt + 0.25));
-        }
-      }
-      w.amt += ((w.moving ? 1 : 0) - w.amt) * (1 - Math.exp(-dt * 7));
-      w.phase += dt * (w.speed / 34) * Math.PI * w.amt;
-      if (w.amt > 0.05) {
-        const a = w.amt;
-        T.faceX = lerp(T.faceX, w.dir * 9, a);
-        if (!this.drag) { T.lookX = lerp(T.lookX, w.dir * 0.75, a); T.lookY = lerp(T.lookY, 0, a); }
-        T.tilt += w.dir * 2 * a;
-        T.wagFreq = Math.max(T.wagFreq, 1.6 * a); T.wagAmp = Math.max(T.wagAmp, 12 * a);
-        T.earLift += 0.15 * a;
+        case 'happy': this._startAction(pick([ACTIONS.wave, ACTIONS.hop, ACTIONS.headTilt, ACTIONS.dance])(this)); break;
+        default: this._startAction(pick([ACTIONS.headTilt, ACTIONS.wave, ACTIONS.lickLips, ACTIONS.stretch])(this));
       }
     }
 
@@ -1283,6 +1569,9 @@
       T.tilt = lerp(T.tilt, side * 13, k); T.headX = lerp(T.headX, side * 6, k); T.faceX = lerp(T.faceX, side * 4, k);
       T.earLift = lerp(T.earLift, isCat ? -0.25 : -0.35, k);
       T.wagFreq = lerp(T.wagFreq, isCat ? 0.8 : 3.4, k); T.wagAmp = lerp(T.wagAmp, isCat ? 10 : 24, k); T.tailBase = lerp(T.tailBase, -12, k);
+      // elleri göğsünde birleşir, mutlulukla sallanır
+      const sw = Math.sin(this.t * 4) * 6;
+      T.h0x = lerp(T.h0x, 186 + sw, k); T.h0y = lerp(T.h0y, 282, k); T.h1x = lerp(T.h1x, 214 + sw, k); T.h1y = lerp(T.h1y, 282, k);
       if (isCat) {
         T.whisker = lerp(T.whisker, 1, k);
         pet.purr -= dt;
@@ -1298,97 +1587,128 @@
     _smoothPose(dt, T) {
       const P = this.P;
       for (const key in T) {
-        if (key.charAt(0) === '_') continue;
+        if (key.charAt(0) === '_' || !(key in POSE_DEFAULT)) continue;
         const sp = POSE_SPEED[key] || 7;
         P[key] += (T[key] - P[key]) * (1 - Math.exp(-sp * dt));
       }
       const R = this.raw;
       R.hop = T._hop || 0; R.shake = T._shake || 0; R.squash = T._squash || 0; R.rot = T._rot || 0; R.fluff = T._fluff || 0;
-    }
-
-    _updateBowls(dt) {
-      const b = this.bowls, r = this.r, k = 1 - Math.exp(-7 * dt);
-      b.food += (b.foodTarget - b.food) * k;
-      b.water += (b.waterTarget - b.water) * k;
-      const show = (el, v) => {
-        el.setAttribute('transform', 'translate(0 ' + f((1 - v) * 95) + ')');
-        el.setAttribute('opacity', f(clamp(v * 3, 0, 1)));
-        el.setAttribute('display', v < 0.01 ? 'none' : 'inline');
-      };
-      show(r.foodBowl, b.food); show(r.waterBowl, b.water);
-      const lvl = b.waterAmount;
-      r.water.setAttribute('ry', f(4 + lvl * 7)); r.water.setAttribute('rx', f(52 + lvl * 14)); r.water.setAttribute('cy', f(342 - lvl * 4));
+      const it = this.item;
+      it.show += ((T.itemShow || 0) - it.show) * (1 - Math.exp(-dt * 10));
+      if (T.itemType) it.type = T.itemType;
+      if (T.itemScale != null) it.scale = T.itemScale; else it.scale = 1;
     }
 
     // ---------------------------------------------------------------- çizim
-    _render(dt) {
-      const P = this.P, r = this.r, S = SPECIES[this.species], R = this.raw, w = this.walk, s = this.s;
+    _limb(name, i, pts, w, color) {
+      const r = this.r;
+      const d = 'M' + pts.map((p) => f(p[0]) + ' ' + f(p[1])).join(' L');
+      r[name + 'O' + i].setAttribute('d', d); r[name + 'O' + i].setAttribute('stroke-width', f(w * 2 + 7));
+      r[name + 'F' + i].setAttribute('d', d); r[name + 'F' + i].setAttribute('stroke-width', f(w * 2));
+      const pp = r[name + 'P' + i];
+      if (pp) { const m = pts.length - 1; pp.setAttribute('d', 'M' + f(lerp(pts[m - 1][0], pts[m][0], 0.2)) + ' ' + f(lerp(pts[m - 1][1], pts[m][1], 0.2)) + ' L' + f(pts[m][0]) + ' ' + f(pts[m][1])); pp.setAttribute('stroke-width', f(w * 2)); }
+      // ince parlama (tüp hissi)
+      const off = -w * 0.35;
+      const hp = pts.map((p, k) => {
+        const q = pts[Math.min(k + 1, pts.length - 1)], o = pts[Math.max(k - 1, 0)];
+        const tx = q[0] - o[0], ty = q[1] - o[1], l = Math.hypot(tx, ty) || 1;
+        return [p[0] + (-ty / l) * off * (i === 0 ? 1 : -1), p[1] + (tx / l) * off * (i === 0 ? 1 : -1)];
+      });
+      r[name + 'H' + i].setAttribute('d', 'M' + hp.map((p) => f(p[0]) + ' ' + f(p[1])).join(' L')); r[name + 'H' + i].setAttribute('stroke-width', f(w * 0.6));
+      // desen noktaları
+      if (this._decoKind) {
+        const kids = r[name + 'D' + i].children;
+        const fr = this._decoKind === 'spots' ? [0.35, 0.7] : [0.45, 0.75];
+        for (let k = 0; k < kids.length; k++) {
+          const t = fr[k] * (pts.length - 1), a = Math.floor(t), u = t - a, b2 = Math.min(a + 1, pts.length - 1);
+          const x = lerp(pts[a][0], pts[b2][0], u), y = lerp(pts[a][1], pts[b2][1], u);
+          const ang = Math.atan2(pts[b2][1] - pts[a][1], pts[b2][0] - pts[a][0]) * 57.3;
+          const side = this._decoKind === 'spots' ? (k ? 5 : -5) : 0;
+          kids[k].setAttribute('transform', 'translate(' + f(x) + ' ' + f(y) + ') rotate(' + f(ang + 90) + ') translate(' + side + ' 0)');
+        }
+      }
+    }
+
+    _render(dt, T) {
+      const P = this.P, r = this.r, S = SPECIES[this.species], R = this.raw, s = this.s;
       this.breathPhase += dt * Math.PI * 2 * P.breathRate;
       this.wagPhase += dt * Math.PI * 2 * P.wagFreq;
       const breath = Math.sin(this.breathPhase) * P.breathAmp;
       const wag = Math.sin(this.wagPhase);
-      const wa = w.amt, ph = w.phase;
-      const bob = -Math.abs(Math.sin(ph)) * 5 * wa;
+      const sway = Math.sin(this.t * 0.9) * 1.2 * (1 - P.sit);
 
-      r.pet.setAttribute('transform', 'translate(' + f(w.x - 200 * s) + ' ' + f(this.groundY - G * s) + ') scale(' + s + ')');
+      r.pet.setAttribute('transform', 'translate(' + f(this.petX - 200 * s) + ' ' + f(this.groundY - G * s) + ') scale(' + Math.round(s * 1000) / 1000 + ')');
       const fl = 1 + R.fluff * 0.07;
-      r.root.setAttribute('transform', 'translate(' + f(R.shake) + ' ' + f(R.hop + bob) + ') rotate(' + f(R.rot + Math.sin(ph) * 1.5 * wa) + ' 200 ' + (G - 40) + ')' +
-        (R.fluff ? ' translate(200 ' + G + ') scale(' + f(fl * 100) / 100 + ') translate(-200 -' + G + ')' : ''));
-      r.shadow.setAttribute('rx', f(112 * (1 + P.lie * 0.12) * (1 + R.hop / 140)));
-      r.shadow.setAttribute('opacity', f(1 + R.hop / 60));
+      r.root.setAttribute('transform', 'translate(' + f(R.shake) + ' 0) rotate(' + f(R.rot + sway) + ' 200 ' + (G - 60) + ')' +
+        (R.fluff ? ' translate(200 ' + G + ') scale(' + Math.round(fl * 100) / 100 + ') translate(-200 -' + G + ')' : ''));
+      r.shadow.setAttribute('rx', f(96 * (1 + P.sit * 0.2) * (1 + R.hop / 160)));
+      r.shadow.setAttribute('opacity', f(1 + R.hop / 70));
 
-      // gövde
-      const sq = R.squash;
-      const sy = (1 - 0.38 * P.lie) * (1 + breath * 0.016) * (1 - sq * 0.08);
-      const sx = (1 + 0.1 * P.lie) * (1 - breath * 0.006) * (1 + sq * 0.06);
-      r.body.setAttribute('transform', 'translate(200 ' + G + ') scale(' + Math.round(sx * 1000) / 1000 + ' ' + Math.round(sy * 1000) / 1000 + ') translate(-200 -' + G + ')');
-      for (let i = 0; i < 2; i++) {
-        const lift = Math.max(0, Math.sin(ph + i * Math.PI + Math.PI / 2)) * 7 * wa;
-        r['rfoot' + i].setAttribute('transform', 'translate(0 ' + f(-lift / Math.max(0.5, sy)) + ')');
-      }
-      r.tail.setAttribute('transform', 'rotate(' + f(P.tailBase + wag * P.wagAmp) + ' 248 344)');
+      // üst gövde (oturunca aşağı iner, zıplayınca yükselir)
+      const sq = R.squash, up = P.sit * SIT_DROP + R.hop + sq * 8;
+      r.upper.setAttribute('transform', 'translate(0 ' + f(up) + ')');
+      const sy = (1 + breath * 0.016) * (1 - sq * 0.07), sx = (1 - breath * 0.006) * (1 + sq * 0.05);
+      r.body.setAttribute('transform', 'translate(200 414) scale(' + Math.round(sx * 1000) / 1000 + ' ' + Math.round(sy * 1000) / 1000 + ') translate(-200 -414)');
+      r.tail.setAttribute('transform', 'translate(0 ' + f(P.sit * 40) + ') rotate(' + f(P.tailBase + wag * P.wagAmp) + ' 234 392)');
 
-      // ön bacaklar (adım atma)
-      const baseTop = lerp(256, G - 30, P.lie) + breath * 0.6 + sq * 8;
+      // bacaklar + ayaklar
+      const sit = P.sit, sk = smooth01((sit - 0.35) / 0.4);
       for (let i = 0; i < 2; i++) {
-        const lift = Math.max(0, Math.sin(ph + i * Math.PI)) * 13 * wa;
-        const swing = Math.cos(ph + i * Math.PI) * 3 * wa * w.dir;
-        const x = S.legs[i] + swing, top = baseTop + lift * 0.25, wrist = G - 14 - lift, h = wrist - top;
-        const d = legShape(x, top, wrist, 17.5, 13);
-        const hk = clamp(h / 90, 0.3, 1);
-        r['legPath' + i].setAttribute('d', this.hq ? furD(samplePath(d, 0, 20), {
-          h: 6 * hk, hv: 2 * hk, flow: 0.9, seed: 40 + i,
-          amount: (mx, my, nx, ny) => {
-            if (my < top + 10 || ny > 0.5) return 0;
-            const tt = (my - top) / (h || 1), outer = i === 0 ? nx < -0.4 : nx > 0.4;
-            if (tt > 0.3 && tt < 0.65) return outer ? 1 : 0;
-            if (tt > 0.78) return 0.7;
-            return 0;
-          }
-        }) : d);
-        r['legStr' + i].setAttribute('d', 'M' + f(x - 6) + ' ' + f(top + h * 0.3) + ' q3 6 1 12 M' + f(x + 5) + ' ' + f(top + h * 0.5) + ' q3 6 1 12');
-        r['paw' + i].setAttribute('transform', 'translate(' + f(swing) + ' ' + f(-lift) + ')');
+        const dir = i === 0 ? -1 : 1, lift = P['foot' + i];
+        const hip = [HIP[i][0], HIP[i][1] + up];
+        const fx = lerp(FOOT[i][0], 200 + dir * 52, sit) + dir * lift * 14;
+        const fyy = lerp(G - 16, G - 22, sit) - lift * 44 - Math.max(0, R.hop) * 0;
+        const footY = Math.min(fyy, hip[1] + 70);
+        const knee = [lerp(hip[0], fx, 0.5) + dir * (sit * 10 + lift * 8), lerp(hip[1], footY, 0.5)];
+        this._limb('leg', i, [hip, knee, [fx, footY]], 21);
+        r['foot' + i].setAttribute('transform', 'translate(' + f(fx) + ' ' + f(footY + 16) + ') rotate(' + f(dir * (6 + lift * 20)) + ')');
+        r['foot' + i].setAttribute('opacity', f(1 - sk));
+        r['sole' + i].setAttribute('transform', 'translate(' + f(fx + dir * 6) + ' ' + f(G - 18) + ') rotate(' + f(dir * 14) + ')');
+        r['sole' + i].setAttribute('opacity', f(sk));
       }
 
       // kafa
-      const hx = P.headX, hy = P.headY + P.lie * 70 + breath * 1.3 + sq * 6;
+      const hx = P.headX, hy = P.headY + breath * 1.2;
       r.head.setAttribute('transform', 'translate(' + f(hx) + ' ' + f(hy) + ') rotate(' + f(P.tilt - R.rot * 0.6) + ' 200 205) translate(200 205) scale(' + Math.round(P.headScale * 1000) / 1000 + ') translate(-200 -205)');
       r.face.setAttribute('transform', 'translate(' + f(P.faceX) + ' 0)');
       r.earsAll.forEach((e) => e.setAttribute('transform', 'translate(' + f(-P.faceX * 0.35) + ' 0)'));
-
       const tw = this.earTwitch.t >= 0 ? Math.sin(this.earTwitch.t / 0.35 * Math.PI * 3) * 8 : 0;
       const flap = R.rot ? Math.sin(this.t * 40) * 18 : 0;
+      const floppy = BREEDS[this.breed].ears.indexOf('floppy') === 0;
       for (let i = 0; i < 2; i++) {
         const twi = this.earTwitch.side === i ? tw : 0;
-        const walkFlap = Math.sin(ph * 2 + i) * 6 * wa;
-        if (this.species === 'dog') {
-          r['ear' + i].setAttribute('transform', 'rotate(' + f(P.earLift * 24 + wag * P.wagAmp * 0.12 + twi + breath * 0.6 + walkFlap + flap) + ' 136 80)');
-        } else {
-          r['ear' + i].setAttribute('transform', 'rotate(' + f(-P.earLift * 18 + twi + flap * 0.4) + ' 150 96)');
-        }
+        if (floppy) r['ear' + i].setAttribute('transform', 'rotate(' + f(P.earLift * 24 + wag * P.wagAmp * 0.12 + twi + breath * 0.6 + flap) + ' 136 80)');
+        else r['ear' + i].setAttribute('transform', 'rotate(' + f(-P.earLift * 16 + twi + flap * 0.4) + ' 150 96)');
       }
 
-      // gözler
+      // kollar (ters kinematik)
+      const shY = breath * 0.8;
+      const hands = [];
+      for (let i = 0; i < 2; i++) {
+        const Sx = SHOULDER[i][0], Sy = SHOULDER[i][1] + shY;
+        const res = ik(Sx, Sy, P['h' + i + 'x'], P['h' + i + 'y'], L1, L2, i === 0 ? 1 : -1);
+        this._limb('arm', i, [[Sx, Sy], [res.ex, res.ey], [res.hx, res.hy]], ARM_W);
+        const ang = Math.atan2(res.hy - res.ey, res.hx - res.ex) * 57.3;
+        r['hand' + i].setAttribute('transform', 'translate(' + f(res.hx) + ' ' + f(res.hy) + ') rotate(' + f(ang - 90) + ')');
+        hands.push([res.hx, res.hy]);
+      }
+      // eldeki nesne
+      const it = this.item;
+      if (it.show > 0.02 && it.type) {
+        r.handItem.setAttribute('display', 'inline');
+        const mx = (hands[0][0] + hands[1][0]) / 2, my = (hands[0][1] + hands[1][1]) / 2;
+        const sc = Math.round((0.5 + it.show * 0.5) * 100) / 100;
+        r.handItem.setAttribute('transform', 'translate(' + f(mx) + ' ' + f(my + (it.type === 'treat' ? -6 : 4)) + ') rotate(' + f(P.itemTilt) + ') scale(' + sc + ')');
+        r.handItem.setAttribute('opacity', f(clamp(it.show * 2, 0, 1)));
+        r.itemFood.setAttribute('display', it.type === 'food' ? 'inline' : 'none');
+        r.itemWater.setAttribute('display', it.type === 'water' ? 'inline' : 'none');
+        r.itemTreat.setAttribute('display', it.type === 'treat' ? 'inline' : 'none');
+        if (it.type === 'treat') r.itemTreatS.setAttribute('transform', 'scale(' + Math.round(Math.max(0.01, it.scale) * 100) / 100 + ')');
+        if (it.type === 'food') { const n = Math.ceil(it.amount * 7 - 0.001); for (let k = 0; k < 7; k++) { const e = r['hk' + k]; if (e) e.setAttribute('display', k < n ? 'inline' : 'none'); } }
+        if (it.type === 'water' && r.handWater) { r.handWater.setAttribute('ry', f(1 + it.amount * 4)); r.handWater.setAttribute('rx', f(16 + it.amount * 9)); }
+      } else r.handItem.setAttribute('display', 'none');
+
+      // gözler, kaşlar, ağız
       const bl = this.blink.t >= 0 ? Math.sin(clamp(this.blink.t / this.blink.dur, 0, 1) * Math.PI) : 0;
       const open = clamp(P.eyeOpen * (1 - bl), 0, 1);
       for (let i = 0; i < 2; i++) this._renderEye(i, S.eyes[i], open);
@@ -1407,7 +1727,6 @@
         r.whisk0.setAttribute('transform', 'rotate(' + f(wsk) + ' 172 184)');
         r.whisk1.setAttribute('transform', 'rotate(' + f(wsk) + ' 172 184)');
       }
-      // çamur lekeleri
       const dirt = f(clamp((45 - this.stats.cleanliness) / 30, 0, 1));
       r.mudBody.setAttribute('opacity', dirt); r.mudHead.setAttribute('opacity', dirt);
     }
@@ -1465,63 +1784,95 @@
     }
   }
 
-  // ================================================================ Aksiyonlar
+  const PALETTES_PROPS = {
+    foodBowl: '#F06C8B', foodBowlShade: '#C94A6A', kibble: '#A8582B', kibble2: '#C7773D',
+    waterBowl: '#4FA9D6', waterBowlShade: '#2F7FAE', water: '#9EDCFA',
+    heart: '#FF5E86', zzz: '#7C8BE0', drop: '#6CC3F0', shadow: 'rgba(60,30,20,0.16)', mud: '#7E5233',
+    treat: '#E8B26A', fish: '#F7A0B4', chrome: '#D4DDE6', chromeDark: '#8E9BA8', hose: '#A9B8C6',
+    foamEdge: '#B9DDF2', stink: '#8BA35A'
+  };
+
+  // ================================================================ Aksiyonlar (kol hareketleri dahil)
   // { name, dur, busy, silent, start(), update(T, dt, p, t), end(), cancel() }
+  // ağzını patisiyle silme
+  function wipeMouth(pet, T, t, k) {
+    const m = pet._mouthUpper();
+    T.h1x = lerp(T.h1x, m.x + Math.sin(t * 11) * 26, k); T.h1y = lerp(T.h1y, m.y + 8, k);
+    T.h0x = lerp(T.h0x, 188, k); T.h0y = lerp(T.h0y, 326, k);
+    T.mouthOpen = 0; T.tongue = 0; T.squint = 0.6 * k; T.eyeOpen = lerp(T.eyeOpen, 0.5, k); T.smile = 0.9; T.tilt += -6 * k;
+  }
+  // karnını sıvazlama
+  function patBelly(T, t, k) {
+    T.h0x = lerp(T.h0x, 182 + Math.cos(t * 6) * 10, k); T.h0y = lerp(T.h0y, 330 + Math.sin(t * 6) * 8, k);
+    T.h1x = lerp(T.h1x, 218 + Math.cos(t * 6 + 2) * 10, k); T.h1y = lerp(T.h1y, 334 + Math.sin(t * 6 + 2) * 8, k);
+  }
+
   const ACTIONS = {
-    eat(pet) {
+    // kaptan mama: kabı iki eliyle tutar, kafasını eğip yer, sonra ağzını siler
+    eatBowl(pet) {
       return {
-        name: 'eat', dur: 5.6, busy: true,
-        start() { pet.bowls.foodAmount = 1; pet._updateKibbles(true); pet.bowls.foodTarget = 1; },
+        name: 'eat', dur: 7, busy: true,
+        start() { pet.item.amount = 1; pet.item.type = 'food'; this.bites = 0; },
         update(T, dt, p, t) {
-          T.wagFreq = 2.8; T.wagAmp = 20; T.tailBase = -10; T.earLift = 0.2; T.brow = 0; T.lie = 0;
-          if (t < 0.7) { T.lookY = 1; T.lookX = 0; T.smile = 1; T.mouthOpen = 0.25; T.tongue = 0.35; T.pupil = 1; T.headY = 10 * smooth01(t / 0.7); return; }
+          T.wagFreq = 2.8; T.wagAmp = 20; T.tailBase = -10; T.earLift = 0.2; T.brow = 0; T.sit = 0;
+          T.itemType = 'food';
           if (t < 4.6) {
+            T.itemShow = 1;
+            T.h0x = 150; T.h0y = 262; T.h1x = 250; T.h1y = 262; T.itemTilt = 0;
+            if (t < 0.7) { T.lookY = 1; T.smile = 1; T.mouthOpen = 0.25; T.tongue = 0.35; T.pupil = 1; return; }
             const c = (t - 0.7) / 1.3, u = c - Math.floor(c);
             const down = u < 0.4 ? smooth01(u / 0.2) : 1 - smooth01((u - 0.4) / 0.2);
-            T.headY = lerp(98, 128, down); T.headScale = 0.94; T.tilt = Math.sin(t * 2) * 3;
+            T.headY = lerp(16, 46, down); T.headScale = 0.96; T.tilt = Math.sin(t * 2) * 3;
+            T.h0y += down * 6; T.h1y += down * 6;
             T.lookY = 1; T.squint = 0.5; T.eyeOpen = 0.55; T.smile = 0.6;
-            if (u > 0.38 && u < 0.45 && !this._crumbed) {
-              this._crumbed = true;
-              pet.bowls.foodAmount = Math.max(0, pet.bowls.foodAmount - 1 / 3.2); pet._updateKibbles();
-              for (let i = 0; i < 4; i++) pet._spawnL('crumb', 200 + rand(-30, 30), 322, { vx: rand(-60, 60), vy: rand(-110, -60), g: 320, life: 0.8 });
+            if (u > 0.38 && u < 0.45 && !this._bit) {
+              this._bit = true;
+              pet.item.amount = Math.max(0, pet.item.amount - 1 / 3);
+              for (let i = 0; i < 4; i++) pet._spawnL('crumb', 200 + rand(-30, 30), 250 + pet._upY(), { vx: rand(-60, 60), vy: rand(-110, -60), g: 320, life: 0.8 });
             }
-            if (u > 0.5) this._crumbed = false;
+            if (u > 0.5) this._bit = false;
             if (u > 0.55) { T.mouthOpen = 0.12 + 0.28 * Math.max(0, Math.sin(t * 15)); T.headY += Math.sin(t * 15) * 1.5; } else T.mouthOpen = 0;
-            T.tongue = 0;
             return;
           }
-          pet.bowls.foodTarget = 0;
-          T.headY = 0; T.smile = 1; T.squint = 0.6; T.eyeOpen = 0.6; T.blush = 0.5; T.mouthOpen = 0.12; T.tongue = 0.6; T.tongueX = Math.sin(t * 9);
+          T.itemShow = 0;
+          if (t < 6) { wipeMouth(pet, T, t, smooth01((t - 4.6) / 0.3)); return; }
+          patBelly(T, t, 1); T.smile = 1; T.squint = 0.6; T.eyeOpen = 0.4; T.blush = 0.5;
         },
         end() {
-          pet.bowls.foodTarget = 0;
           pet.stats.fullness = Math.min(100, pet.stats.fullness + 35);
           pet.stats.happiness = Math.min(100, pet.stats.happiness + 5);
           pet._spawnL('heart', 240, 80, { vy: -50, s: 1.1 });
           pet._emit('stats', pet.getState());
-        },
-        cancel() { pet.bowls.foodTarget = 0; }
+        }
       };
     },
 
-    // Elle verilen mamayı ağzına alıp çiğner
+    // elle verilen mamayı patileriyle tutup yer, ağzını siler
     nom(pet) {
       return {
-        name: 'eat', dur: 2.6, busy: true,
-        start() {
-          const S = SPECIES[pet.species], P = pet.P;
-          for (let i = 0; i < 5; i++) pet._spawnL('crumb', 200 + P.faceX + rand(-14, 14), S.mouth.y + 14 + P.headY, { vx: rand(-70, 70), vy: rand(-90, -30), g: 420, life: 0.8 });
-        },
+        name: 'eat', dur: 4.4, busy: true,
+        start() { this.bite = -1; },
         update(T, dt, p, t) {
-          T.wagFreq = 3.2; T.wagAmp = 22; T.tailBase = -12; T.earLift = 0.3; T.brow = -0.1; T.blush = 0.5; T.lookY = 0; T.lookX = 0;
-          if (t < 0.15) { T.mouthOpen = 0; T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1; T._squash = 0.4; return; }
-          if (t < 1.9) {
-            const c = Math.max(0, Math.sin(t * 15));
-            T.mouthOpen = 0.06 + 0.22 * c; T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1;
-            T.headY = Math.sin(t * 15) * 1.8; T.tilt = Math.sin(t * 3) * 4;
+          T.wagFreq = 3.2; T.wagAmp = 22; T.tailBase = -12; T.earLift = 0.3; T.brow = -0.1; T.blush = 0.5; T.lookY = 0.3; T.lookX = 0;
+          const m = pet._mouthUpper();
+          T.itemType = 'treat';
+          if (t < 2) {
+            T.itemShow = 1;
+            T.h0x = m.x - 20; T.h0y = m.y + 22; T.h1x = m.x + 20; T.h1y = m.y + 22;
+            const bites = Math.floor(t / 0.5);
+            T.itemScale = 1 - Math.min(1, bites / 4);
+            if (bites !== this.bite) {
+              this.bite = bites;
+              for (let i = 0; i < 3; i++) pet._spawnL('crumb', m.x + rand(-14, 14), m.y + 20 + pet._upY(), { vx: rand(-70, 70), vy: rand(-90, -30), g: 420, life: 0.8 });
+            }
+            const c = Math.max(0, Math.sin(t * 13));
+            T.mouthOpen = 0.08 + 0.3 * c; T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1;
+            T.headY = Math.sin(t * 13) * 1.5;
             return;
           }
-          T.smile = 1; T.squint = 0.5; T.eyeOpen = 0.6; T.mouthOpen = 0.12; T.tongue = 0.6; T.tongueX = Math.sin(t * 10);
+          T.itemShow = 0;
+          if (t < 3.3) { wipeMouth(pet, T, t, smooth01((t - 2) / 0.3)); return; }
+          patBelly(T, t, 1); T.smile = 1; T.squint = 0.5; T.eyeOpen = 0.6; T.mouthOpen = 0.12; T.tongue = 0.6; T.tongueX = Math.sin(t * 10);
         },
         end() {
           pet.stats.fullness = Math.min(100, pet.stats.fullness + 15);
@@ -1532,70 +1883,73 @@
       };
     },
 
-    refuse() { // tokken mamayı reddeder (başını sallar)
+    refuse() {
       return {
-        name: 'refuse', dur: 1.2, silent: true,
+        name: 'refuse', dur: 1.3, silent: true,
         update(T, dt, p, t) {
           const o = bump(p, 0, 1, 0.2);
           T.faceX = Math.sin(t * 16) * 9 * o; T.tilt = Math.sin(t * 16) * 5 * o;
           T.eyeOpen = lerp(1, 0.5, o); T.smile = 0.2; T.brow = 0.2; T.mouthOpen = 0;
+          T.h1x = lerp(T.h1x, 258 + Math.sin(t * 16) * 16, o); T.h1y = lerp(T.h1y, 236, o); // eliyle "hayır"
+          T.h0x = lerp(T.h0x, 184, o); T.h0y = lerp(T.h0y, 330, o);
         }
       };
     },
 
+    // su kabını iki eliyle tutup içer
     drink(pet) {
       return {
-        name: 'drink', dur: 5, busy: true,
-        start() { pet.bowls.waterAmount = 1; pet.bowls.waterTarget = 1; this.rip = 0; },
+        name: 'drink', dur: 6, busy: true,
+        start() { pet.item.amount = 1; pet.item.type = 'water'; this.rip = 0; },
         update(T, dt, p, t) {
-          T.wagFreq = 2; T.wagAmp = 14; T.earLift = 0.1; T.brow = 0; T.lie = 0;
-          if (t < 0.7) { T.lookY = 1; T.lookX = 0; T.smile = 0.8; T.mouthOpen = 0.3; T.tongue = 0.5; T.pupil = 0.9; T.headY = 10 * smooth01(t / 0.7); return; }
+          T.wagFreq = 2; T.wagAmp = 14; T.earLift = 0.1; T.brow = 0; T.sit = 0;
+          T.itemType = 'water';
           if (t < 4) {
-            const lap = Math.sin(t * 22);
-            T.headY = 112 + lap * 2.5; T.headScale = 0.94; T.lookY = 1; T.eyeOpen = 0.5; T.squint = 0.4;
+            T.itemShow = 1;
+            const m = pet._mouthUpper();
+            T.h0x = m.x - 46; T.h0y = m.y + 52; T.h1x = m.x + 46; T.h1y = m.y + 52;
+            if (t < 0.7) { T.lookY = 1; T.smile = 0.8; T.mouthOpen = 0.3; T.tongue = 0.5; T.pupil = 0.9; T.itemTilt = 0; return; }
+            const lap = Math.sin(t * 20);
+            T.itemTilt = -8; T.headY = 14 + lap * 2; T.lookY = 1; T.eyeOpen = 0.5; T.squint = 0.4;
             T.mouthOpen = 0.35; T.tongue = 0.6 + 0.6 * Math.max(0, lap); T.smile = 0.5;
-            pet.bowls.waterAmount = Math.max(0.15, 1 - (t - 0.7) / 3.3 * 0.85);
+            pet.item.amount = Math.max(0.1, 1 - (t - 0.7) / 3.3 * 0.9);
             this.rip -= dt;
-            if (this.rip <= 0) {
-              this.rip = 0.28;
-              pet._spawn('ripple', 200 + rand(-12, 12), 340 - pet.bowls.waterAmount * 4, { life: 0.9 });
-              if (Math.random() < 0.6) pet._spawnL('drop', 200 + rand(-25, 25), 330, { vx: rand(-50, 50), vy: rand(-120, -80), g: 380, life: 0.7, s: 0.8 });
-            }
+            if (this.rip <= 0) { this.rip = 0.25; pet._spawnL('drop', m.x + rand(-25, 25), m.y + 40 + pet._upY(), { vx: rand(-50, 50), vy: rand(-120, -80), g: 380, life: 0.7, s: 0.7 }); }
             return;
           }
-          pet.bowls.waterTarget = 0;
-          T.headY = 0; T.smile = 1; T.squint = 0.5; T.eyeOpen = 0.65; T.mouthOpen = 0.1; T.tongue = 0.5; T.tongueX = Math.sin(t * 9);
-          if (!this.dripped) { this.dripped = true; for (let i = 0; i < 3; i++) pet._spawnL('drop', 200 + rand(-8, 8), 205, { vy: rand(10, 40), g: 300, life: 0.9, s: 0.7 }); }
+          T.itemShow = 0;
+          if (t < 5.2) { wipeMouth(pet, T, t, smooth01((t - 4) / 0.3)); return; }
+          T.smile = 1; T.squint = 0.5; T.eyeOpen = 0.65; T.mouthOpen = 0.1; T.tongue = 0.5; T.tongueX = Math.sin(t * 9);
         },
         end() {
-          pet.bowls.waterTarget = 0;
           pet.stats.hydration = Math.min(100, pet.stats.hydration + 40);
           pet.stats.happiness = Math.min(100, pet.stats.happiness + 3);
           pet._spawnL('sparkle', 250, 90, { vy: -40, s: 1.1, vr: 90 });
           pet._emit('stats', pet.getState());
-        },
-        cancel() { pet.bowls.waterTarget = 0; }
+        }
       };
     },
 
-    // Duştan sonra silkelenerek kurulanma
+    // duştan sonra silkelenerek kurulanma (kollar çırpınır)
     shakeDry(pet) {
       return {
-        name: 'shakeDry', dur: 2.8, busy: true,
+        name: 'shakeDry', dur: 3, busy: true,
         start() { this.pop = 0; this.burst = 0; },
         update(T, dt, p, t) {
-          T.lie = 0;
+          T.sit = 0;
           if (t < 1.9) {
             const env = bump(t, 0.1, 1.9, 0.2);
-            T._rot = Math.sin(t * Math.PI * 2 * 6.5) * 13 * env;
-            T._shake = Math.sin(t * Math.PI * 2 * 6.5 + 1) * 5 * env;
+            T._rot = Math.sin(t * Math.PI * 2 * 6.5) * 10 * env;
+            T._shake = Math.sin(t * Math.PI * 2 * 6.5 + 1) * 6 * env;
             T.eyeOpen = 0; T.closedCurve = 0.2; T.squint = 1; T.mouthOpen = 0.2 * env; T.smile = 0.3;
             T.earLift = 0.3; T.wagFreq = 6; T.wagAmp = 25 * env; T.tailBase = -10;
+            const fl = Math.sin(t * 38);
+            T.h0x = 108; T.h0y = 262 + fl * 30; T.h1x = 292; T.h1y = 262 - fl * 30;
             this.burst -= dt;
             if (this.burst <= 0 && env > 0.2) {
               this.burst = 0.02;
-              const a = rand(0, Math.PI * 2), rr = rand(70, 110);
-              const cy = Math.random() < 0.5 ? pet._headLocal().y : 290;
+              const a = rand(0, Math.PI * 2), rr = rand(80, 120);
+              const cy = Math.random() < 0.5 ? pet._headLocal().y : 320;
               pet._spawnL('drop', 200 + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.8, { vx: Math.cos(a) * rand(200, 320), vy: Math.sin(a) * rand(150, 260) - 80, g: 600, life: 0.7, s: 0.7 });
             }
             this.pop -= dt;
@@ -1605,11 +1959,12 @@
           }
           if (pet.foam.length) pet._popFoam(pet.foam.length);
           pet.wet = 0;
-          const o = bump(t, 1.9, 2.8, 0.3);
+          const o = bump(t, 1.9, 3, 0.3);
           T._fluff = o; T.smile = 1; T.eyeOpen = 0; T.closedCurve = 1; T.blush = 0.6; T.earLift = 0.6; T.wagFreq = 3; T.wagAmp = 20;
+          T.h0x = 128; T.h0y = 212; T.h1x = 272; T.h1y = 212; // "tertemiz oldum!" kollar havada
           if (!this.sparkled) {
             this.sparkled = true;
-            for (let i = 0; i < 5; i++) pet._spawnL('sparkle', rand(110, 290), rand(60, 300), { vy: -40, s: rand(0.8, 1.3), vr: 120, life: 1.2 });
+            for (let i = 0; i < 6; i++) pet._spawnL('sparkle', rand(110, 290), rand(60, 380), { vy: -40, s: rand(0.8, 1.3), vr: 120, life: 1.2 });
           }
         },
         end() {
@@ -1618,20 +1973,33 @@
           pet.stats.happiness = Math.min(100, pet.stats.happiness + (pet.species === 'dog' ? 6 : 2));
           pet._emit('stats', pet.getState());
         },
-        cancel() { pet.wet = 0; }
+        cancel() { pet.wet = 0; if (pet.foam.length) pet._popFoam(pet.foam.length); }
       };
     },
 
+    // esneme + kollarını gerinme
     yawn() {
       return {
-        name: 'yawn', dur: 2.2, silent: true,
+        name: 'yawn', dur: 2.4, silent: true,
         update(T, dt, p) {
-          const o = bump(p, 0.15, 0.85, 0.3);
+          const o = bump(p, 0.12, 0.88, 0.3);
           T.mouthOpen = lerp(T.mouthOpen, 1.1, o); T.tongue = lerp(T.tongue, 0, o);
           T.eyeOpen = lerp(T.eyeOpen, 0, smooth01(o * 1.6)); T.closedCurve = 0.2;
-          T.headY = lerp(T.headY, -10, o); T.tilt = lerp(T.tilt, -6, o);
+          T.headY = lerp(T.headY, -8, o); T.tilt = lerp(T.tilt, -6, o);
           T.browY = -5 * o; T.brow = lerp(T.brow, 0.4, o); T.earLift = lerp(T.earLift, -0.5, o);
+          T.h0x = lerp(T.h0x, 140, o); T.h0y = lerp(T.h0y, 160, o); T.h1x = lerp(T.h1x, 260, o); T.h1y = lerp(T.h1y, 160, o);
+          T._squash = -0.3 * o;
           if (p > 0.85) { T.mouthOpen = 0.1 * Math.max(0, Math.sin(p * 60)); T.smile = 0.3; }
+        }
+      };
+    },
+    stretch() {
+      return {
+        name: 'stretch', dur: 2, silent: true,
+        update(T, dt, p) {
+          const o = bump(p, 0, 1, 0.3);
+          T.h0x = lerp(T.h0x, 120, o); T.h0y = lerp(T.h0y, 170, o); T.h1x = lerp(T.h1x, 280, o); T.h1y = lerp(T.h1y, 170, o);
+          T._squash = -0.35 * o; T.eyeOpen = lerp(T.eyeOpen, 0, o); T.closedCurve = 1; T.smile = 0.8; T.headY -= 6 * o;
         }
       };
     },
@@ -1640,14 +2008,19 @@
     },
     wake(pet) {
       return {
-        name: 'wake', dur: 2.8, busy: true,
+        name: 'wake', dur: 3, busy: true,
         start() { pet.sleeping = false; pet._emit('wake', {}); },
         update(T, dt, p, t) {
-          if (t < 0.8) { T.lie = 1; T.eyeOpen = 0; T.closedCurve = -1; T.earLift = lerp(-0.7, 0.4, t / 0.8); T.wagAmp = 2; return; }
-          if (t < 1.5) { T.lie = 1 - smooth01((t - 0.8) / 0.7); T.eyeOpen = 0.35 + 0.2 * Math.sin(t * 9); T.smile = 0.2; T.brow = 0.3; return; }
-          const o = bump(t, 1.5, 2.6, 0.3);
-          T.lie = 0; T.headY = -12 * o; T.tilt = -5 * o; T.mouthOpen = 1.05 * o; T.eyeOpen = lerp(0.6, 0, o);
-          T.closedCurve = 0.2; T._squash = -0.3 * o; T.smile = 0.5;
+          if (t < 0.8) { Object.assign(T, MOOD_POSES.sleeping); T.earLift = lerp(-0.7, 0.4, t / 0.8); return; }
+          if (t < 1.4) { // gözünü ovuşturur
+            T.sit = 1; T.eyeOpen = 0.2; T.squint = 0.6;
+            T.h1x = 234 + Math.cos(t * 16) * 5; T.h1y = 132 + Math.sin(t * 16) * 5; T.h0x = 168; T.h0y = 372;
+            return;
+          }
+          if (t < 2) { T.sit = 1 - smooth01((t - 1.4) / 0.6); T.eyeOpen = 0.5; T.smile = 0.3; return; }
+          const o = bump(t, 2, 3, 0.3); // ayağa kalkıp gerinme
+          T.sit = 0; T.h0x = lerp(T.h0x, 130, o); T.h0y = lerp(T.h0y, 160, o); T.h1x = lerp(T.h1x, 270, o); T.h1y = lerp(T.h1y, 160, o);
+          T.headY = -8 * o; T.mouthOpen = 1.05 * o; T.eyeOpen = lerp(0.6, 0, o); T.closedCurve = 0.2; T._squash = -0.3 * o; T.smile = 0.5;
         }
       };
     },
@@ -1656,18 +2029,33 @@
         name: 'stir', dur: 1.3, silent: true,
         update(T, dt, p) {
           const o = bump(p, 0, 1, 0.3);
-          T.smile = lerp(T.smile, 0.9, o); T.tilt = lerp(T.tilt, 14, o); T.mouthOpen = 0.12 * o * Math.max(0, Math.sin(p * 20));
+          T.smile = lerp(T.smile, 0.9, o); T.tilt = lerp(T.tilt, 16, o); T.mouthOpen = 0.12 * o * Math.max(0, Math.sin(p * 20));
           T.earLift = lerp(T.earLift, 0, o); T.blush = 0.5 * o;
         }
       };
     },
-    boop() {
+    // kafasına dokununca: patileri yanaklarında, kıkırdar
+    boop(pet) {
       return {
-        name: 'boop', dur: 0.9, silent: true,
+        name: 'boop', dur: 1.1, silent: true,
         update(T, dt, p) {
           const o = bump(p, 0, 1, 0.25);
           T.eyeOpen = lerp(T.eyeOpen, 0, o); T.closedCurve = 1; T.smile = 1; T.mouthOpen = 0.35 * o;
-          T.earLift = lerp(T.earLift, 0.6, o); T.blush = 0.7 * o; T._squash = 0.5 * Math.sin(p * Math.PI); T.wagFreq = 3; T.wagAmp = 20;
+          T.earLift = lerp(T.earLift, 0.6, o); T.blush = 0.9 * o; T._squash = 0.4 * Math.sin(p * Math.PI); T.wagFreq = 3; T.wagAmp = 20;
+          const cy = SPECIES[pet.species].cheekY + 6 + T.headY;
+          T.h0x = lerp(T.h0x, 152, o); T.h0y = lerp(T.h0y, cy, o); T.h1x = lerp(T.h1x, 248, o); T.h1y = lerp(T.h1y, cy, o);
+        }
+      };
+    },
+    // karnına dokununca gıdıklanır
+    giggle(pet) {
+      return {
+        name: 'giggle', dur: 1.2, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.2);
+          T.eyeOpen = lerp(T.eyeOpen, 0, o); T.closedCurve = 1; T.smile = 1; T.mouthOpen = 0.45 * o * (0.6 + 0.4 * Math.sin(t * 25));
+          T._shake = Math.sin(t * 40) * 2 * o; T.blush = 0.6 * o; T.tongue = pet.species === 'dog' ? 0.3 * o : 0;
+          T.h0x = lerp(T.h0x, 176, o); T.h0y = lerp(T.h0y, 320, o); T.h1x = lerp(T.h1x, 224, o); T.h1y = lerp(T.h1y, 320, o);
         }
       };
     },
@@ -1675,10 +2063,34 @@
       return {
         name: 'hop', dur: 0.95, silent: true,
         update(T, dt, p) {
-          T._hop = p > 0.15 && p < 0.85 ? -Math.sin((p - 0.15) / 0.7 * Math.PI) * 26 : 0;
+          T._hop = p > 0.15 && p < 0.85 ? -Math.sin((p - 0.15) / 0.7 * Math.PI) * 30 : 0;
           T._squash = p < 0.15 ? Math.sin(p / 0.15 * Math.PI) * 0.8 : p > 0.85 ? Math.sin((p - 0.85) / 0.15 * Math.PI) * 0.8 : -0.2;
           T.smile = 1; T.mouthOpen = 0.45; T.tongue = pet.species === 'dog' ? 0.4 : 0;
           T.eyeOpen = 0; T.closedCurve = 1; T.earLift = 0.6; T.wagFreq = 3.5; T.wagAmp = 22;
+          T.h0x = 124; T.h0y = 200; T.h1x = 276; T.h1y = 200;
+        }
+      };
+    },
+    // el sallama
+    wave() {
+      return {
+        name: 'wave', dur: 1.9, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.2);
+          T.h1x = lerp(T.h1x, 292 + Math.sin(t * 13) * 16, o); T.h1y = lerp(T.h1y, 190, o);
+          T.smile = 1; T.mouthOpen = 0.3 * o; T.tilt = -6 * o; T.earLift += 0.3 * o; T.lookX = 0; T.lookY = 0; T.faceX = 0;
+        }
+      };
+    },
+    dance(pet) {
+      return {
+        name: 'dance', dur: 2.6, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.12), b = Math.sin(t * 8);
+          T._rot = b * 5 * o; T.tilt = -b * 8 * o; T.smile = 1; T.mouthOpen = 0.3 * o; T.eyeOpen = 0; T.closedCurve = 1;
+          T.h0x = lerp(T.h0x, 130, o); T.h0y = lerp(T.h0y, 230 + b * 30, o); T.h1x = lerp(T.h1x, 270, o); T.h1y = lerp(T.h1y, 230 - b * 30, o);
+          T.foot0 = Math.max(0, b) * 0.4 * o; T.foot1 = Math.max(0, -b) * 0.4 * o; T.wagFreq = 3; T.wagAmp = 22;
+          if (Math.random() < dt * 2) pet._spawnL('text', rand(120, 280), 60, { text: '♪', vy: -40, life: 1.2, size: 26, color: '#9B8DE8' });
         }
       };
     },
@@ -1687,30 +2099,56 @@
         name: 'celebrate', dur: 2.2,
         update(T, dt, p, t) {
           const c = (t % 0.73) / 0.73;
-          T._hop = -Math.sin(c * Math.PI) * 30; T._squash = c < 0.1 || c > 0.9 ? 0.6 : -0.2;
+          T._hop = -Math.sin(c * Math.PI) * 34; T._squash = c < 0.1 || c > 0.9 ? 0.6 : -0.2;
           T.smile = 1; T.mouthOpen = 0.55; T.eyeOpen = 0; T.closedCurve = 1; T.blush = 0.7;
           T.earLift = 0.8; T.wagFreq = 4; T.wagAmp = 26; T.tilt = Math.sin(t * 6) * 6;
-          if (Math.random() < dt * 9) pet._spawnL(Math.random() < 0.5 ? 'sparkle' : 'heart', rand(90, 310), rand(60, 180), { vy: -50, vr: 120, s: rand(0.7, 1.2) });
+          T.h0x = 118 + Math.sin(t * 12) * 8; T.h0y = 170; T.h1x = 282 - Math.sin(t * 12) * 8; T.h1y = 170;
+          if (Math.random() < dt * 9) pet._spawnL(Math.random() < 0.5 ? 'sparkle' : 'heart', rand(90, 310), rand(40, 200), { vy: -50, vr: 120, s: rand(0.7, 1.2) });
         }
       };
     },
+    // karın guruldaması: eliyle karnını tutar
     growl(pet) {
       return {
-        name: 'growl', dur: 1.6, silent: true,
-        start() { pet._spawnL('growl', 200, 300, { vy: -10, life: 1.2, s: 1.2 }); pet._spawnL('text', 255, 288, { text: 'gurr', vy: -25, life: 1.3, size: 17 }); },
+        name: 'growl', dur: 1.8, silent: true,
+        start() { pet._spawnL('growl', 200, 320, { vy: -10, life: 1.2, s: 1.2 }); pet._spawnL('text', 262, 300, { text: 'gurr', vy: -25, life: 1.3, size: 17 }); },
         update(T, dt, p, t) {
-          const o = bump(p, 0.05, 0.75, 0.2);
-          T._shake = Math.sin(t * 70) * 2.2 * o; T.lookY = 1; T.lookX = 0; T.brow = 1; T.smile = -0.8; T.headY = 10 * o; T.mouthOpen = 0.1 * o; T.earLift = -0.8;
+          const o = bump(p, 0.05, 0.85, 0.2);
+          T._shake = Math.sin(t * 70) * 2 * o; T.lookY = 1; T.lookX = 0; T.brow = 1; T.smile = -0.8; T.headY = 10 * o; T.mouthOpen = 0.1 * o; T.earLift = -0.8;
+          patBelly(T, t, o);
         }
       };
     },
-    scratch() { // kirliyken kaşınma
+    rubEye(pet) {
       return {
-        name: 'scratch', dur: 1.6, silent: true,
+        name: 'rubEye', dur: 1.6, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.2), e = SPECIES[pet.species].eyes[0];
+          T.h0x = lerp(T.h0x, e.cx + Math.cos(t * 15) * 6, o); T.h0y = lerp(T.h0y, e.cy + 10 + T.headY + Math.sin(t * 15) * 5, o);
+          T.eyeOpen = lerp(T.eyeOpen, 0, o); T.closedCurve = -0.3; T.mouthOpen = 0.15 * o; T.tilt = 6 * o;
+        }
+      };
+    },
+    // sıcaktan eliyle yüzünü yelpazeler
+    fan(pet) {
+      return {
+        name: 'fan', dur: 1.8, silent: true,
         update(T, dt, p, t) {
           const o = bump(p, 0, 1, 0.2);
-          T.tilt += 16 * o; T.headX += 6 * o; T._shake = Math.sin(t * 40) * 1.5 * o;
-          T.eyeOpen = lerp(T.eyeOpen, 0.3, o); T.squint = 0.6 * o; T.smile = -0.2; T.brow = 0.5; T.earLift = -0.4;
+          T.h1x = lerp(T.h1x, 282 + Math.sin(t * 22) * 10, o); T.h1y = lerp(T.h1y, 168 + Math.cos(t * 22) * 8, o);
+          T.squint = 0.4 * o;
+        }
+      };
+    },
+    // kirliyken kaşınma
+    scratch(pet) {
+      return {
+        name: 'scratch', dur: 1.8, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.2);
+          T.tilt += 14 * o; T.headX += 5 * o; T.eyeOpen = lerp(T.eyeOpen, 0.3, o); T.squint = 0.6 * o; T.smile = -0.2; T.brow = 0.5; T.earLift = -0.4;
+          T.h0x = lerp(T.h0x, 150 + Math.sin(t * 30) * 7, o); T.h0y = lerp(T.h0y, 92 + T.headY, o);
+          T.h1x = lerp(T.h1x, 214 + Math.sin(t * 30 + 1) * 8, o); T.h1y = lerp(T.h1y, 300, o);
         }
       };
     },
@@ -1742,13 +2180,59 @@
           const o = bump(p, 0, 1, 0.3);
           T.tilt += 14 * dir * o; T.earLift += 0.4 * o; T.pupil = lerp(T.pupil, 1, o);
           T.lookX = -dir * 0.3; T.lookY = -0.2; T.mouthOpen = 0.1 * o; T.browY = -4 * o;
+          if (dir > 0) { T.h1x = lerp(T.h1x, 236, o); T.h1y = lerp(T.h1y, 196 + T.headY, o); } // çenesini tutar
+          else { T.h0x = lerp(T.h0x, 164, o); T.h0y = lerp(T.h0y, 196 + T.headY, o); }
+        }
+      };
+    },
+
+    // ---- top oyunu
+    swat(pet, side) {
+      return {
+        name: 'swat', dur: 0.6, busy: true, silent: true,
+        update(T, dt, p, t) {
+          const B = pet.ball, u = pet._toUpper(B.x, B.y);
+          T.smile = 1; T.mouthOpen = 0.4; T.eyeOpen = 0.9; T.pupil = 1; T.wagFreq = 3.5; T.wagAmp = 22; T.earLift = 0.5;
+          pet._lookAtWorld(T, B.x, B.y);
+          if (t < 0.16) {
+            T['h' + side + 'x'] = u.x; T['h' + side + 'y'] = u.y;
+            pet.P['h' + side + 'x'] = lerp(pet.P['h' + side + 'x'], u.x, 0.5); pet.P['h' + side + 'y'] = lerp(pet.P['h' + side + 'y'], u.y, 0.5);
+          } else if (!this.hit) {
+            this.hit = true;
+            const dir = Math.sign(B.x - pet.petX) || (side ? 1 : -1);
+            pet._hitBall(dir * rand(380, 620), -rand(600, 850));
+          } else { T.eyeOpen = 0; T.closedCurve = 1; }
+        }
+      };
+    },
+    header(pet) {
+      return {
+        name: 'header', dur: 0.7, busy: true, silent: true,
+        update(T, dt, p, t) {
+          T._hop = -Math.sin(p * Math.PI) * 22; T.headY = -10 * Math.sin(p * Math.PI);
+          T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1; T.mouthOpen = 0.3;
+          T.h0x = 124; T.h0y = 210; T.h1x = 276; T.h1y = 210;
+          if (t > 0.12 && !this.hit) { this.hit = true; pet._hitBall(rand(-260, 260), -rand(800, 980)); }
+        }
+      };
+    },
+    kick(pet, side) {
+      return {
+        name: 'kick', dur: 0.7, busy: true, silent: true,
+        update(T, dt, p, t) {
+          T['foot' + side] = bump(p, 0, 0.8, 0.3); T._rot = (side ? -1 : 1) * 4 * bump(p, 0, 0.8, 0.3);
+          T.smile = 1; T.mouthOpen = 0.3; T.eyeOpen = 0.8;
+          T.h0x = 116; T.h0y = 270; T.h1x = 284; T.h1y = 270;
+          pet._lookAtWorld(T, pet.ball.x, pet.ball.y);
+          if (t > 0.22 && !this.hit) { this.hit = true; const dir = side ? 1 : -1; pet._hitBall(dir * rand(500, 760), -rand(450, 650)); }
         }
       };
     }
   };
 
-  PetEngine.ACTIONS = Object.keys(ACTIONS).filter((n) => n !== 'fallAsleep');
-  PetEngine.PALETTES = PALETTES;
+  PetEngine.ACTIONS = Object.keys(ACTIONS).filter((n) => ['fallAsleep', 'swat', 'kick', 'header'].indexOf(n) < 0);
+  PetEngine.BREEDS = BREEDS;
+  PetEngine.EYES = EYES;
   PetEngine.MOODS = Object.keys(MOOD_POSES);
   return PetEngine;
 });
@@ -1758,12 +2242,12 @@
 /*
  * WebView köprüsü
  * Gelen komutlar (JSON string ya da obje):
- *   {type:'feed'} {type:'water'} {type:'sleep'} {type:'wake'} {type:'yawn'} {type:'celebrate'} {type:'pet'}
- *   {type:'setSpecies', species:'dog'|'cat'}
+ *   {type:'treat'} {type:'feed'} {type:'water'} {type:'bath'} {type:'ball'} {type:'sleep'} {type:'wake'} {type:'yawn'} {type:'celebrate'} {type:'pet'}
+ *   {type:'setSpecies', species:'dog'|'cat'}  {type:'setBreed', breed:'dalmatian'}  {type:'setEyes', eyes:'blue'}  {type:'getBreeds', species:'cat'}
  *   {type:'setState', state:{stats:{...}, sleeping:false, lastUpdate:1700000000000}}
  *   {type:'getState'}  {type:'setTimeScale', value:1}  {type:'setColors', colors:{...}}
  *   {type:'pause'} {type:'resume'} {type:'play', name:'growl'}
- * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'sleep'|'wake'|'state', data:{...}}
+ * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'sleep'|'wake'|'breed'|'breeds'|'state', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -1771,6 +2255,8 @@
 
   var pet = new PetEngine(document.getElementById('pet'), {
     species: q.get('species') || 'dog',
+    breed: q.get('breed') || undefined,
+    eyes: q.get('eyes') || undefined,
     timeScale: parseFloat(q.get('timeScale') || '1')
   });
   window.pet = pet;
@@ -1794,7 +2280,10 @@
       case 'water': pet.giveWater(); break;
       case 'treat': pet.feedTreat(); break;
       case 'bath': pet.bathe(); break;
-      case 'walkTo': pet.walkTo(cmd.x); break;
+      case 'ball': pet.throwBall(); break;
+      case 'setBreed': pet.setBreed(cmd.breed); break;
+      case 'setEyes': pet.setEyes(cmd.eyes); break;
+      case 'getBreeds': send('breeds', pet.getBreeds(cmd.species)); return;
       case 'sleep': pet.sleep(); break;
       case 'wake': pet.wake(); break;
       case 'yawn': pet.yawn(); break;

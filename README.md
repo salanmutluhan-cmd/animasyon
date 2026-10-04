@@ -1,120 +1,145 @@
 # 🐾 Pet Bakım Mini Oyunu: Animasyon Motoru
 
-Regl takip uygulaması içine eklenecek **köpek ve kedi bakma** mini oyunu için hazır animasyon paketi.
-Görünüm 2D, karşıdan bakış ve cartoon tarzında. Tüm animasyonlar kodla üretilir, bu yüzden her ekranda keskin görünür.
-Çalışması için tek bir HTML dosyası yeter, dış bağlantı gerekmez.
+Regl takip uygulaması için **köpek ve kedi bakma** mini oyunu. Hayvan 2D, karşıdan görünüyor ve cartoon tarzında çizilmiş.
+**İki ayağı üstünde duruyor**, kollarını kullanıyor, ekranda yürümüyor.
+Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 
-| Tüylü köpek | Mamayı ağzına götürünce | Yeme | Duş (köpük) | Silkelenme |
+| Ayakta | Kabı tutup yeme | Ağzını silme | Su içme | Duşta ovalanma |
 |---|---|---|---|---|
-| ![](docs/dog-idle.png) | ![](docs/dog-food-near.png) | ![](docs/dog-nom.png) | ![](docs/dog-shower.png) | ![](docs/dog-shake.png) |
+| ![](docs/ayakta.png) | ![](docs/mama-kabi.png) | ![](docs/agiz-silme.png) | ![](docs/su-icme.png) | ![](docs/dus.png) |
 
-| Yürüme | Kirli kedi | Kedi duşta | Kediye mama | Uyku |
-|---|---|---|---|---|
-| ![](docs/dog-walk.png) | ![](docs/cat-dirty.png) | ![](docs/cat-bath.png) | ![](docs/cat-treat.png) | ![](docs/cat-sleep.png) |
+| Silkelenme | Uyku (oturur) | Demo |
+|---|---|---|
+| ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-## Hızlı deneme (telefonda da)
+**23 gerçek cins:**
 
-`demo.html` **tek başına çalışır**, yanında başka dosya gerekmez. Telefona gönderip Chrome ile açabilirsiniz.
+![](docs/cinsler.png)
 
-> ⚠️ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. Dosyayı indirip
-> tarayıcıda açın ya da bilgisayarda `npx serve .` çalıştırıp telefondan `http://<bilgisayar-ip>:3000/demo.html` adresine girin.
+**Top oyunu** (patiyle vurma, kafa topu):
 
-## Oynanış
+![](docs/top-oyunu.png)
 
-| Etkileşim | Ne olur |
+## Hızlı deneme
+
+`demo.html` **tek başına çalışır**. Telefona gönderip Chrome ile açabilirsiniz.
+GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. Dosyayı indirip açın.
+
+## Oynanış ve kol hareketleri
+
+| Ne yapılır | Hayvan ne yapar |
 |---|---|
-| **Mama** (sol alt): parmakla sürükleyip **ağzına götür** | Hayvan mamaya bakar, uzaktaysa ona doğru yürür, yaklaştıkça ağzını açar, dil çıkarır, salyası akar. **Bırakınca** mamayı ağzına alır, çiğner, dudaklarını yalar (tokluk +15). Tokken başını çevirip reddeder. |
-| **Su** (sol alt): su kabını hayvanın önüne sürükle | Kap önüne konur, diliyle lap lap içer (su +40) |
-| **Duş** (sağ alt): duş başlığını **hayvanın üstüne** götür | Su akar, hayvanın kafasında ve gövdesinde köpükler birikir, gözlerini sıkar, kulakları düşer, çamur lekeleri çıkar |
-| Duş başlığını **yerine bırak** | Hayvan **silkelenerek kurulanır**: sallanır, etrafa su damlaları saçar, köpükler patlar, tüyleri kabarır, parıltılar çıkar (temizlik = 100) |
-| Parmağını hayvanın üstünde gezdir | Sevilme: gözleri ^^ olur, yanakları pembeleşir, kafasını parmağa doğru eğer, kalpler çıkar. Köpek dil çıkarıp kuyruk sallar, kedi mırlar |
-| Kafasına dokun | Mutlu tepki verir. Gövdesine dokunursan zıplar |
-| Kendiliğinden | Ekranda **sağa sola rastgele yürür**: adım atar, kafasını gittiği yöne çevirir, kulakları sallanır. Ruh haline göre hızlanır ya da yavaşlar, yorgunken çok az yürür |
+| **Mama**yı ağzına sürükle | Mamaya bakar, iki eliyle uzanır, ağzını açar, salyası akar. Bırakınca mamayı patileriyle tutup ısırarak yer, sonra **patisiyle ağzını siler** ve karnını sıvazlar. Tokken başını çevirir ve eliyle "hayır" yapar |
+| **Su** kabını hayvana sürükle | Kabı iki eliyle tutup diliyle içer, sonra ağzını siler |
+| **Top**u tutup fırlat | Gözleriyle topu izler. Top tutulurken kollarını açıp hazır bekler. Top yakına gelince patisiyle vurur, kafasının üstüne düşerse kafa atar, yerde ayaklarının yanındaysa tekme atar ("boing!"). Top duvarlardan ve yerden seker |
+| **Duş**u hayvanın üstüne götür | Gözlerini sıkar, kulaklarını indirir, **elleriyle kafasını ve karnını ovalar**, köpükler birikir |
+| Duş başlığını yerine bırak | Kollarını çırparak **silkelenir**, su saçar, köpükler patlar, tüyleri kabarır, kollarını havaya kaldırıp "tertemiz!" pozu verir |
+| Parmağını hayvanın üstünde gezdir | Elleri göğsünde birleşir, sallanır, gözleri ^^ olur, yanakları kızarır. Kedi mırlar |
+| Kafasına dokun | Patilerini yanaklarına koyup kıkırdar |
+| Karnına dokun | Gıdıklanır |
+| Uyut | Esneyip kollarını gerer, **yere oturur** (pembe pati yastıkları görünür), elleri kucağında uyur |
+| Uyandır | Gözünü ovuşturur, kalkar, gerinir |
 
-**Ruh halleri** (istatistiklere göre otomatik): `happy`, `neutral`, `hungry` (karnı guruldar), `thirsty` (dil dışarıda soluma),
-`tired` (yarı kapalı gözler, esneme), `dirty` (çamur lekeleri, koku, kaşınma), `sad`, `sleeping` (yatar, Zzz).
+**Kendiliğinden yaptıkları** (ruh haline göre):
+- **Mutlu:** el sallar, dans eder, zıplar.
+- **Aç:** karnını tutar, karnı guruldar.
+- **Yorgun:** gözünü ovuşturur, esner.
+- **Susamış:** eliyle yüzünü yelpazeler.
+- **Kirli:** kafasını ve karnını kaşır, çamur lekeleri görünür, koku çıkar.
+- **Üzgün:** elleri önde birleşik, iç çeker.
 
-**Çizim detayı:** Gövde, kalça, bacaklar, kuyruk, kulaklar ve yanaklarda tüy tutamları var. Göğüste kabarık açık renk tüy, tüy dokusu ve tüy çizgileri de var.
-Patilerde 4 parmak çıkıntısı ve parmak çizgileri, bileklerde ve dirseklerde tüy püskülleri bulunuyor.
-Gözlerde iris, göz bebeği, parlama ve göz kapakları; burunda burun delikleri var.
+## Özelleştirme
 
-## Dosyalar
+**Köpek cinsleri:** Golden Retriever, Kangal, Dalmaçyalı, Sibirya Kurdu (Husky), İngiliz Bulldog, Beagle, Pug, Siyah Labrador, Border Collie, Shiba Inu, Rottweiler, Pomeranian
 
+**Kedi cinsleri:** Sarman (Tekir), Van Kedisi, Ankara Kedisi, British Shorthair, Siyam, Smokin (Siyah-Beyaz), Üç Renkli (Calico), Siyah Kedi, Gri Tekir, Maine Coon, Scottish Fold
+
+Her cinsin kendine özgü özellikleri var:
+- **Desen:** benek, maske, tekir çizgisi, siyam uçları, Van lekesi, eyer gibi.
+- **Kulak:** sarkık, küçük sarkık, dik ya da katlanmış.
+- **Tüy yoğunluğu, pati rengi ve varsayılan göz rengi.**
+
+**Göz renkleri:** Kahverengi, Koyu kahve, Ela, Yeşil, Zümrüt, Mavi, Buz mavisi, Kehribar, Sarı, Bakır, Gri, Ela-Mavi (Van tipi iki farklı göz), Mavi-Yeşil
+
+```js
+pet.setBreed('kangal');   // cins değiştir
+pet.setEyes('iceblue');   // göz rengi (null → cinsin kendi rengi)
+pet.getBreeds('cat');     // liste: [{id, name, species, swatch:[renkler]}]
 ```
-demo.html                          ← TEK DOSYA deneme sayfası (butonlar + istatistikler)
-dist/pet.html                      ← TEK DOSYA, uygulamadaki WebView'de açılacak sayfa
-integration/android/PetView.kt     ← Android (Kotlin) WebView bileşeni
-integration/android/assets/pet.html← app/src/main/assets/ içine kopyalanacak dosya
-integration/react-native/          ← React Native / Expo bileşeni
-integration/flutter/pet_view.dart  ← Flutter widget'ı
-src/pet-engine.js                  ← animasyon motoru (kaynak)
-tools/build.js                     ← src değişince: node tools/build.js
-```
+
+| id | Cins | id | Cins |
+|---|---|---|---|
+| `golden` | Golden Retriever | `tabby` | Sarman (Tekir) |
+| `kangal` | Kangal | `van` | Van Kedisi |
+| `dalmatian` | Dalmaçyalı | `ankara` | Ankara Kedisi |
+| `husky` | Husky | `british` | British Shorthair |
+| `bulldog` | İngiliz Bulldog | `siamese` | Siyam |
+| `beagle` | Beagle | `tuxedo` | Smokin |
+| `pug` | Pug | `calico` | Üç Renkli |
+| `labrador` | Siyah Labrador | `black` | Siyah Kedi |
+| `collie` | Border Collie | `silver` | Gri Tekir |
+| `shiba` | Shiba Inu | `mainecoon` | Maine Coon |
+| `rottweiler` | Rottweiler | `scottish` | Scottish Fold |
+| `pomeranian` | Pomeranian | | |
 
 ## Android'e entegrasyon (Kotlin)
 
-1. `integration/android/assets/pet.html` → `app/src/main/assets/pet.html`
-2. `integration/android/PetView.kt` dosyasını projeye ekleyin, paket adını değiştirin.
-3. Layout ve kod:
+1. `integration/android/assets/pet.html` dosyasını `app/src/main/assets/pet.html` olarak kopyalayın.
+2. `integration/android/PetView.kt` dosyasını projeye ekleyin ve paket adını kendi paketinizle değiştirin.
 
 ```xml
 <com.example.pet.PetView
     android:id="@+id/petView"
     android:layout_width="match_parent"
-    android:layout_height="480dp" />
+    android:layout_height="520dp" />
 ```
 ```kotlin
 val prefs = getSharedPreferences("pet", MODE_PRIVATE)
 petView.onStats = { json -> prefs.edit().putString("state", json.toString()).apply() }
-petView.onMood = { mood -> /* "hungry", "dirty" ... bildirim vb. */ }
-petView.load(species = "dog", savedState = prefs.getString("state", null))
+petView.load(breed = "golden", savedState = prefs.getString("state", null))
 
-// isteğe bağlı butonlar (ekrandaki sürüklenebilir araçlar zaten hazır):
-feedBtn.setOnClickListener { petView.feedTreat() }
-bathBtn.setOnClickListener { petView.bathe() }
-sleepBtn.setOnClickListener { petView.sleep() }
+// Kullanıcının seçimlerinden:
+petView.setBreed("dalmatian")
+petView.setEyes("blue")
+
+// İsteğe bağlı butonlar (ekrandaki sürüklenebilir araçlar zaten hazır):
+petView.feedTreat(); petView.giveWater(); petView.bathe(); petView.throwBall(); petView.sleep(); petView.wake()
 ```
 
-React Native ve Flutter için `integration/` klasöründeki dosyalara bakın. Kullanım aynı: `feedTreat()`, `bathe()`, `giveWater()`, `sleep()`, `wake()`.
+React Native (`integration/react-native/`) ve Flutter (`integration/flutter/`) için de aynı metodlar var.
 
 ## Köprü protokolü
 
 **Uygulama → hayvan** (`window.petCommand(json)`):
 ```js
-{type:'treat'}  // elle mama (otomatik ağza götürme)
-{type:'feed'}   // mama kabından yeme
-{type:'water'} {type:'bath'} {type:'sleep'} {type:'wake'} {type:'pet'} {type:'celebrate'} {type:'yawn'}
-{type:'walkTo', x:0.3}          // 0..1 arası konuma yürü
-{type:'play', name:'growl'}     // herhangi bir animasyon
-{type:'setSpecies', species:'dog'|'cat'}
-{type:'setState', state:{ stats:{fullness, hydration, energy, happiness, cleanliness}, sleeping, lastUpdate }}
-{type:'setTimeScale', value: 1} {type:'setColors', colors:{...}} {type:'pause'} {type:'resume'} {type:'getState'}
+{type:'treat'} {type:'feed'} {type:'water'} {type:'bath'} {type:'ball'}
+{type:'sleep'} {type:'wake'} {type:'pet'} {type:'celebrate'} {type:'yawn'} {type:'play', name:'dance'}
+{type:'setBreed', breed:'van'}  {type:'setEyes', eyes:'odd'}  {type:'setSpecies', species:'cat'}
+{type:'getBreeds', species:'dog'}
+{type:'setState', state:{ breed, eyes, stats:{fullness, hydration, energy, happiness, cleanliness}, sleeping, lastUpdate }}
+{type:'setTimeScale', value:1} {type:'pause'} {type:'resume'} {type:'getState'}
 ```
 
-**Hayvan → uygulama** (`{source:'pet', type, data}` JSON):
-`ready`, `stats` (saniyede bir), `mood`, `action` (`eat`/`drink`/`bath`/`shakeDry`/`sleep`/`wake`… start/end), `drag` (araç sürükleme),
-`pet` (sevme başladı/bitti), `sleep`, `wake`, `state`.
+**Hayvan → uygulama** (`{source:'pet', type, data}`):
+`ready`, `stats` (saniyede bir; `breed` ve `eyes` dahil, kaydetmek için ideal), `mood`, `action`, `play` (topa vurdu),
+`drag`, `pet`, `sleep`, `wake`, `breed`, `breeds`, `state`.
 
 ## Durumu kaydetme
 
-`stats` olayıyla gelen objeyi saklayın, uygulama açılınca `setState` ile geri verin. `lastUpdate` sayesinde
-uygulama kapalıyken geçen süre (en fazla 72 saat) hesaplanır: hayvan acıkmış, susamış, kirlenmiş olur.
+`stats` olayıyla gelen objeyi saklayın, uygulama açılınca `setState` ile geri verin.
+Cins, göz rengi ve istatistikler birlikte geri yüklenir. `lastUpdate` sayesinde uygulama kapalıyken geçen süre de hesaba katılır.
 
 ## Ayarlar
 
-`new PetEngine(el, options)`:
+`new PetEngine(el, { breed, eyes, tools, background, quality, petScale, labels, timeScale, decay, stats })`
 
 | Seçenek | Varsayılan | Açıklama |
 |---|---|---|
-| `species` | `'dog'` | `'dog'` / `'cat'` |
-| `tools` | `true` | alt tepsideki Mama / Su / Duş araçları |
-| `background` | `true` | oda arka planı (pencere, halı, zemin). `false` → şeffaf |
-| `walk` | `true` | ekranda rastgele yürüme |
-| `quality` | `'high'` | `'low'` → tüy detayı kapalı (çok eski telefonlar için) |
-| `petScale` | `1` | hayvan boyutu |
-| `labels` | `{food:'Mama', water:'Su', shower:'Duş'}` | araç yazıları |
-| `timeScale` | `1` | test için zamanı hızlandırma (`3600` → 1 sn = 1 saat) |
-| `decay` | `{fullness:6, hydration:8, energy:5, energyRegen:22, happiness:3, cleanliness:4}` | saat başına değişim |
-| `colors` | — | renkler, ör. `{ cat:{ fur:'#3a3a3a', furShade:'#222', stripe:'#2a2a2a', light:'#fff', iris:'#f2c94c' } }` |
+| `breed` | `'golden'` | yukarıdaki cins id'lerinden biri |
+| `eyes` | cinse göre | göz rengi id |
+| `tools` | `true` | alt tepsideki Mama / Su / Top / Duş araçları |
+| `background` | `true` | oda (koltuk, raf, pencere, halı). `false` → şeffaf |
+| `quality` | `'high'` | `'low'` → tüy dokusu kapalı (çok eski telefonlar için) |
+| `labels` | `{food:'Mama', water:'Su', ball:'Top', shower:'Duş'}` | araç yazıları |
 
-Hayvan alanı en/boy oranına göre kendini ayarlar. **3:4 civarı dikey bir alan** önerilir.
+Önerilen alan oranı **3:4 civarı dikey**.

@@ -55,16 +55,22 @@ class PetView @JvmOverloads constructor(
     }
 
     /** species: "dog" | "cat". savedState: daha önce onStats ile kaydettiğiniz JSON (varsa). */
-    fun load(species: String = "dog", savedState: String? = null) {
+    fun load(species: String = "dog", savedState: String? = null, breed: String? = null) {
         pendingSpecies = species
         pendingState = savedState
-        loadUrl("file:///android_asset/pet.html?species=$species")
+        loadUrl("file:///android_asset/pet.html?species=$species" + (breed?.let { "&breed=$it" } ?: ""))
     }
 
     fun feedTreat() = send("""{"type":"treat"}""")     // elle mama: ağza götürülür
     fun feedBowl() = send("""{"type":"feed"}""")       // mama kabından yer
     fun giveWater() = send("""{"type":"water"}""")
     fun bathe() = send("""{"type":"bath"}""")          // duş + silkelenme
+    fun throwBall() = send("""{"type":"ball"}""")      // top oyunu
+    /** golden, kangal, dalmatian, husky, bulldog, beagle, pug, labrador, collie, shiba, rottweiler, pomeranian,
+     *  tabby, van, ankara, british, siamese, tuxedo, calico, black, silver, mainecoon, scottish */
+    fun setBreed(breed: String) = send("""{"type":"setBreed","breed":"$breed"}""")
+    /** brown, darkbrown, hazel, green, emerald, blue, iceblue, amber, yellow, copper, grey, odd, oddgreen  (null → cinse göre) */
+    fun setEyes(eyes: String?) = send(if (eyes == null) """{"type":"setEyes","eyes":null}""" else """{"type":"setEyes","eyes":"$eyes"}""")
     fun sleep() = send("""{"type":"sleep"}""")
     fun wake() = send("""{"type":"wake"}""")
     fun petOnce() = send("""{"type":"pet"}""")
@@ -88,7 +94,6 @@ class PetView @JvmOverloads constructor(
             main.post {
                 when (msg.optString("type")) {
                     "ready" -> {
-                        setSpecies(pendingSpecies)
                         pendingState?.let { setState(it) }
                         onReady?.invoke()
                     }
