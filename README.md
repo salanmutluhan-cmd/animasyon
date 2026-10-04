@@ -12,7 +12,11 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 |---|---|---|
 | ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-**23 gerçek cins:**
+**Yakın plan:** Kollar ve bacaklar kıvrımlı ve tüylü. Omuz ve uyluk kalın, bilek ve ayak bileği ince. Dirsek, bilek ve uylukta tüy püskülleri var. Gövdede göğüs, bel ve kalça hatları var.
+
+![](docs/yakin-plan.png)
+
+**23 gerçek cins.** Köpeklerde kafa şekli, burun uzunluğu, göz şekli, gövde yapısı ve kuyruk cinse göre değişir:
 
 ![](docs/cinsler.png)
 
@@ -54,7 +58,19 @@ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. D
 
 **Kedi cinsleri:** Sarman (Tekir), Van Kedisi, Ankara Kedisi, British Shorthair, Siyam, Smokin (Siyah-Beyaz), Üç Renkli (Calico), Siyah Kedi, Gri Tekir, Maine Coon, Scottish Fold
 
-Her cinsin kendine özgü özellikleri var:
+Her köpek cinsinin gerçek yüz ve vücut hatları var:
+- **Bulldog:** geniş ve basık yüz, sarkık yanaklar, alt çene dişleri, iri ve çarpık bacaklı gövde, kısa kuyruk.
+- **Pug:** yuvarlak yüz, iri gözler, burun kıvrımı, tombul gövde, kıvrık kuyruk.
+- **Border Collie ve Dalmaçyalı:** dar kafa, uzun burun, ince gövde.
+- **Kangal:** iri kafa, uzun burun, kara maske, büyük gövde, orak kuyruk.
+- **Rottweiler:** geniş kafa, kaslı gövde, kısa kuyruk.
+- **Husky ve Shiba:** kurt ve tilki yüzü, kıvrık kuyruk.
+- **Beagle:** uzun sarkık kulaklar.
+- **Pomeranian:** minik burun, kabarık gövde.
+
+Kedilerde British Shorthair ve Maine Coon daha iri yapılı.
+
+Her cinsin ayrıca kendine özgü şu özellikleri var:
 - **Desen:** benek, maske, tekir çizgisi, siyam uçları, Van lekesi, eyer gibi.
 - **Kulak:** sarkık, küçük sarkık, dik ya da katlanmış.
 - **Tüy yoğunluğu, pati rengi ve varsayılan göz rengi.**
