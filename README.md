@@ -1,7 +1,7 @@
 # 🐾 Pet Bakım Mini Oyunu: Animasyon Motoru
 
 Regl takip uygulaması için **köpek ve kedi bakma** mini oyunu. Hayvan 2D, karşıdan görünüyor ve cartoon tarzında çizilmiş.
-**Oyuncak ayıcık gibi oturuyor**, ön patilerini kullanıyor, ekranda yürümüyor.
+**İki ayağı üstünde duruyor**, kollarını kullanıyor, ekranda yürümüyor.
 Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 
 | Ayakta | Kabı tutup yeme | Ağzını silme | Su içme | Duşta ovalanma |
@@ -12,17 +12,7 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 |---|---|---|
 | ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-**Yakın plan:** Tarz yuvarlak, chibi bir peluş yavru. Hayvan insan gibi dik durmuyor, oyuncak ayıcık gibi hafif çömelmiş oturuyor.
-- **Oran:** Kafa büyük, gövde kısa ve kompakt.
-- **Arka bacaklar:** Yuvarlak kalça tümsekleri. Ayaklar öne uzanıyor ve pembe pati yastıkları görünüyor.
-- **Ön bacaklar:** Kısa, kalın ve yumuşak, patiler karnın önünde. Patiler parmaksız, yuvarlak ve küçük.
-- **Karın ve göğüs:** Karında kenarı yumuşak açık renk bir bölge, göğüste küçük bir tüy kabarıklığı var.
-- **Yüz:** Gözler sıcak ve oyuncak gibi, burun ve ağız küçük, kulaklar daha hafif. İfade masum ve gülümser.
-- **Çizgiler:** Dış çizgiler ince ve yumuşak.
-
-![](docs/yakin-plan.png)
-
-**23 gerçek cins.** Köpeklerde kafa şekli, burun uzunluğu, göz şekli, gövde yapısı ve kuyruk cinse göre değişir:
+**23 gerçek cins:**
 
 ![](docs/cinsler.png)
 
@@ -64,19 +54,7 @@ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. D
 
 **Kedi cinsleri:** Sarman (Tekir), Van Kedisi, Ankara Kedisi, British Shorthair, Siyam, Smokin (Siyah-Beyaz), Üç Renkli (Calico), Siyah Kedi, Gri Tekir, Maine Coon, Scottish Fold
 
-Her köpek cinsinin gerçek yüz ve vücut hatları var:
-- **Bulldog:** geniş ve basık yüz, sarkık yanaklar, alt çene dişleri, iri ve çarpık bacaklı gövde, kısa kuyruk.
-- **Pug:** yuvarlak yüz, iri gözler, burun kıvrımı, tombul gövde, kıvrık kuyruk.
-- **Border Collie ve Dalmaçyalı:** dar kafa, uzun burun, ince gövde.
-- **Kangal:** iri kafa, uzun burun, kara maske, büyük gövde, orak kuyruk.
-- **Rottweiler:** geniş kafa, kaslı gövde, kısa kuyruk.
-- **Husky ve Shiba:** kurt ve tilki yüzü, kıvrık kuyruk.
-- **Beagle:** uzun sarkık kulaklar.
-- **Pomeranian:** minik burun, kabarık gövde.
-
-Kedilerde British Shorthair ve Maine Coon daha iri yapılı.
-
-Her cinsin ayrıca kendine özgü şu özellikleri var:
+Her cinsin kendine özgü özellikleri var:
 - **Desen:** benek, maske, tekir çizgisi, siyam uçları, Van lekesi, eyer gibi.
 - **Kulak:** sarkık, küçük sarkık, dik ya da katlanmış.
 - **Tüy yoğunluğu, pati rengi ve varsayılan göz rengi.**
