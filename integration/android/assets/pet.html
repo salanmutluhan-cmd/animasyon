@@ -215,17 +215,18 @@
 
   // ================================================================ Gövde tipleri ve cinse göre kafa/vücut hatları
   // Yumuşak, pofuduk gövde tipleri: chest = göğüs genişliği, belly = karın (en geniş yer). Bel çukuru yok.
+  // Oyuncak ayıcık gibi oturan, kompakt yavru gövdeleri. arm: kısa kalın ön bacak kalınlığı, leg: arka bacak
   const BODY_TYPES = {
-    athletic: { top: 198, bottom: 420, neck: 46, chest: 72, belly: 86, arm: [17, 15.5, 14], leg: [28, 23, 19], L1: 44, L2: 42 },
-    slim:     { top: 198, bottom: 416, neck: 42, chest: 66, belly: 78, arm: [15.5, 14, 12.5], leg: [26, 21, 17], L1: 46, L2: 44 },
-    large:    { top: 200, bottom: 422, neck: 50, chest: 78, belly: 94, arm: [18.5, 17, 15], leg: [30, 25, 20], L1: 44, L2: 42 },
-    stocky:   { top: 202, bottom: 424, neck: 56, chest: 84, belly: 98, arm: [19.5, 18, 16], leg: [30, 25, 21], L1: 42, L2: 40, bowed: 1 },
-    chubby:   { top: 200, bottom: 424, neck: 52, chest: 78, belly: 98, arm: [17.5, 16, 15], leg: [28, 24, 20], L1: 42, L2: 40 },
-    compact:  { top: 198, bottom: 420, neck: 46, chest: 72, belly: 88, arm: [16.5, 15, 13.5], leg: [27, 22, 18], L1: 44, L2: 42 },
-    muscular: { top: 200, bottom: 420, neck: 50, chest: 80, belly: 90, arm: [18.5, 17, 15], leg: [30, 24, 20], L1: 44, L2: 42 },
-    fluffy:   { top: 198, bottom: 422, neck: 50, chest: 78, belly: 94, arm: [17, 15.5, 14], leg: [27, 22, 18], L1: 42, L2: 40 },
-    cat:      { top: 200, bottom: 418, neck: 44, chest: 68, belly: 82, arm: [15.5, 14, 12.5], leg: [26, 21, 16.5], L1: 44, L2: 42 },
-    catBig:   { top: 200, bottom: 420, neck: 48, chest: 76, belly: 92, arm: [17.5, 16, 14], leg: [29, 23, 18], L1: 44, L2: 42 }
+    athletic: { top: 206, bottom: 404, neck: 48, chest: 76, belly: 86, arm: [19, 18.5, 17.5], leg: [26, 24, 22], L1: 32, L2: 30 },
+    slim:     { top: 206, bottom: 400, neck: 44, chest: 70, belly: 80, arm: [17.5, 17, 16], leg: [24, 22, 20], L1: 33, L2: 31 },
+    large:    { top: 206, bottom: 406, neck: 52, chest: 82, belly: 94, arm: [20.5, 20, 19], leg: [28, 26, 24], L1: 32, L2: 30 },
+    stocky:   { top: 208, bottom: 406, neck: 56, chest: 86, belly: 98, arm: [21, 20.5, 20], leg: [28, 26, 24], L1: 30, L2: 28, bowed: 1 },
+    chubby:   { top: 206, bottom: 406, neck: 54, chest: 82, belly: 100, arm: [19.5, 19, 18], leg: [27, 25, 23], L1: 30, L2: 28 },
+    compact:  { top: 206, bottom: 404, neck: 48, chest: 76, belly: 88, arm: [18.5, 18, 17], leg: [26, 24, 22], L1: 32, L2: 30 },
+    muscular: { top: 206, bottom: 404, neck: 52, chest: 82, belly: 92, arm: [20.5, 20, 19], leg: [28, 26, 24], L1: 32, L2: 30 },
+    fluffy:   { top: 206, bottom: 406, neck: 52, chest: 80, belly: 94, arm: [19, 18.5, 17.5], leg: [26, 24, 22], L1: 30, L2: 28 },
+    cat:      { top: 208, bottom: 402, neck: 46, chest: 70, belly: 82, arm: [17.5, 17, 16], leg: [24, 22, 20], L1: 32, L2: 30 },
+    catBig:   { top: 208, bottom: 404, neck: 50, chest: 78, belly: 92, arm: [19, 18.5, 17.5], leg: [26, 24, 22], L1: 32, L2: 30 }
   };
   // Kuyruk şekilleri (orta çizgi noktaları + kalınlık)
   const TAILS = {
@@ -310,11 +311,12 @@
     const g = { sh, bt, L1: bt.L1, L2: bt.L2, tail: TAILS[sh.tail] };
     if (isDog) {
       sh.eyeY += 5; sh.eyeRx *= 0.95; sh.eyeRy *= 0.93;
+      sh.noseS *= 0.82; sh.mz = [sh.mz[0] * 0.86, sh.mz[1] * 0.86, sh.mz[2] - 2];
       sh.noseY = Math.max(sh.noseY, sh.eyeY + sh.eyeRy * 0.6 + 12);
       g.eyes = [{ cx: 200 - sh.eyeDx, cy: sh.eyeY, rx: sh.eyeRx, ry: sh.eyeRy }, { cx: 200 + sh.eyeDx, cy: sh.eyeY, rx: sh.eyeRx, ry: sh.eyeRy }];
       g.noseDy = sh.noseY - 155;
-      g.mouth = { x: 200, y: 176 + g.noseDy * sh.noseS, hw: clamp(sh.mz[0] * 0.38, 13, 22), depth: 34 };
-      g.tongueW = 11; g.cheekY = Math.max(sh.eyeY + 42, g.mouth.y);
+      g.mouth = { x: 200, y: 174 + g.noseDy * sh.noseS, hw: clamp(sh.mz[0] * 0.33, 11, 17), depth: 28 };
+      g.tongueW = 9; g.cheekY = Math.max(sh.eyeY + 42, g.mouth.y);
       g.headCY = (sh.top + sh.bot) / 2 + 2; g.headD = dogHeadD(sh);
     } else {
       g.eyes = [{ cx: 162, cy: 136, rx: 21, ry: 22 }, { cx: 238, cy: 136, rx: 21, ry: 22 }];
@@ -324,14 +326,11 @@
     g.bodyD = torsoD(bt);
     const bh = bt.bottom - bt.top;
     g.bellyD = ellipseD(200, f(bt.top + bh * 0.6), f(bt.belly * 0.6), f(bh * 0.36));
-    const shY = bt.top + 58, shX = bt.chest - 24;
+    const shY = bt.top + 46, shX = bt.chest - 20;
     g.shoulder = [[200 - shX, shY], [200 + shX, shY]];
-    const reach = (bt.L1 + bt.L2) * 0.93;
-    const dy = Math.sqrt(reach * reach - 18 * 18);
-    g.rest = [[200 - shX + 4, shY + Math.sqrt(reach * reach - 16)], [200 + shX - 4, shY + Math.sqrt(reach * reach - 16)]];
-    g.hip = [[200 - bt.belly * 0.42, bt.bottom - 24], [200 + bt.belly * 0.42, bt.bottom - 24]];
-    const spread = bt.bowed ? 14 : 2;
-    g.foot = [[g.hip[0][0] - spread, G], [g.hip[1][0] + spread, G]];
+    g.rest = [[200 - shX + 18, shY + 50], [200 + shX - 18, shY + 50]];        // kısa ön bacaklar, patiler karnın önünde
+    g.hip = [[200 - bt.belly * 0.6, bt.bottom - 10], [200 + bt.belly * 0.6, bt.bottom - 10]]; // oturan kalça (arka bacak)
+    g.foot = [[200 - bt.belly * 0.5, G - 20], [200 + bt.belly * 0.5, G - 20]];                // öne uzanan ayaklar
     return g;
   }
 
@@ -442,13 +441,14 @@
     }
   };
   const REST = [[128, 338], [272, 338]];
-  const SIT_DROP = 48;
+  const SIT_DROP = 14;
+  const HEAD_SCALE = 1.12; // yavru oranı: büyük kafa
 
   // ================================================================ Poz parametreleri
   const POSE_DEFAULT = {
     headX: 0, headY: 0, tilt: 0, headScale: 1, faceX: 0,
     lookX: 0, lookY: 0, eyeOpen: 1, squint: 0, closedCurve: 1, pupil: 0.3,
-    brow: 0, browY: 0, smile: 0.4, mouthOpen: 0, tongue: 0, tongueX: 0,
+    brow: 0, browY: -2, smile: 0.7, mouthOpen: 0, tongue: 0, tongueX: 0,
     earLift: 0, tailBase: 0, wagFreq: 1.2, wagAmp: 8,
     sit: 0, blush: 0.32, breathRate: 0.33, breathAmp: 1, whisker: 0,
     h0x: REST[0][0], h0y: REST[0][1], h1x: REST[1][0], h1y: REST[1][1],
@@ -461,8 +461,8 @@
     h0x: 11, h0y: 11, h1x: 11, h1y: 11, foot0: 14, foot1: 14, itemTilt: 8
   };
   const MOOD_POSES = {
-    happy:   { smile: 0.9, earLift: 0.35, tailBase: -10, wagFreq: 2.2, wagAmp: 18, pupil: 0.5 },
-    neutral: { smile: 0.4, earLift: 0.05, tailBase: 0, wagFreq: 1.1, wagAmp: 8 },
+    happy:   { smile: 1, mouthOpen: 0.22, earLift: 0.35, tailBase: -10, wagFreq: 2.2, wagAmp: 18, pupil: 0.5 },
+    neutral: { smile: 0.7, earLift: 0.05, tailBase: 0, wagFreq: 1.1, wagAmp: 8 },
     hungry:  { smile: -0.45, brow: 0.85, earLift: -0.45, tailBase: 18, wagFreq: 0.6, wagAmp: 3, lookY: 0.25, headY: 4,
                h0x: 180, h0y: 330, h1x: 222, h1y: 336 },
     thirsty: { smile: 0.15, brow: 0.45, mouthOpen: 0.38, tongue: 0.75, breathRate: 2.3, breathAmp: 1.3, earLift: -0.2, tailBase: 10, wagFreq: 0.8, wagAmp: 4 },
@@ -489,16 +489,15 @@
           '<ellipse cx="' + e.cx + '" cy="' + e.cy + '" rx="' + e.rx + '" ry="' + e.ry + '" fill="#fff"/>' +
           '<ellipse data-r="iris' + i + '" rx="' + f(e.rx * 0.97) + '" ry="' + f(e.ry * 0.97) + '" fill="url(#' + uid + '-iris' + i + ')"/>' +
           '<ellipse data-r="pupil' + i + '" rx="6" ry="10" fill="' + C.pupil + '"/>' +
-          '<ellipse cx="' + e.cx + '" cy="' + f(e.cy - e.ry * 0.62) + '" rx="' + e.rx + '" ry="' + f(e.ry * 0.42) + '" fill="#000" opacity="0.18"/>' +
-          '<circle data-r="hl' + i + 'a" r="' + f(e.rx * 0.36) + '" fill="#fff"/>' +
-          '<circle data-r="hl' + i + 'b" r="' + f(e.rx * 0.17) + '" fill="#fff"/>' +
-          '<circle data-r="hl' + i + 'c" r="' + f(e.rx * 0.09) + '" fill="#fff" opacity="0.85"/>' +
+          '<circle data-r="hl' + i + 'a" r="' + f(e.rx * 0.27) + '" fill="#fff" opacity="0.95"/>' +
+          '<circle data-r="hl' + i + 'b" r="' + f(e.rx * 0.12) + '" fill="#fff" opacity="0.8"/>' +
+          '<circle data-r="hl' + i + 'c" r="0" fill="#fff"/>' +
           '<path data-r="lid' + i + '" fill="' + C.fur + '"/>' +
           '<path data-r="low' + i + '" fill="' + C.fur + '"/>' +
           '<path data-r="lidEdge' + i + '" fill="none" stroke="' + C.line + '" stroke-width="3" stroke-linecap="round"/>' +
           '<path data-r="lowEdge' + i + '" fill="none" stroke="' + C.line + '" stroke-width="2.5" stroke-linecap="round"/>' +
         '</g>' +
-        '<ellipse cx="' + e.cx + '" cy="' + e.cy + '" rx="' + e.rx + '" ry="' + e.ry + '" fill="none" stroke="' + C.line + '" stroke-width="3"/>' +
+        '<ellipse cx="' + e.cx + '" cy="' + e.cy + '" rx="' + e.rx + '" ry="' + e.ry + '" fill="none" stroke="' + C.line + '" stroke-width="2.4"/>' +
       '</g>' +
       '<path data-r="closed' + i + '" fill="none" stroke="' + C.lineFace + '" stroke-width="4.5" stroke-linecap="round" display="none"/>';
   }
@@ -591,7 +590,7 @@
 
   function buildPet(b, C, P, uid, hq, geo) {
     const sp = b.species, S = geo, sh = geo.sh, bt = geo.bt, L = C.line, isDog = sp === 'dog', fl = b.fluff || 1;
-    const st = ' stroke="' + L + '" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"';
+    const st = ' stroke="' + L + '" stroke-width="3.4" stroke-linejoin="round" stroke-linecap="round"';
     const tex = (d, op) => hq && FUR_LOCKS ? '<path d="' + d + '" fill="url(#' + uid + '-tex)" opacity="' + (op || 0.5) + '"/>' : '';
     const strands = (d, col, w, op) => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + (w || 2.4) + '" stroke-linecap="round" opacity="' + (op || 0.6) + '"/>';
     const furOr = (d, o) => hq ? fur(d, o) : d;
@@ -622,10 +621,12 @@
         '<path d="' + pawD(0, 0, 25) + '" fill="' + C.paw + '"' + st + '/>' +
         '<path d="M-14 -16 Q0 -23 14 -16" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.35"/>' +
         '<path d="' + toeLines(0, 0, 25) + '" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/></g></g>';
-    const soleMk = (i) => '<g data-r="sole' + i + '" opacity="0">' +
-        '<ellipse cx="0" cy="0" rx="27" ry="23" fill="' + C.paw + '"' + st + '/>' +
-        '<path d="M-14 8 Q-16 -2 0 -2 Q16 -2 14 8 Q12 16 0 16 Q-12 16 -14 8 Z" fill="' + C.pad + '"/>' +
-        '<ellipse cx="-14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="0" cy="-15" rx="5.5" ry="6.5" fill="' + C.pad + '"/><ellipse cx="14" cy="-11" rx="5.5" ry="6.5" fill="' + C.pad + '"/></g>';
+    const pk = Math.round(bt.leg[2] / 22 * 100) / 100;
+    const soleMk = (i) => '<g data-r="sole' + i + '"><g transform="scale(' + pk + ')">' +
+        '<ellipse cx="0" cy="0" rx="24" ry="20" fill="' + C.paw + '"' + st + '/>' +
+        '<ellipse cx="-5" cy="-9" rx="11" ry="5" fill="#fff" opacity="0.25"/>' +
+        '<path d="M-11 7 Q-12 -1 0 -1 Q12 -1 11 7 Q9 13 0 13 Q-9 13 -11 7 Z" fill="' + C.pad + '"/>' +
+        '<ellipse cx="-11" cy="-9" rx="4.3" ry="5" fill="' + C.pad + '"/><ellipse cx="0" cy="-12" rx="4.3" ry="5" fill="' + C.pad + '"/><ellipse cx="11" cy="-9" rx="4.3" ry="5" fill="' + C.pad + '"/></g></g>';
     const limb = (name, i) => '<g data-r="' + name + i + '">' +
       (name === 'arm' ? '<path data-r="armA' + i + '" fill="#000" opacity="0.09" transform="translate(' + (i ? -4 : 4) + ' 6)"/>' : '') +
       '<path data-r="' + name + 'F' + i + '" fill="url(#' + uid + '-gLimb' + i + ')"/>' +
@@ -636,25 +637,29 @@
       '<path data-r="' + name + 'V' + i + '" fill="url(#' + uid + '-gVolSh)"/>' +
       '<path data-r="' + name + 'H' + i + '" fill="none" stroke="#ffffff" stroke-linecap="round" opacity="0.16"/>' +
       '<path data-r="' + name + 'S' + i + '" fill="none" stroke="' + C.furDeep + '" stroke-width="2.2" stroke-linecap="round" opacity="0.45"/>' +
-      '<path data-r="' + name + 'O' + i + '" fill="none" stroke="' + L + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path data-r="' + name + 'O' + i + '" fill="none" stroke="' + L + '" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>' +
       '</g>';
     const legs = limb('leg', 0) + limb('leg', 1) + footMk(0) + footMk(1);
     const soles = soleMk(0) + soleMk(1);
 
     // ---- gövde
     const yc = bt.top + 52, yw = bt.top + (bt.bottom - bt.top) * 0.6;
-    const bodyFur = furOr(geo.bodyD, { step: 15, h: 3.2 * fl, hv: 1.5, flow: 0.8, seed: 3, amount: (x, y, nx, ny) => (fl > 1.15 && y > bt.top + 40 && ny < 0.6 && Math.abs(nx) > 0.75 ? 1 : 0) });
-    const bellyD = furOr(geo.bellyD, { step: 12, h: 4.2 * fl, hv: 2, flow: 0.9, seed: 8, amount: (x, y, nx, ny) => (y < yc + 30 && ny > -0.2 ? 1 : 0) });
+    const bodyFur = furOr(geo.bodyD, { step: 16, h: 2.4 * fl, hv: 1, flow: 0.6, seed: 3, amount: (x, y, nx, ny) => (y > bt.top + 30 && ny < 0.75 && Math.abs(nx) > 0.5 ? 1 : 0) });
+    const bh = bt.bottom - bt.top;
+    const bellyD = ellipseD(200, f(bt.top + bh * 0.6), f(bt.belly * 0.62), f(bh * 0.4));
+    const chestTuft = furOr(ellipseD(200, bt.top + 22, bt.neck * 0.95, 26), { step: 12, h: 4.5 * fl, hv: 2, flow: 1, seed: 8, amount: (x, y, nx, ny) => (ny > 0.25 ? 1 : 0) });
+    const haunch = (sg) => furOr(ellipseD(f(200 + sg * bt.belly * 0.6), bt.bottom - 16, f(bt.leg[0] + 10), f(bt.leg[0] + 4)), { step: 14, h: 2.4 * fl, hv: 1, flow: 0.5, seed: 30 + sg, amount: (x, y, nx) => (nx * sg > 0.4 ? 1 : 0) });
+    const haunches = [-1, 1].map((sg) => { const d = haunch(sg); return '<path d="' + d + '" fill="url(#' + uid + '-gBody)"' + st + '/>' + vol(d); }).join('');
     const bellySh = mix(C.light, '#7A5A40', 0.3);
     const anatomy = '';
     const mud = (cx, cy, r, seed) => '<path d="' + fur(ellipseD(cx, cy, r, r * 0.75), { step: 9, h: 3.5, hv: 2, seed }) + '" fill="' + P.mud + '" opacity="0.9"/>' +
       '<circle cx="' + (cx + r * 0.9) + '" cy="' + (cy + r * 0.6) + '" r="' + (r * 0.25) + '" fill="' + P.mud + '"/>';
-    const body = '<g data-r="body">' +
+    const body = '<g data-r="body">' + haunches +
       '<path d="' + bodyFur + '" fill="url(#' + uid + '-gBody)"/>' + tex(bodyFur, 0.3) +
       clipped('bodyClip', bodyFur, patternMarkup('body', b, C, uid, geo) + locks([200 - bt.belly - 10, bt.top + 14, 200 + bt.belly + 10, bt.bottom], 5, 1, lockSh, lockHi)) +
-      '<path d="' + bellyD + '" fill="url(#' + uid + '-gLight)"/>' +
+      '<path d="' + bellyD + '" fill="url(#' + uid + '-gBelly)"/>' +
       clipped('bellyClip', bellyD, locks([140, bt.top + 30, 260, bt.bottom], 7, 0.9, bellySh, '#ffffff', 0.32)) + anatomy +
-      strands('M' + f(186) + ' ' + f(yc - 6) + ' q4 8 0 15 M200 ' + f(yc) + ' q4 8 0 15 M214 ' + f(yc - 6) + ' q4 8 0 15', C.lightShade, 2.6, 1) +
+      '<path d="' + chestTuft + '" fill="url(#' + uid + '-gLight)"/>' +
       '<ellipse cx="200" cy="' + (bt.top + 8) + '" rx="' + bt.neck * 1.4 + '" ry="12" fill="#000" opacity="0.07"/>' +           // kafanın gölgesi
       vol(bodyFur) +
       '<g data-r="mudBody" opacity="0">' + mud(150, 300, 18, 21) + mud(252, 262, 14, 22) + mud(258, 352, 16, 23) + mud(214, 330, 10, 25) + '</g>' +
@@ -675,8 +680,9 @@
       let ear = '<path d="' + earD + '" fill="url(#' + uid + '-gEar)"' + st + '/>' + tex(earD, 0.35) +
         '<path d="M132 84 C108 78 88 104 90 146 C92 168 102 178 110 172 C118 160 118 126 136 102 Z" fill="' + C.earShade + '" opacity="0.4"/>';
       if (b.pattern.includes('spots')) ear += '<ellipse cx="96" cy="130" rx="6" ry="5" fill="' + mix(C.ear, '#000000', 0.3) + '"/>';
-      if (b.ears === 'floppySmall') ear = '<g transform="translate(140 80) scale(0.68) translate(-140 -80)">' + ear + '</g>';
-      else if (sh.earLong) ear = '<g transform="translate(140 80) scale(1 1.22) translate(-140 -80)">' + ear + '</g>';
+      if (b.ears === 'floppySmall') ear = '<g transform="translate(140 80) scale(0.62) translate(-140 -80)">' + ear + '</g>';
+      else if (sh.earLong) ear = '<g transform="translate(140 80) scale(0.85 1.02) translate(-140 -80)">' + ear + '</g>';
+      else ear = '<g transform="translate(140 80) scale(0.82) translate(-140 -80)">' + ear + '</g>';
       earL = '<g data-r="ear0">' + ear + '</g>';
       earR = '<g transform="translate(400 0) scale(-1 1)"><g data-r="ear1">' + ear + '</g></g>';
     } else if (b.ears === 'folded') {
@@ -730,8 +736,8 @@
 
     const eyes = eyeMarkup(S.eyes[0], 0, C, uid) + eyeMarkup(S.eyes[1], 1, C, uid);
     const browW = isDog ? 4.5 : 3.5;
-    const brows = '<path data-r="brow0" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round" opacity="0.55"/>' +
-                  '<path data-r="brow1" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round" opacity="0.55"/>';
+    const brows = '<path data-r="brow0" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round" opacity="0.38"/>' +
+                  '<path data-r="brow1" fill="none" stroke="' + C.brow + '" stroke-width="' + browW + '" stroke-linecap="round" opacity="0.38"/>';
     const LM = C.lineMouth;
     const nose = isDog
       ? '<g transform="translate(0 ' + f(geo.noseDy) + ') translate(200 158) scale(' + sh.noseS + ') translate(-200 -158)">' +
@@ -777,9 +783,9 @@
 
     // ---- kollar (her karede güncellenir)
     const hand = (i) => '<g data-r="hand' + i + '">' +
-      '<ellipse cx="0" cy="0" rx="' + f(bt.arm[2] + 6.5) + '" ry="' + f(bt.arm[2] + 4.5) + '" fill="' + C.paw + '"' + st + '/>' +
-      '<path d="M-8 6 L-8 15 M0 8 L0 17 M8 6 L8 15" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/>' +
-      '<path d="M-10 -8 Q0 -14 10 -8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.3"/></g>';
+      '<ellipse cx="0" cy="2" rx="' + f(bt.arm[2] + 3.5) + '" ry="' + f(bt.arm[2] + 2) + '" fill="' + C.paw + '"' + st + '/>' +
+      '<ellipse cx="-3" cy="-3" rx="' + f(bt.arm[2] * 0.55) + '" ry="' + f(bt.arm[2] * 0.3) + '" fill="#fff" opacity="0.28"/>' +
+      '<ellipse cx="0" cy="' + f(bt.arm[2] * 0.62) + '" rx="' + f(bt.arm[2] * 0.42) + '" ry="' + f(bt.arm[2] * 0.22) + '" fill="' + C.pad + '" opacity="0.55"/></g>';
     const arms = limb('arm', 0) + hand(0) + limb('arm', 1) + hand(1);
 
     // ---- elde tutulan nesneler (kap, mama)
@@ -790,7 +796,7 @@
       '</g>';
 
     // iris: altta açık (ışık yansıması), üstte koyu — sevimli parlak göz
-    const iris = (i, c) => '<radialGradient id="' + uid + '-iris' + i + '" cx="50%" cy="82%" r="85%"><stop offset="0" stop-color="' + mix(c, '#ffffff', 0.35) + '"/><stop offset="0.45" stop-color="' + c + '"/><stop offset="1" stop-color="' + mix(c, '#000000', isDog ? 0.7 : 0.45) + '"/></radialGradient>';
+    const iris = (i, c) => '<radialGradient id="' + uid + '-iris' + i + '" cx="50%" cy="78%" r="80%"><stop offset="0" stop-color="' + mix(c, '#ffffff', 0.18) + '"/><stop offset="0.55" stop-color="' + mix(c, '#3A2418', isDog ? 0.35 : 0.1) + '"/><stop offset="1" stop-color="' + mix(c, '#2A1A12', isDog ? 0.6 : 0.4) + '"/></radialGradient>';
     const defs =
       '<radialGradient id="' + uid + '-gHead" cx="50%" cy="36%" r="64%"><stop offset="0.6" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></radialGradient>' +
       '<radialGradient id="' + uid + '-gBody" cx="45%" cy="30%" r="75%"><stop offset="0.45" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></radialGradient>' +
@@ -799,6 +805,7 @@
       '<radialGradient id="' + uid + '-gNose" cx="40%" cy="30%" r="70%"><stop offset="0" stop-color="' + mix(C.nose, '#ffffff', 0.3) + '"/><stop offset="1" stop-color="' + C.nose + '"/></radialGradient>' +
       '<linearGradient id="' + uid + '-gLimb0" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + C.furShade + '"/><stop offset="0.45" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.fur + '"/></linearGradient>' +
       '<linearGradient id="' + uid + '-gLimb1" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="' + C.fur + '"/><stop offset="0.55" stop-color="' + C.fur + '"/><stop offset="1" stop-color="' + C.furShade + '"/></linearGradient>' +
+      '<radialGradient id="' + uid + '-gBelly" cx="50%" cy="45%" r="50%"><stop offset="0.55" stop-color="' + C.light + '"/><stop offset="1" stop-color="' + C.light + '" stop-opacity="0"/></radialGradient>' +
       '<radialGradient id="' + uid + '-gVolSh" cx="50%" cy="42%" r="62%"><stop offset="0.6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="' + (lum(C.fur) < 0.25 ? 0.3 : 0.2) + '"/></radialGradient>' +
       '<radialGradient id="' + uid + '-gVolHi" cx="34%" cy="24%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity="' + (lum(C.fur) < 0.25 ? 0.22 : 0.34) + '"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>' +
       '<linearGradient id="' + uid + '-gEar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + C.ear + '"/><stop offset="1" stop-color="' + C.earShade + '"/></linearGradient>' +
@@ -1881,28 +1888,24 @@
       r.upper.setAttribute('transform', 'translate(0 ' + f(up) + ')');
       const sy = (1 + breath * 0.016) * (1 - sq * 0.07), sx = (1 - breath * 0.006) * (1 + sq * 0.05);
       r.body.setAttribute('transform', 'translate(200 ' + bt.bottom + ') scale(' + Math.round(sx * 1000) / 1000 + ' ' + Math.round(sy * 1000) / 1000 + ') translate(-200 -' + bt.bottom + ')');
-      r.tail.setAttribute('transform', 'translate(0 ' + f(P.sit * 40) + ') rotate(' + f(P.tailBase + wag * P.wagAmp) + ' 234 392)');
+      r.tail.setAttribute('transform', 'translate(0 ' + f(P.sit * 10) + ') rotate(' + f(P.tailBase + wag * P.wagAmp) + ' 234 392)');
 
       // bacaklar + ayaklar
-      const sit = P.sit, sk = smooth01((sit - 0.35) / 0.4);
       for (let i = 0; i < 2; i++) {
         const dir = i === 0 ? -1 : 1, lift = P['foot' + i];
         const hip = [S.hip[i][0], S.hip[i][1] + up];
-        const fx = lerp(S.foot[i][0], 200 + dir * (bt.hip * 0.8 + 6), sit) + dir * lift * 14;
-        const fyy = lerp(G - 16, G - 22, sit) - lift * 44;
-        const footY = Math.min(fyy, hip[1] + 90);
-        const knee = [lerp(hip[0], fx, 0.5) + dir * (sit * 10 + lift * 8 + (bt.bowed ? 6 : 2)), lerp(hip[1], footY, 0.55)];
+        const fx = S.foot[i][0] + dir * (lift * 12 + P.sit * 6);
+        const fy = S.foot[i][1] + Math.min(0, R.hop) - lift * 36;
+        const knee = [lerp(hip[0], fx, 0.5) + dir * 4, lerp(hip[1], fy, 0.5)];
         const lw = bt.leg;
-        this._limb('leg', i, [hip, knee, [fx, footY]], profile([[0, lw[0]], [0.3, lw[0] * 0.92], [0.58, lw[1]], [0.85, lw[2] * 1.05], [1, lw[2]]]), true);
-        r['foot' + i].setAttribute('transform', 'translate(' + f(fx) + ' ' + f(footY + 16) + ') rotate(' + f(dir * (6 + lift * 20)) + ')');
-        r['foot' + i].setAttribute('opacity', f(1 - sk));
-        r['sole' + i].setAttribute('transform', 'translate(' + f(fx + dir * 6) + ' ' + f(G - 18) + ') rotate(' + f(dir * 14) + ')');
-        r['sole' + i].setAttribute('opacity', f(sk));
+        this._limb('leg', i, [hip, knee, [fx, fy]], profile([[0, lw[0]], [1, lw[2]]]), true);
+        r['foot' + i].setAttribute('opacity', '0');
+        r['sole' + i].setAttribute('transform', 'translate(' + f(fx) + ' ' + f(fy) + ') rotate(' + f(dir * (10 + lift * 25)) + ')');
       }
 
       // kafa
       const hx = P.headX, hy = P.headY + breath * 1.2;
-      r.head.setAttribute('transform', 'translate(' + f(hx) + ' ' + f(hy) + ') rotate(' + f(P.tilt - R.rot * 0.6) + ' 200 205) translate(200 205) scale(' + Math.round(P.headScale * 1000) / 1000 + ') translate(-200 -205)');
+      r.head.setAttribute('transform', 'translate(' + f(hx) + ' ' + f(hy) + ') rotate(' + f(P.tilt - R.rot * 0.6) + ' 200 205) translate(200 212) scale(' + Math.round(P.headScale * HEAD_SCALE * 1000) / 1000 + ') translate(-200 -212)');
       r.face.setAttribute('transform', 'translate(' + f(P.faceX) + ' 0)');
       r.earsAll.forEach((e) => e.setAttribute('transform', 'translate(' + f(-P.faceX * 0.35) + ' 0)'));
       const tw = this.earTwitch.t >= 0 ? Math.sin(this.earTwitch.t / 0.35 * Math.PI * 3) * 8 : 0;
@@ -1981,10 +1984,10 @@
       ir.setAttribute('cx', f(px)); ir.setAttribute('cy', f(py));
       pu.setAttribute('cx', f(px)); pu.setAttribute('cy', f(py - e.ry * 0.05));
       if (this.species === 'cat') { pu.setAttribute('rx', f((3 + P.pupil * 8) * e.rx / 21)); pu.setAttribute('ry', f(e.ry * 0.68)); }
-      else { pu.setAttribute('rx', f(e.rx * (0.5 + P.pupil * 0.12))); pu.setAttribute('ry', f(e.ry * (0.55 + P.pupil * 0.1))); }
+      else { pu.setAttribute('rx', f(e.rx * (0.42 + P.pupil * 0.1))); pu.setAttribute('ry', f(e.ry * (0.46 + P.pupil * 0.08))); pu.setAttribute('opacity', '0.55'); }
       const hx = e.cx + P.lookX * e.rx * 0.06, hy = e.cy + P.lookY * e.ry * 0.05;
-      r['hl' + i + 'a'].setAttribute('cx', f(hx + e.rx * 0.3)); r['hl' + i + 'a'].setAttribute('cy', f(hy - e.ry * 0.32));
-      r['hl' + i + 'b'].setAttribute('cx', f(hx - e.rx * 0.34)); r['hl' + i + 'b'].setAttribute('cy', f(hy + e.ry * 0.36));
+      r['hl' + i + 'a'].setAttribute('cx', f(hx + e.rx * 0.28)); r['hl' + i + 'a'].setAttribute('cy', f(hy - e.ry * 0.3));
+      r['hl' + i + 'b'].setAttribute('cx', f(hx - e.rx * 0.3)); r['hl' + i + 'b'].setAttribute('cy', f(hy + e.ry * 0.34));
       r['hl' + i + 'c'].setAttribute('cx', f(hx + e.rx * 0.42)); r['hl' + i + 'c'].setAttribute('cy', f(hy + e.ry * 0.2));
       const x0 = e.cx - e.rx - 4, x1 = e.cx + e.rx + 4;
       const lidY = lerp(e.cy + e.ry + 2, e.cy - e.ry - 3, open), curve = e.ry * 0.35;
@@ -2036,7 +2039,7 @@
     const m = pet._mouthUpper();
     T.h1x = lerp(T.h1x, m.x + Math.sin(t * 11) * 26, k); T.h1y = lerp(T.h1y, m.y + 8, k);
     T.h0x = lerp(T.h0x, 188, k); T.h0y = lerp(T.h0y, 326, k);
-    T.mouthOpen = 0; T.tongue = 0; T.squint = 0.6 * k; T.eyeOpen = lerp(T.eyeOpen, 0.5, k); T.smile = 0.9; T.tilt += -6 * k;
+    T.headY += 16 * k; T.mouthOpen = 0; T.tongue = 0; T.squint = 0.6 * k; T.eyeOpen = lerp(T.eyeOpen, 0.5, k); T.smile = 0.9; T.tilt += -6 * k;
   }
   // karnını sıvazlama
   function patBelly(T, t, k) {

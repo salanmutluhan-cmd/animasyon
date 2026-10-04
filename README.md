@@ -1,7 +1,7 @@
 # 🐾 Pet Bakım Mini Oyunu: Animasyon Motoru
 
 Regl takip uygulaması için **köpek ve kedi bakma** mini oyunu. Hayvan 2D, karşıdan görünüyor ve cartoon tarzında çizilmiş.
-**İki ayağı üstünde duruyor**, kollarını kullanıyor, ekranda yürümüyor.
+**Oyuncak ayıcık gibi oturuyor**, ön patilerini kullanıyor, ekranda yürümüyor.
 Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 
 | Ayakta | Kabı tutup yeme | Ağzını silme | Su içme | Duşta ovalanma |
@@ -12,7 +12,13 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 |---|---|---|
 | ![](docs/silkelenme.png) | ![](docs/uyku.png) | ![](docs/demo-telefon.png) |
 
-**Yakın plan:** Çizim tarzı sevimli yavru çizimleri gibi. Gözler koyu ve parlak, büyük parlama noktaları var, göz akı neredeyse görünmüyor. Yanaklar hafif pembe. Kafa büyük, gövde tombul ve yuvarlak (armut biçiminde), kol ve bacaklar kısa ve tombul. Patiler karnın önünde duruyor. Gölgelendirme temiz ve yumuşak: sol üstten ışık, kenarlarda hafif koyulaşma, kolların gövdeye düşen gölgesi.
+**Yakın plan:** Tarz yuvarlak, chibi bir peluş yavru. Hayvan insan gibi dik durmuyor, oyuncak ayıcık gibi hafif çömelmiş oturuyor.
+- **Oran:** Kafa büyük, gövde kısa ve kompakt.
+- **Arka bacaklar:** Yuvarlak kalça tümsekleri. Ayaklar öne uzanıyor ve pembe pati yastıkları görünüyor.
+- **Ön bacaklar:** Kısa, kalın ve yumuşak, patiler karnın önünde. Patiler parmaksız, yuvarlak ve küçük.
+- **Karın ve göğüs:** Karında kenarı yumuşak açık renk bir bölge, göğüste küçük bir tüy kabarıklığı var.
+- **Yüz:** Gözler sıcak ve oyuncak gibi, burun ve ağız küçük, kulaklar daha hafif. İfade masum ve gülümser.
+- **Çizgiler:** Dış çizgiler ince ve yumuşak.
 
 ![](docs/yakin-plan.png)
 
