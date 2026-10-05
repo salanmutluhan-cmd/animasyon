@@ -289,13 +289,13 @@
     earLift: 0, tailBase: 0, wagFreq: 1.2, wagAmp: 8,
     sit: 0, blush: 0, breathRate: 0.33, breathAmp: 1, whisker: 0,
     h0x: REST[0][0], h0y: REST[0][1], h1x: REST[1][0], h1y: REST[1][1],
-    foot0: 0, foot1: 0, itemTilt: 0
+    foot0: 0, foot1: 0, itemTilt: 0, teeth: 0
   };
   const POSE_SPEED = {
     mouthOpen: 16, tongue: 14, tongueX: 14, eyeOpen: 12, squint: 10, closedCurve: 14,
     sit: 3, headY: 8, headX: 8, tilt: 7, lookX: 9, lookY: 9, smile: 8, brow: 6, faceX: 7,
     wagFreq: 4, wagAmp: 4, tailBase: 4, breathRate: 2, breathAmp: 2, blush: 4,
-    h0x: 11, h0y: 11, h1x: 11, h1y: 11, foot0: 14, foot1: 14, itemTilt: 8
+    h0x: 11, h0y: 11, h1x: 11, h1y: 11, foot0: 14, foot1: 14, itemTilt: 8, teeth: 10
   };
   const MOOD_POSES = {
     happy:   { smile: 0.9, earLift: 0.35, tailBase: -10, wagFreq: 2.2, wagAmp: 18, pupil: 0.5 },
@@ -308,6 +308,8 @@
     dirty:   { smile: 0, brow: 0.35, earLift: -0.25, tailBase: 12, wagFreq: 0.7, wagAmp: 5 },
     sad:     { smile: -0.7, brow: 1, earLift: -0.85, tailBase: 32, wagFreq: 0.3, wagAmp: 0, headY: 8, lookY: 0.45, pupil: 0.7,
                h0x: 186, h0y: 366, h1x: 214, h1y: 366 },
+    sick:    { eyeOpen: 0.55, brow: 0.75, earLift: -0.6, headY: 8, tilt: 6, smile: -0.35, tailBase: 30, wagFreq: 0.4, wagAmp: 2, blush: 0.9, breathRate: 0.5,
+               lookY: 0.3, h0x: 182, h0y: 322, h1x: 220, h1y: 332 },
     sleeping:{ sit: 1, eyeOpen: 0, closedCurve: -1, smile: 0.2, earLift: -0.7, tailBase: 40, wagFreq: 0.25, wagAmp: 1.5,
                breathRate: 0.21, breathAmp: 2.2, tilt: 10, headY: 8, headX: -4, h0x: 168, h0y: 376, h1x: 232, h1y: 376 }
   };
@@ -518,7 +520,7 @@
     }
     play(name) {
       if (!this.on) return;
-      const now = Date.now(), gap = { crunch: 90, lap: 110, squish: 160, pop: 45, boing: 150, sparkle: 120, snore: 2500 }[name] || 60;
+      const now = Date.now(), gap = { crunch: 90, lap: 110, squish: 160, pop: 45, boing: 150, sparkle: 120, snore: 2500, brush: 140, scrub: 110, coin: 150 }[name] || 60;
       if (this.last[name] && now - this.last[name] < gap) return;
       this.last[name] = now;
       switch (name) {
@@ -535,6 +537,10 @@
         case 'meow': this.tone(620, 0.32, { to: 920, vol: 0.1 }); this.tone(920, 0.22, { to: 560, vol: 0.08, delay: 0.17 }); break;
         case 'snore': this.noise(1.1, { filter: 'lowpass', freq: 320, q: 2, vol: 0.09, a: 0.35 }); break;
         case 'pew': this.tone(1100, 0.14, { to: 1500, vol: 0.06 }); break;
+        case 'brush': this.noise(0.12, { freq: 3200, q: 1.2, vol: 0.05 }); break;
+        case 'scrub': this.noise(0.08, { freq: 4200, q: 2, vol: 0.05 }); break;
+        case 'achoo': this.noise(0.25, { filter: 'highpass', freq: 1800, vol: 0.16, a: 0.02 }); this.tone(520, 0.2, { to: 300, vol: 0.06 }); break;
+        case 'coin': this.tone(1320, 0.08, { vol: 0.05 }); this.tone(1760, 0.14, { vol: 0.045, delay: 0.07 }); break;
       }
     }
     water(on) {
@@ -642,6 +648,7 @@
       '<ellipse cx="200" cy="218" rx="62" ry="12" fill="#000" opacity="0.06"/>' +           // kafanın gövdeye düşen gölgesi
       '<path d="M144 250 Q136 290 140 330" stroke="#fff" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.12"/>' + // parlama
       '<g data-r="mudBody" opacity="0">' + mud(150, 300, 18, 21) + mud(252, 262, 14, 22) + mud(258, 352, 16, 23) + mud(214, 330, 10, 25) + '</g>' +
+      '<clipPath id="' + uid + '-wearClip"><path d="' + bodyFur + '"/></clipPath><g data-r="wearBody" clip-path="url(#' + uid + '-wearClip)"></g>' +
       '<path d="' + bodyFur + '" fill="none"' + st + '/>' +
       '</g>';
 
@@ -711,7 +718,7 @@
         '<ellipse cx="197" cy="159.5" rx="3" ry="1.4" fill="#fff" opacity="0.7"/>';
     const mouth =
       '<path data-r="mouthOpen" fill="' + C.mouth + '" stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"/>' +
-      '<g clip-path="url(#' + uid + '-mouth)"><ellipse data-r="mouthTongue" fill="' + C.tongue + '"/></g>' +
+      '<g clip-path="url(#' + uid + '-mouth)"><ellipse data-r="mouthTongue" fill="' + C.tongue + '"/><path data-r="teeth" fill="#fff" stroke="#E6D8D0" stroke-width="1.2" opacity="0"/></g>' +
       '<g data-r="tongueOut"><path data-r="tongue" fill="' + C.tongue + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>' +
       '<path data-r="tongueLine" stroke="#E0607A" stroke-width="2.5" stroke-linecap="round" fill="none"/></g>' +
       '<path data-r="mouthLine" fill="none" stroke="' + LM + '" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -727,6 +734,10 @@
       ? '<path d="M188 70 Q192 56 199 66 Q204 52 210 68 Q215 60 214 74" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"/>'
       : '<path d="M190 78 Q194 66 200 74 Q206 64 210 78" fill="' + C.fur + '" stroke="' + L + '" stroke-width="3" stroke-linejoin="round"/>';
 
+    // hastalık: kızarık burun, alında ter damlası
+    const sickFx = '<g data-r="sickFx" opacity="0"><ellipse cx="200" cy="' + (isDog ? 156 : 163) + '" rx="' + (isDog ? 22 : 13) + '" ry="' + (isDog ? 14 : 9) + '" fill="#FF5E5E" opacity="0.45"/>' +
+      '<path d="M252 92 C256 100 258 104 258 107 A6 6 0 0 1 246 107 C246 104 248 100 252 92 Z" fill="#9EDCFA" stroke="' + L + '" stroke-width="2"/>' +
+      '<path d="M140 104 l8 4 M138 114 l9 1" stroke="#7FB4D8" stroke-width="2.5" stroke-linecap="round"/></g>';
     const head = '<g data-r="head">' +
       (earsBehind ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
       headTuft +
@@ -736,8 +747,9 @@
       strands(isDog ? 'M126 152 q7 6 9 16 M274 152 q-7 6 -9 16' : 'M118 166 q8 2 12 8 M282 166 q-8 2 -12 8', C.furDeep, 2.4, 0.4) +
       '<ellipse cx="200" cy="96" rx="44" ry="16" fill="#fff" opacity="0.13"/>' +
       '<g data-r="mudHead" opacity="0">' + mud(150, 102, 13, 31) + mud(262, 168, 10, 32) + '</g>' +
-      '<g data-r="face">' + face + cheeks + eyes + brows + nose + mouth + whiskers + '</g>' +
+      '<g data-r="face">' + face + cheeks + eyes + brows + nose + sickFx + mouth + whiskers + '<g data-r="wearEyes"></g></g>' +
       (!earsBehind ? '<g data-r="ears">' + earL + earR + '</g>' : '') +
+      '<g data-r="wearHead"></g>' +
       '<g data-r="foamHead"></g>' +
       '</g>';
 
@@ -746,7 +758,10 @@
       '<ellipse cx="0" cy="0" rx="19" ry="17" fill="' + C.paw + '"' + st + '/>' +
       '<path d="M-8 6 L-8 15 M0 8 L0 17 M8 6 L8 15" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/>' +
       '<path d="M-10 -8 Q0 -14 10 -8" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.3"/></g>';
-    const arms = limb('arm', 0) + hand(0) + limb('arm', 1) + hand(1);
+    // kazak giyilince üst kolu saran kollar
+    const sleeve = (i) => '<g data-r="sleeve' + i + '" display="none"><path data-r="sleeveO' + i + '" fill="none" stroke="' + L + '" stroke-linecap="round"/>' +
+      '<path data-r="sleeveF' + i + '" fill="none" stroke="#9FD8F5" stroke-linecap="round"/><path data-r="sleeveC' + i + '" fill="none" stroke="#6DBBE6" stroke-linecap="butt"/></g>';
+    const arms = limb('arm', 0) + sleeve(0) + hand(0) + limb('arm', 1) + sleeve(1) + hand(1);
 
     // ---- elde tutulan nesneler (kap, mama)
     const handItem = '<g data-r="handItem" display="none">' +
@@ -772,9 +787,10 @@
     const pet =
       '<ellipse data-r="shadow" cx="200" cy="' + (G + 2) + '" rx="96" ry="13" fill="' + P.shadow + '"/>' +
       '<g data-r="root">' +
+        '<g data-r="wearBack"></g>' +
         '<g data-r="tail">' + tail + '</g>' +
         legs +
-        '<g data-r="upper">' + body + '<g data-r="foamBody"></g>' + head + handItem + arms + '</g>' + soles +
+        '<g data-r="upper">' + body + '<g data-r="foamBody"></g><g data-r="wearNeck"></g>' + head + handItem + arms + '</g>' + soles +
       '</g>';
     return { defs, pet };
   }
@@ -863,6 +879,201 @@
     return s;
   }
 
+  const FONT = '-apple-system, Roboto, Segoe UI, sans-serif';
+  function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // ================================================================ Kıyafetler (hayvanın yerel koordinatlarında çizilir)
+  // slot: head (kafa), eyes (gözlük), neck (boyun), body (gövde)
+  const CLOTHES = {
+    bow:     { slot: 'head', name: 'Fiyonk', price: 15, level: 1 },
+    party:   { slot: 'head', name: 'Parti şapkası', price: 25, level: 1 },
+    flower:  { slot: 'head', name: 'Çiçek taç', price: 40, level: 2 },
+    beret:   { slot: 'head', name: 'Bere', price: 35, level: 2 },
+    crown:   { slot: 'head', name: 'Taç', price: 80, level: 4 },
+    round:   { slot: 'eyes', name: 'Yuvarlak gözlük', price: 30, level: 1 },
+    heart:   { slot: 'eyes', name: 'Kalp gözlük', price: 45, level: 3 },
+    sun:     { slot: 'eyes', name: 'Güneş gözlüğü', price: 60, level: 4 },
+    collar:  { slot: 'neck', name: 'Tasma', price: 15, level: 1 },
+    bowtie:  { slot: 'neck', name: 'Papyon', price: 25, level: 2 },
+    scarf:   { slot: 'neck', name: 'Atkı', price: 35, level: 2 },
+    sweater: { slot: 'body', name: 'Kazak', price: 55, level: 3 },
+    cape:    { slot: 'body', name: 'Pelerin', price: 90, level: 5 }
+  };
+  const CLOTH_SLOTS = ['head', 'eyes', 'neck', 'body'];
+  function clothMarkup(id, sp, L) {
+    const hy = sp === 'dog' ? 68 : 76, E = SPECIES[sp].eyes;
+    const st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"';
+    switch (id) {
+      case 'party': return '<g transform="translate(206 ' + (hy + 4) + ') rotate(10)"><path d="M-28 4 L0 -66 L28 4 Q0 13 -28 4 Z" fill="#9B8DE8"' + st + '/>' +
+        '<circle cx="-8" cy="-14" r="5" fill="#FFD166"/><circle cx="10" cy="-30" r="4.5" fill="#FF8FB1"/><circle cx="-2" cy="-46" r="3.5" fill="#7FE0C2"/><circle cx="12" cy="-6" r="4" fill="#7FE0C2"/>' +
+        '<circle cx="0" cy="-68" r="10" fill="#FF6F91"' + st + '/></g>';
+      case 'crown': return '<g transform="translate(200 ' + (hy - 2) + ')"><path d="M-36 8 L-38 -26 L-18 -8 L0 -36 L18 -8 L38 -26 L36 8 Q0 16 -36 8 Z" fill="#FFD166"' + st + '/>' +
+        '<path d="M-34 0 Q0 8 34 0" stroke="#E0A229" stroke-width="3" fill="none"/><circle cx="0" cy="-2" r="6" fill="#FF5E86" stroke="' + L + '" stroke-width="2"/>' +
+        '<circle cx="-20" cy="0" r="4" fill="#4FA9D6" stroke="' + L + '" stroke-width="2"/><circle cx="20" cy="0" r="4" fill="#4FA9D6" stroke="' + L + '" stroke-width="2"/>' +
+        '<circle cx="0" cy="-36" r="4" fill="#fff" stroke="' + L + '" stroke-width="2"/><path d="M-26 -14 L-22 -2" stroke="#fff" stroke-width="3" opacity="0.7" stroke-linecap="round"/></g>';
+      case 'beret': return '<g transform="translate(212 ' + (hy + 6) + ') rotate(-10)"><ellipse cx="0" cy="-10" rx="56" ry="22" fill="#E2556F"' + st + '/>' +
+        '<path d="M-50 -2 Q0 14 50 -2" stroke="#B23A55" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+        '<path d="M0 -32 L2 -42" stroke="' + L + '" stroke-width="5" stroke-linecap="round"/><path d="M-30 -20 Q-10 -28 10 -26" stroke="#fff" stroke-width="4" opacity="0.35" fill="none" stroke-linecap="round"/></g>';
+      case 'flower': {
+        let s = '';
+        const cy = SPECIES[sp].headCY, cols = ['#FF8FB1', '#FFD166', '#FFFFFF', '#9B8DE8', '#FF8FB1', '#FFD166', '#FFFFFF'];
+        for (let i = 0; i < 7; i++) {
+          const a = (-150 + i * 20) * Math.PI / 180, x = 200 + Math.cos(a) * 84, y = cy + Math.sin(a) * 70;
+          s += '<ellipse cx="' + f(x + 9) + '" cy="' + f(y + 5) + '" rx="8" ry="4" fill="#7CC48A" transform="rotate(30 ' + f(x + 9) + ' ' + f(y + 5) + ')"/>';
+          let pe = '';
+          for (let k = 0; k < 5; k++) { const b = k * 72 * Math.PI / 180; pe += '<circle cx="' + f(x + Math.cos(b) * 6.5) + '" cy="' + f(y + Math.sin(b) * 6.5) + '" r="5.5"/>'; }
+          s += '<g fill="' + cols[i] + '" stroke="' + L + '" stroke-width="1.8">' + pe + '</g><circle cx="' + f(x) + '" cy="' + f(y) + '" r="4" fill="#FFB347" stroke="' + L + '" stroke-width="1.5"/>';
+        }
+        return s;
+      }
+      case 'bow': return '<g transform="translate(150 ' + (hy + 18) + ') rotate(-22)"><path d="M0 0 C-14 -20 -36 -16 -32 2 C-30 16 -12 12 0 0 Z M0 0 C14 -20 36 -16 32 2 C30 16 12 12 0 0 Z" fill="#FF6F91"' + st + '/>' +
+        '<circle cx="-20" cy="-2" r="2.5" fill="#fff"/><circle cx="20" cy="-2" r="2.5" fill="#fff"/><circle cx="-12" cy="-8" r="2" fill="#fff"/><circle cx="12" cy="-8" r="2" fill="#fff"/>' +
+        '<ellipse cx="0" cy="0" rx="7" ry="8" fill="#E2456A"' + st + '/></g>';
+      case 'round': {
+        let s = '';
+        E.forEach((e) => { s += '<circle cx="' + e.cx + '" cy="' + e.cy + '" r="' + (e.rx + 9) + '" fill="#E6F6FF" fill-opacity="0.18" stroke="#5B4636" stroke-width="5"/>'; });
+        return s + '<path d="M' + (E[0].cx + E[0].rx + 9) + ' ' + (E[0].cy - 2) + ' Q200 ' + (E[0].cy - 12) + ' ' + (E[1].cx - E[1].rx - 9) + ' ' + (E[1].cy - 2) + '" stroke="#5B4636" stroke-width="5" fill="none"/>' +
+          '<path d="M' + (E[0].cx - E[0].rx - 9) + ' ' + E[0].cy + ' L' + (E[0].cx - E[0].rx - 30) + ' ' + (E[0].cy - 6) + ' M' + (E[1].cx + E[1].rx + 9) + ' ' + E[1].cy + ' L' + (E[1].cx + E[1].rx + 30) + ' ' + (E[1].cy - 6) + '" stroke="#5B4636" stroke-width="5" stroke-linecap="round"/>' +
+          '<path d="M' + (E[0].cx - 12) + ' ' + (E[0].cy - 16) + ' q6 -5 12 -4 M' + (E[1].cx - 12) + ' ' + (E[1].cy - 16) + ' q6 -5 12 -4" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>';
+      }
+      case 'heart': {
+        let s = '';
+        E.forEach((e) => { s += '<path transform="translate(' + e.cx + ' ' + (e.cy + 2) + ') scale(2.3)" d="M0 10 C-18 -2 -13 -19 0 -9 C13 -19 18 -2 0 10 Z" fill="#FF8FB1" fill-opacity="0.35" stroke="#FF3E7F" stroke-width="2"/>'; });
+        return s + '<path d="M' + (E[0].cx + 26) + ' ' + (E[0].cy - 6) + ' Q200 ' + (E[0].cy - 14) + ' ' + (E[1].cx - 26) + ' ' + (E[1].cy - 6) + '" stroke="#FF3E7F" stroke-width="4.5" fill="none"/>';
+      }
+      case 'sun': {
+        let s = '';
+        E.forEach((e) => { s += '<rect x="' + (e.cx - e.rx - 11) + '" y="' + (e.cy - e.ry - 4) + '" width="' + (e.rx * 2 + 22) + '" height="' + (e.ry * 2 + 10) + '" rx="14" fill="#2A2340" fill-opacity="0.92" stroke="#111" stroke-width="4"/>' +
+          '<path d="M' + (e.cx - e.rx) + ' ' + (e.cy - 6) + ' L' + (e.cx - e.rx + 12) + ' ' + (e.cy - e.ry + 4) + '" stroke="#fff" stroke-width="4" opacity="0.6" stroke-linecap="round"/>'; });
+        return s + '<path d="M' + (E[0].cx + E[0].rx + 11) + ' ' + (E[0].cy - 6) + ' L' + (E[1].cx - E[1].rx - 11) + ' ' + (E[1].cy - 6) + '" stroke="#111" stroke-width="5"/>';
+      }
+      case 'collar': return '<path d="M146 220 Q200 250 254 220" stroke="' + L + '" stroke-width="16" fill="none" stroke-linecap="round"/><path d="M146 220 Q200 250 254 220" stroke="#F06C8B" stroke-width="10" fill="none" stroke-linecap="round"/>' +
+        '<g fill="#fff"><circle cx="170" cy="230" r="2"/><circle cx="230" cy="230" r="2"/></g><circle cx="200" cy="246" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/><path d="M196 244 h8" stroke="#E0A229" stroke-width="2"/>';
+      case 'bowtie': return '<g transform="translate(200 238)"><path d="M0 0 L-28 -14 Q-32 0 -28 14 Z M0 0 L28 -14 Q32 0 28 14 Z" fill="#E2456A"' + st + '/>' +
+        '<g fill="#fff"><circle cx="-18" cy="-4" r="2.4"/><circle cx="-14" cy="6" r="2.4"/><circle cx="18" cy="-4" r="2.4"/><circle cx="14" cy="6" r="2.4"/></g><rect x="-7" y="-8" width="14" height="16" rx="5" fill="#B23A55"' + st + '/></g>';
+      case 'scarf': return '<path d="M144 218 Q200 254 256 218" stroke="' + L + '" stroke-width="24" fill="none" stroke-linecap="round"/><path d="M144 218 Q200 254 256 218" stroke="#7FC8F8" stroke-width="18" fill="none" stroke-linecap="round"/>' +
+        '<path d="M170 232 l4 -12 M196 240 l4 -14 M222 236 l4 -12" stroke="#fff" stroke-width="5" stroke-linecap="round"/>' +
+        '<path d="M222 236 L232 300 L254 296 L244 228 Z" fill="#7FC8F8"' + st + '/><path d="M228 258 L248 255 M230 276 L250 273" stroke="#fff" stroke-width="5"/>' +
+        '<path d="M234 300 v8 M240 299 v8 M246 298 v8 M252 297 v8" stroke="' + L + '" stroke-width="2.5" stroke-linecap="round"/>';
+      case 'sweater': return '<rect x="100" y="196" width="200" height="140" fill="#9FD8F5"/>' +
+        '<path d="M100 258 H300 M100 282 H300" stroke="#fff" stroke-width="7" opacity="0.8"/><path d="M100 270 H300" stroke="#FF8FB1" stroke-width="5"/>' +
+        '<rect x="100" y="326" width="200" height="14" fill="#6DBBE6"/><path d="M110 326 v14 M124 326 v14 M138 326 v14 M152 326 v14 M166 326 v14 M180 326 v14 M194 326 v14 M208 326 v14 M222 326 v14 M236 326 v14 M250 326 v14 M264 326 v14 M278 326 v14 M292 326 v14" stroke="#4E9FCC" stroke-width="2"/>' +
+        '<path d="M100 340 H300" stroke="' + L + '" stroke-width="3.5"/><path d="M150 216 Q200 244 250 216" stroke="#6DBBE6" stroke-width="12" fill="none"/>';
+      case 'cape': return '<path d="M138 224 C100 300 88 380 94 430 Q200 446 306 430 C312 380 300 300 262 224 Z" fill="#D64561"' + st + '/>' +
+        '<path d="M98 420 Q200 436 302 420" stroke="#FFD166" stroke-width="5" fill="none"/><path d="M118 300 Q110 360 112 410" stroke="#fff" stroke-width="5" opacity="0.25" fill="none" stroke-linecap="round"/>';
+    }
+    return '';
+  }
+  // mağaza / dolap önizlemesi için: kıyafeti kendi merkezine taşı
+  function clothPreview(id, sp, L) {
+    const c = { head: [200, sp === 'dog' ? 52 : 60, 0.9], eyes: [200, 134, 0.62], neck: [200, 236, 0.85], body: [200, 300, 0.42] }[CLOTHES[id].slot];
+    if (id === 'flower') c[1] = 86;
+    if (id === 'bow') c[0] = 150, c[1] = 84, c[2] = 1.1;
+    if (id === 'scarf') c[1] = 252, c[2] = 0.62;
+    if (id === 'cape') c[1] = 330, c[2] = 0.3;
+    return '<g transform="scale(' + c[2] + ') translate(' + (-c[0]) + ' ' + (-c[1]) + ')">' + clothMarkup(id, sp, L) + '</g>';
+  }
+
+  // ================================================================ Bakım ve hediye eşyaları
+  function careIcon(id, L) {
+    const st = ' stroke="' + L + '" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"';
+    switch (id) {
+      case 'brush': return '<g transform="rotate(-30)"><rect x="-6" y="4" width="12" height="40" rx="6" fill="#C98A5B"' + st + '/>' +
+        '<rect x="-24" y="-26" width="48" height="32" rx="14" fill="#FF8FB1"' + st + '/><path d="M-16 -26 v-8 M-8 -26 v-9 M0 -26 v-9 M8 -26 v-9 M16 -26 v-8" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/></g>';
+      case 'tooth': return '<g transform="rotate(-35)"><rect x="-5" y="-4" width="10" height="54" rx="5" fill="#7FC8F8"' + st + '/>' +
+        '<rect x="-9" y="-28" width="18" height="26" rx="5" fill="#fff"' + st + '/><path d="M-5 -24 h10 M-5 -18 h10 M-5 -12 h10" stroke="#9FD8F5" stroke-width="2.5"/>' +
+        '<path d="M-10 -30 Q-4 -40 2 -33 Q8 -42 12 -31" fill="#fff" stroke="#9FD8F5" stroke-width="3"/></g>';
+      case 'thermo': return '<g transform="rotate(-40)"><rect x="-6" y="-38" width="12" height="62" rx="6" fill="#fff"' + st + '/><circle cx="0" cy="26" r="9" fill="#FF5E86"' + st + '/>' +
+        '<rect x="-2" y="-14" width="4" height="36" fill="#FF5E86"/><path d="M6 -30 h-5 M6 -22 h-5 M6 -14 h-5 M6 -6 h-5" stroke="' + L + '" stroke-width="1.8"/></g>';
+      case 'syrup': return '<g><rect x="-14" y="-10" width="28" height="36" rx="8" fill="#B45A8C"' + st + '/><rect x="-8" y="-24" width="16" height="14" rx="3" fill="#fff"' + st + '/>' +
+        '<rect x="-10" y="0" width="20" height="14" rx="3" fill="#fff"/><path d="M-4 7 h8 M0 3 v8" stroke="#FF5E86" stroke-width="3"/></g>' +
+        '<g transform="translate(22 -6) rotate(-30)"><ellipse cx="0" cy="-12" rx="9" ry="6" fill="#E6EEF2"' + st + '/><ellipse cx="0" cy="-12" rx="5" ry="3" fill="#FF8FB1"/><rect x="-2" y="-6" width="4" height="26" rx="2" fill="#E6EEF2"' + st + '/></g>';
+      case 'vitamin': return '<g transform="rotate(-25)"><path d="M-22 0 A11 11 0 0 1 -11 -11 H0 V11 H-11 A11 11 0 0 1 -22 0 Z" fill="#FFB347"' + st + '/><path d="M0 -11 H11 A11 11 0 0 1 11 11 H0 Z" fill="#fff"' + st + '/>' +
+        '<path d="M-14 -5 h8" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8"/></g><path d="M18 -18 l3 -7 l3 7 l7 3 l-7 3 l-3 7 l-3 -7 l-7 -3 Z" fill="#FFD166" stroke="' + L + '" stroke-width="1.5"/>';
+      case 'bottle': return '<g><rect x="-22" y="-20" width="44" height="46" rx="18" fill="#FF8FB1"' + st + '/><rect x="-8" y="-32" width="16" height="14" rx="4" fill="#9B8DE8"' + st + '/>' +
+        '<path d="M0 12 C-12 4 -8 -8 0 -2 C8 -8 12 4 0 12 Z" fill="#fff"/><path d="M-14 -10 q-3 10 0 20" stroke="#fff" stroke-width="3" fill="none" opacity="0.6" stroke-linecap="round"/>' +
+        '<path d="M-6 -42 q-4 -6 0 -12 M6 -42 q4 -6 0 -12" stroke="#FFB7CC" stroke-width="3" fill="none" stroke-linecap="round"/></g>';
+      case 'choco': return '<g transform="rotate(-8)"><rect x="-22" y="-16" width="44" height="32" rx="4" fill="#7B4A2E"' + st + '/>' +
+        '<path d="M-8 -16 v32 M6 -16 v32 M-22 0 h28" stroke="#5A3420" stroke-width="2.5"/><path d="M6 -18 H24 V18 H6 Z" fill="#E2456A"' + st + '/><path d="M10 -6 h10 M10 2 h10" stroke="#FFD166" stroke-width="2.5"/></g>';
+      case 'glass': return '<g><path d="M-16 -24 L16 -24 L12 24 Q0 28 -12 24 Z" fill="#E6F6FF" fill-opacity="0.7"' + st + '/><path d="M-14 -8 L14 -8 L12 22 Q0 26 -12 22 Z" fill="#9EDCFA"/>' +
+        '<path d="M-10 -20 L-8 16" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8"/><circle cx="4" cy="4" r="2.5" fill="#fff"/><circle cx="-3" cy="12" r="2" fill="#fff"/></g>';
+    }
+    return '';
+  }
+  // ilaçlar: sürüklenip ağzına götürülür
+  const MEDS = {
+    thermo:  { name: 'Termometre', desc: 'Ateşini ölç', fx: {} },
+    syrup:   { name: 'Şurup', desc: 'Hastalığı iyileştirir', fx: { health: 35, happiness: -2 } },
+    vitamin: { name: 'Vitamin', desc: 'Güç ve enerji', fx: { health: 15, energy: 8 } }
+  };
+
+  // ================================================================ Günlük görevler
+  const QUESTS = {
+    feed:      { text: 'Mama ver', n: 2, icon: '🍖' },
+    water:     { text: 'Su ver', n: 1, icon: '💧' },
+    bath:      { text: 'Banyo yaptır', n: 1, icon: '🛁' },
+    brush:     { text: 'Tüylerini tara', n: 1, icon: '✨' },
+    teeth:     { text: 'Dişlerini fırçala', n: 1, icon: '🦷' },
+    play:      { text: 'Oyun oyna (5 vuruş)', n: 5, icon: '🎮' },
+    hide:      { text: 'Saklambaçta onu bul', n: 1, icon: '🙈' },
+    pet:       { text: 'Onu sev (10 kez okşa)', n: 10, icon: '🤚' },
+    userWater: { text: 'Sen de 2 bardak su iç', n: 2, icon: '🥤' },
+    mood:      { text: '"Bugün nasılsın?" sorusunu cevapla', n: 1, icon: '💬' }
+  };
+  const SELF_QUESTS = ['userWater', 'mood'];
+
+  // ================================================================ Kullanıcının ruh hali ve regl döngüsü
+  const USER_MOODS = {
+    happy:   { emoji: '😊', name: 'Mutlu' },
+    sad:     { emoji: '😢', name: 'Üzgün' },
+    tired:   { emoji: '😴', name: 'Yorgun' },
+    pain:    { emoji: '😣', name: 'Ağrılı' },
+    angry:   { emoji: '😠', name: 'Sinirli' },
+    anxious: { emoji: '😰', name: 'Kaygılı' }
+  };
+  const CYCLE = {
+    period:     { label: '🌸 Regl', tips: ['Kendine iyi bak 💕 Ben yanındayım', 'Karnın ağrıyorsa sıcak su torbası iyi gelir', 'Bugün dinlenmeyi hak ediyorsun 🌸', 'Bol su içmeyi unutma 💧', 'Hafif bir yürüyüş ağrıya iyi gelebilir', 'Sana sarılmaya geldim 🤗'] },
+    pms:        { label: '🍫 PMS', tips: ['Duyguların dalgalıysa bu çok normal 💗', 'Biraz bitter çikolata ister misin? 🍫', 'Bugün kendine biraz zaman ayır', 'Tuzu ve kafeini azaltmak iyi gelebilir'] },
+    follicular: { label: '🌱 Enerjik dönem', tips: ['Enerjin yükseliyor! 🌱', 'Yeni bir şeye başlamak için harika bir gün', 'Biraz dans edelim mi? 💃'] },
+    ovulation:  { label: '🌼 Yumurtlama', tips: ['Bugün ışıl ışılsın! 🌼', 'Enerjin çok yüksek, hadi oynayalım!', 'Su içmeyi unutma 💧'] },
+    luteal:     { label: '🍂 Sakin dönem', tips: ['Kendine nazik ol 🍂', 'Sıcak bir bitki çayı iyi gelebilir 🍵', 'Bu akşam erken uyumak iyi gelebilir 🌙'] }
+  };
+  const NEED_LINES = {
+    hungry: ['Karnım acıktı! 🍖', 'Mama zamanı geldi mi?'],
+    thirsty: ['Susadım 💧', 'Biraz su alabilir miyim?'],
+    tired: ['Uykum geldi… 😴', 'Işığı kapatır mısın?'],
+    dirty: ['Banyo yapmak istiyorum 🛁', 'Biraz kokuyor olabilirim…'],
+    sad: ['Sıkıldım, oynayalım mı? 🎾', 'Beni sever misin?'],
+    sick: ['Kendimi iyi hissetmiyorum 🤒', 'Veterinere gidelim mi? 🩺'],
+    happy: ['Seni çok seviyorum! 💕', 'Bugün harika bir gün!', 'Yaşasın! 🎉'],
+    neutral: ['Ne yapalım? 🐾', 'Hey! 👋']
+  };
+
+  // saklambaç: saklandığı yerden kafasının üstü görünür
+  function peekMarkup(b, C) {
+    const L = C.line, st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"';
+    let ears = '';
+    if (b.ears === 'floppy' || b.ears === 'floppySmall') ears = '<ellipse cx="-44" cy="8" rx="13" ry="24" fill="' + C.ear + '"' + st + ' transform="rotate(20 -44 8)"/><ellipse cx="44" cy="8" rx="13" ry="24" fill="' + C.ear + '"' + st + ' transform="rotate(-20 44 8)"/>';
+    else if (b.ears === 'folded') ears = '<path d="M-34 -12 L-24 -30 L-12 -18 Z M34 -12 L24 -30 L12 -18 Z" fill="' + C.ear + '"' + st + '/>';
+    else ears = '<path d="M-38 -4 L-40 -46 L-12 -22 Z M38 -4 L40 -46 L12 -22 Z" fill="' + C.ear + '"' + st + '/><path d="M-34 -10 L-35 -34 L-18 -20 Z M34 -10 L35 -34 L18 -20 Z" fill="' + C.earInner + '"/>';
+    return ears + '<path d="M-48 40 C-50 -22 50 -22 48 40 Z" fill="' + C.fur + '"' + st + '/>' +
+      '<g fill="#2A1A14"><ellipse cx="-17" cy="12" rx="7" ry="8"/><ellipse cx="17" cy="12" rx="7" ry="8"/></g>' +
+      '<g fill="#fff"><circle cx="-15" cy="9" r="2.6"/><circle cx="19" cy="9" r="2.6"/></g>';
+  }
+  function boxMarkup(L, back) {
+    const st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"';
+    if (back) return '<path d="M-60 -50 L-72 -78 L-10 -70 L0 -50 Z M60 -50 L72 -78 L10 -70 L0 -50 Z" fill="#C99A63"' + st + '/>';
+    return '<rect x="-64" y="-50" width="128" height="96" rx="6" fill="#DDB07A"' + st + '/><path d="M-64 -36 H64" stroke="#C99A63" stroke-width="4"/>' +
+      '<path d="M-12 -50 V-30 H12 V-50" fill="#F2D6A8" stroke="#C99A63" stroke-width="3"/><path d="M-36 6 C-44 -4 -38 -14 -30 -8 C-22 -14 -16 -4 -24 6 L-30 12 Z" fill="#E59E6D" opacity="0.6"/>';
+  }
+  function basketMarkup(L) {
+    const st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"';
+    let w = '';
+    for (let x = -50; x <= 50; x += 14) w += '<path d="M' + x + ' -40 L' + (x * 0.86) + ' 40"/>';
+    return '<path d="M-60 -40 H60 L52 40 Q0 48 -52 40 Z" fill="#E8C48F"' + st + '/><g stroke="#C99A63" stroke-width="3">' + w + '<path d="M-58 -16 H58 M-55 12 H55"/></g>' +
+      '<rect x="-66" y="-48" width="132" height="14" rx="7" fill="#D9AE73"' + st + '/>' +
+      '<path d="M-40 -48 Q-30 -66 -14 -50 M12 -50 Q30 -70 44 -48" stroke="' + L + '" stroke-width="3" fill="#9FD8F5"/>';
+  }
+
   // Banyo: fayanslı duvar, küvet, lavabo ve ayna, havlu, paspas
   function bathMarkup(Wv, Hv, fy, gy) {
     const L = '#5B7A8C', cx = Wv / 2;
@@ -942,7 +1153,7 @@
       this.showBackground = options.background !== false;
       this.hq = options.quality !== 'low';
       this.scaleOpt = options.petScale || 0;
-      this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo', home: 'Oda', sponge: 'Sünger', shower: 'Duş' }, options.labels || {});
+      this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo', home: 'Oda', sponge: 'Sünger', shower: 'Duş', brush: 'Tarak', tooth: 'Diş' }, options.labels || {});
       this.name = options.name || '';
       this.sfx = new Sfx(options.sound !== false);
       this.lightsOff = false; this.night = 0;   // ampul: ışık kapalıyken perde kapanır, oda kararır, hayvan uyur
@@ -952,7 +1163,16 @@
       this.scene = 'room'; this.sceneK = 0;      // 'room' | 'bath' — banyo ayrı sahne, sağa kayarak geçilir
       this._sceneDone = null;
       this.listeners = {};
-      this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80 }, options.stats || {});
+      this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80, health: 100 }, options.stats || {});
+      // ilerleme: seviye, pati parası, kıyafetler, günlük görevler
+      this.progress = { level: 1, xp: 0, coins: 30, owned: [], wear: { head: null, eyes: null, neck: null, body: null }, quests: { date: '', list: [], bonus: false } };
+      this.showHud = options.hud !== undefined ? !!options.hud : options.tools !== false;
+      this.useClock = options.clock !== false; this.hourOverride = null; this._clockT = 0; this._clockInfo = null;
+      this.cycle = null; this._cycleNext = rand(30, 50); this._cycleFirst = false;
+      this.userMood = null;
+      this.waterEvery = (options.waterReminder === undefined ? 120 : Math.max(0, +options.waterReminder || 0)) * 60; this._waterT = 0;
+      this.speech = null; this._sayCool = rand(6, 10); this.panel = null;
+      this.groom = 0; this.teethT = 0; this.shine = 0; this.hidden = false; this._petAcc = 0; this._questT = 0;
       this.sleeping = false;
       this.paused = false;
 
@@ -975,7 +1195,17 @@
       this.raw = { hop: 0, shake: 0, squash: 0, rot: 0, fluff: 0 };
 
       if (options.state) this.setState(options.state);
+      this._checkQuests();
       this._build();
+      // bakım yaptıkça ödül ve görev ilerlemesi
+      this.on('action', (a) => {
+        if (a.phase !== 'end') return;
+        if (a.name === 'eat') { this._quest('feed'); this.reward(5, 2, this._rewardAt()); }
+        else if (a.name === 'drink') { this._quest('water'); this.reward(4, 2, this._rewardAt()); }
+        else if (a.name === 'shakeDry') { this._quest('bath'); this.reward(10, 5, this._rewardAt()); }
+        else if (a.name === 'med') this.reward(4, 1, this._rewardAt());
+      });
+      this.on('play', (e) => { if (e && e.kind === 'hide') return; this._quest('play'); this.reward(1, 1); });
       this._loop = this._loop.bind(this);
       this._last = null;
       this._raf = requestAnimationFrame(this._loop);
@@ -1020,6 +1250,21 @@
         '<rect data-r="night" x="0" y="0" width="10" height="10" fill="#141A3D" opacity="0" style="pointer-events:none"/>' +
         '<g data-r="nameTag" display="none"><rect data-r="nameBg" x="0" y="-19" height="38" rx="19" fill="rgba(255,255,255,0.92)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
           '<text data-r="nameTxt" y="7" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="21" font-weight="800" fill="' + SC.text + '"></text></g>' +
+        (this.showHud ? '<g data-r="hud" style="pointer-events:none">' +
+          '<g transform="translate(14 14)"><rect width="184" height="48" rx="24" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+            '<path d="M24 4 L30 17 L44 18 L33 27 L37 41 L24 33 L11 41 L15 27 L4 18 L18 17 Z" fill="#FFD166" stroke="' + C.line + '" stroke-width="2.5" stroke-linejoin="round"/>' +
+            '<text data-r="hudLv" x="24" y="31" text-anchor="middle" font-family="' + FONT + '" font-size="15" font-weight="900" fill="#6B3E2E">1</text>' +
+            '<text x="56" y="20" font-family="' + FONT + '" font-size="11" font-weight="800" fill="#B08A82">SEVİYE</text>' +
+            '<rect x="56" y="27" width="110" height="10" rx="5" fill="#F6DCE3"/><rect data-r="hudXp" x="56" y="27" width="0" height="10" rx="5" fill="#FFB347"/></g>' +
+          '<g transform="translate(14 70)"><rect width="120" height="40" rx="20" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+            '<circle cx="20" cy="20" r="13" fill="#FFD166" stroke="#D68A00" stroke-width="2.5"/><g fill="#D68A00"><ellipse cx="20" cy="23" rx="4.5" ry="3.6"/><circle cx="14.5" cy="17" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="22" cy="14" r="2"/><circle cx="25.5" cy="17" r="2"/></g>' +
+            '<text data-r="hudCoins" x="42" y="26" font-family="' + FONT + '" font-size="17" font-weight="900" fill="#8E5E55">0</text></g>' +
+          '<g data-r="hudCycle" transform="translate(14 118)" display="none"><rect data-r="hudCycleBg" width="150" height="34" rx="17" fill="#FFE3EC" stroke="#F7A9BC" stroke-width="2.5"/>' +
+            '<text data-r="hudCycleTxt" x="12" y="22" font-family="' + FONT + '" font-size="13" font-weight="800" fill="#C2456A"></text></g>' +
+          '<g data-r="hudBtns"></g></g>' : '') +
+        '<g data-r="speech" display="none" style="pointer-events:none"><path data-r="speechBg" fill="#fff" stroke="#F3CFD9" stroke-width="3" stroke-linejoin="round"/>' +
+          '<text data-r="speechTxt" text-anchor="middle" font-family="' + FONT + '" font-size="17" font-weight="800" fill="' + SC.text + '"></text>' +
+          '<g data-r="speechBtn" display="none"><rect data-r="speechBtnBg" height="36" rx="18" fill="#4FA9D6"/><text data-r="speechBtnTxt" text-anchor="middle" font-family="' + FONT + '" font-size="15" font-weight="800" fill="#fff"></text></g></g>' +
         '<g data-r="banner" display="none"><rect data-r="bannerBg" x="0" y="-18" height="36" rx="18" fill="#9B8DE8"/>' +
           '<text data-r="bannerTxt" y="6" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="16" font-weight="800" fill="#fff"></text></g>' +
         (this.showTools ? '<path data-r="hose" fill="none" stroke="' + P.hose + '" stroke-width="8" stroke-linecap="round"/>' +
@@ -1032,15 +1277,20 @@
           '</g>' +
           '<g data-r="toolsBath">' +
             slot('Home', '<g transform="translate(0 2) scale(0.95)">' + homeIconMarkup(C.line) + '</g>', this.labels.home) +
+            slot('Brush', '<g transform="translate(-2 -2) scale(0.66)">' + careIcon('brush', C.line) + '</g>', this.labels.brush) +
+            slot('Tooth', '<g transform="translate(4 4) scale(0.85)">' + careIcon('tooth', C.line) + '</g>', this.labels.tooth) +
             slot('Sponge', '<g transform="scale(0.9)">' + spongeMarkup(C.line, true) + '</g>', this.labels.sponge) +
             slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
           '</g>' +
           '<g data-r="menu"></g>' +
+          '<g data-r="panel"></g>' +
           '<g data-r="held" style="pointer-events:none">' +
             '<g data-r="heldFood" display="none"></g>' +
             '<g data-r="heldWater" display="none"><g transform="scale(1.3)">' + waterIconMarkup(P, C.line) + '</g></g>' +
             '<g data-r="heldSponge" display="none"><g data-r="spongeArt">' + spongeMarkup(C.line, false) + '</g></g>' +
             '<g data-r="heldShower" display="none">' + showerMarkup(P, C.line) + '</g>' +
+            '<g data-r="heldBrush" display="none"><g transform="scale(1.25)">' + careIcon('brush', C.line) + '</g></g>' +
+            '<g data-r="heldTooth" display="none"><g transform="scale(1.4)">' + careIcon('tooth', C.line) + '</g></g>' +
           '</g>' : '') +
         '<g data-r="fx" style="pointer-events:none"></g>' +
         '</svg>';
@@ -1057,9 +1307,12 @@
       this.menu = null;
       if (this.game) this.stopGame(true);
       this._bindPointer();
+      this.speech = null; this.panel = null;
       this._layout();
       this._renderName();
       this._renderScene();
+      this._renderWear();
+      this._renderHud();
     }
 
     _limbDeco() {
@@ -1101,15 +1354,16 @@
       if (this.showTools) {
         const ty = Hv - this.trayH / 2 - 4;
         this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, game: { x: 242, y: ty }, light: { x: 336, y: ty }, bath: { x: Wv - 54, y: ty },
-          home: { x: 54, y: ty }, sponge: { x: Wv - 148, y: ty }, shower: { x: Wv - 54, y: ty } };
+          home: { x: 54, y: ty }, brush: { x: 148, y: ty }, tooth: { x: 242, y: ty }, sponge: { x: Wv - 148, y: ty }, shower: { x: Wv - 54, y: ty } };
         const place = (el, sl) => el.setAttribute('transform', 'translate(' + f(sl.x) + ' ' + f(sl.y) + ')');
         place(this.r.slotFood, this.slots.food); place(this.r.slotWater, this.slots.water); place(this.r.slotGame, this.slots.game);
         place(this.r.slotLight, this.slots.light); place(this.r.slotBath, this.slots.bath);
         place(this.r.slotHome, this.slots.home); place(this.r.slotSponge, this.slots.sponge); place(this.r.slotShower, this.slots.shower);
+        place(this.r.slotBrush, this.slots.brush); place(this.r.slotTooth, this.slots.tooth);
       }
       const B = this.ball;
       if (B.active) { B.x = clamp(B.x, B.r, Wv - B.r); B.y = Math.min(B.y, this.floorY - B.r); }
-      if (this.r) this._renderScene();
+      if (this.r) { this._renderScene(); this._layoutHud(); if (this.panel) this._closePanel(); }
     }
 
     // ---------------------------------------------------------------- özelleştirme
@@ -1166,6 +1420,7 @@
     _mouthWorld() { const m = this._mouthUpper(); return this._toWorld(m.x, m.y + this._upY() + this.raw.hop); }
 
     _hit(lx, ly) {
+      if (this.hidden) return null;
       const hd = this._headLocal();
       let dx = (lx - hd.x) / 100, dy = (ly - hd.y) / 88;
       if (dx * dx + dy * dy < 1) return 'head';
@@ -1184,6 +1439,10 @@
           try { svg.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
           e.preventDefault();
           this.sfx.unlock();
+          // konuşma balonundaki buton ("İçtim ✓")
+          const sp = this.speech;
+          if (sp && sp.hit && w.x > sp.hit.x && w.x < sp.hit.x + sp.hit.w && w.y > sp.hit.y && w.y < sp.hit.y + sp.hit.h) { const fn = sp.onTap; this.speech = null; this.r.speech.setAttribute('display', 'none'); if (fn) fn(); return; }
+          if (this.panel) { this._panelDown(w, e.pointerId); return; }
           // açık menü: bir seçeneğe dokunuldu mu?
           if (this.menu) {
             const cell = this.menu.cells.find((c) => w.x > c.x && w.x < c.x + c.w && w.y > c.y && w.y < c.y + c.h);
@@ -1197,7 +1456,10 @@
           const B = this.ball;
           if (B.active && !B.held && Math.hypot(w.x - B.x, w.y - B.y) < B.r + 22) { this._grabBall(w, e.pointerId); return; }
           if (this._sceneMoving()) return;
+          const hb = this.showHud && !this.drag && !this.auto ? this._hudAt(w) : null;
+          if (hb) { if (this.game && this.game.kind === 'hide') this.stopGame(); this._openPanel(hb); return; }
           const sk = this.showTools && !this.auto && !this.drag ? this._slotAt(w) : null;
+          if (sk && this.game && this.game.kind === 'hide' && sk !== 'game') this.stopGame();
           if (sk) {
             if (sk === 'food') this._openMenu('food');
             else if (sk === 'water') this._startDrag('water', w.x, w.y, e.pointerId);
@@ -1205,7 +1467,7 @@
             else if (sk === 'light') this.toggleLights();
             else if (sk === 'bath') this.goBath();
             else if (sk === 'home') this.goRoom();
-            else if (sk === 'sponge' || sk === 'shower') this._startDrag(sk, w.x, w.y, e.pointerId);
+            else if (sk === 'sponge' || sk === 'shower' || sk === 'brush' || sk === 'tooth') this._startDrag(sk, w.x, w.y, e.pointerId);
             return;
           }
           if (this.game && this._gamePointerDown(w, e.pointerId)) return;
@@ -1265,6 +1527,8 @@
         this._spawn('heart', wx + rand(-10, 10), wy - 10, { vx: rand(-15, 15), vy: rand(-70, -45), s: rand(0.8, 1.25) });
       }
       this.stats.happiness = Math.min(100, this.stats.happiness + d * 0.012);
+      this._petAcc += d;
+      if (this._petAcc > 260) { this._petAcc = 0; this._quest('pet'); this.reward(1, 0); }
       if (wasLow) this._emit('pet', { phase: 'start' });
     }
     petOnce() {
@@ -1285,7 +1549,7 @@
 
     _slotAt(w) {
       if (!this.showTools) return null;
-      for (const k of this.scene === 'bath' ? ['home', 'sponge', 'shower'] : ['food', 'water', 'game', 'light', 'bath']) {
+      for (const k of this.scene === 'bath' ? ['home', 'brush', 'tooth', 'sponge', 'shower'] : ['food', 'water', 'game', 'light', 'bath']) {
         const sl = this.slots[k];
         if (Math.abs(w.x - sl.x) < 44 && Math.abs(w.y - sl.y) < 46) return k;
       }
@@ -1300,7 +1564,8 @@
         { id: 'ball', kind, label: 'Top', sub: 'Fırlat', icon: '<g transform="scale(0.85)">' + ballMarkup(this.C.line) + '</g>' },
         { id: 'laser', kind, label: 'Lazer', sub: 'Parmağını gezdir', icon: '<circle r="16" fill="#FF3B5C" opacity="0.25"/><circle r="8" fill="#FF3B5C"/><circle cx="-2" cy="-2" r="2.5" fill="#fff"/>' },
         { id: 'bubbles', kind, label: 'Baloncuk', sub: 'Patlat', icon: '<g transform="translate(-8 4) scale(0.8)">' + soapBubbleMarkup() + '</g><g transform="translate(12 -10) scale(0.5)">' + soapBubbleMarkup() + '</g>' },
-        { id: 'butterfly', kind, label: 'Kelebek', sub: 'Yakala', icon: '<g transform="scale(0.75)">' + butterflyMarkup(this.C.line) + '</g>' }];
+        { id: 'butterfly', kind, label: 'Kelebek', sub: 'Yakala', icon: '<g transform="scale(0.75)">' + butterflyMarkup(this.C.line) + '</g>' },
+        { id: 'hide', kind, label: 'Saklambaç', sub: 'Onu bul', icon: '<text y="13" text-anchor="middle" font-size="38">🙈</text>' }];
     }
     _openMenu(kind) {
       this._closeMenu();
@@ -1370,13 +1635,16 @@
       const target = this.lightsOff || this.sleeping ? 1 : 0;
       this.night += (target - this.night) * (1 - Math.exp(-dt * 2.5));
       const n = this.night;
+      this._clockT -= dt;
+      if (this._clockT <= 0 || !this._clockInfo) { this._clockT = 5; const ci = this._clock(); if (!this._clockInfo || ci.sky !== this._clockInfo.sky || ci.cn !== this._clockInfo.cn || ci.sunX !== this._clockInfo.sunX) this._lastNight = -1; this._clockInfo = ci; }
       if (Math.abs(n - this._lastNight) < 0.002) return;
       this._lastNight = n;
       this.r.night.setAttribute('opacity', f(n * 0.5 * 100) / 100);
-      const w = this.win;
+      const w = this.win, ck = this._clockInfo, dark = Math.max(n, ck.cn);
       if (w && w.sky) {
-        w.sky.setAttribute('fill', mix('#CFEAFB', '#2B3A6B', n));
-        w.sun.setAttribute('opacity', f(1 - n)); w.cloud.setAttribute('opacity', f(0.9 * (1 - n))); w.moon.setAttribute('opacity', f(n));
+        w.sky.setAttribute('fill', mix(ck.sky, '#2B3A6B', dark));
+        w.sun.setAttribute('cx', f(ck.sunX)); w.sun.setAttribute('cy', f(ck.sunY)); w.sun.setAttribute('fill', ck.h < 9 || ck.h > 17 ? '#FFB86B' : '#FFE08A');
+        w.sun.setAttribute('opacity', f(1 - dark)); w.cloud.setAttribute('opacity', f(0.9 * (1 - dark))); w.moon.setAttribute('opacity', f(dark));
         const curt = (sg) => { // perde: açıkken kenarda toplanır, kapalıyken pencereyi örter
           const top = lerp(-80, 1, n), mid = lerp(-58, 0, n), bot = lerp(-82, 1, n);
           const X = (v) => f(v * sg);
@@ -1395,7 +1663,7 @@
     startGame(kind) {
       if (this.scene === 'bath') return false;
       if (kind === 'ball') { this.throwBall(); return; }
-      if (['laser', 'bubbles', 'butterfly'].indexOf(kind) < 0) return;
+      if (['laser', 'bubbles', 'butterfly', 'hide'].indexOf(kind) < 0) return;
       this.stopGame(true);
       if (this.sleeping || this.lightsOff) this.setLights(true);
       const g = this.game = { kind, t: 0, dur: 40, cool: 0.6, spawn: 0, items: [], pid: null };
@@ -1411,13 +1679,9 @@
         g.el.innerHTML = butterflyMarkup(this.C.line);
         g.wings = g.el.querySelectorAll('[data-w]');
         layer.appendChild(g.el);
-      }
-      const label = { laser: '🔴 Lazer: parmağını sahnede gezdir', bubbles: '🫧 Baloncukları patlat', butterfly: '🦋 Kelebeğe dokun' }[kind];
-      this.r.bannerTxt.textContent = label + '   ✕';
-      this._bannerW = 300;
-      try { this._bannerW = this.r.bannerTxt.getComputedTextLength() + 40 || 300; } catch (e) { /* yoksay */ }
-      this.r.bannerBg.setAttribute('x', f(-this._bannerW / 2)); this.r.bannerBg.setAttribute('width', f(this._bannerW));
-      this.r.banner.setAttribute('display', 'inline');
+      } else if (kind === 'hide') { this._clearActions(); this._startHide(g); }
+      const label = { laser: '🔴 Lazer: parmağını sahnede gezdir', bubbles: '🫧 Baloncukları patlat', butterfly: '🦋 Kelebeğe dokun', hide: '🙈 Saklambaç' }[kind];
+      this._setBanner(label + '   ✕');
       this._emit('game', { name: kind, phase: 'start' });
     }
     stopGame(silent) {
@@ -1425,12 +1689,14 @@
       if (g.el) g.el.remove();
       g.items.forEach((b) => b.el.remove());
       this.game = null;
+      if (g.kind === 'hide') this.hidden = false;
       if (this.r.banner) this.r.banner.setAttribute('display', 'none');
       if (!silent) this._emit('game', { name: g.kind, phase: 'end' });
     }
     _gamePointerDown(w, pid) {
       const g = this.game;
       if (w.y > this.Hv - this.trayH - 6) return false;
+      if (g.kind === 'hide') return this._hideTap(w);
       if (g.kind === 'laser') { g.pid = pid; g.dot.on = true; g.dot.x = w.x; g.dot.y = Math.min(w.y, this.floorY); return true; }
       if (g.kind === 'bubbles') {
         const b = g.items.find((it) => Math.hypot(it.x - w.x, it.y - w.y) < it.r + 16);
@@ -1455,6 +1721,7 @@
       const g = this.game; if (!g) return;
       g.t += dt; g.cool -= dt;
       if (g.t > g.dur) { this.stopGame(); return; }
+      if (g.kind === 'hide') { this._updateHide(dt, T, g); return; }
       const awake = !this.sleeping && !(this.action && this.action.busy);
       let tgt = null;
       if (g.kind === 'laser') {
@@ -1656,19 +1923,20 @@
       opt = opt || {};
       const sl = opt.from || this.slots[type];
       this.drag = { type, id, fx: x, fy: y, x: sl.x, y: sl.y, returning: null, food: opt.food || 'treat', lastMove: [x, y] };
-      if (type === 'food') this.r.heldFood.innerHTML = '<g transform="scale(1.3)">' + foodIcon(this.drag.food, this.species, PALETTES_PROPS, this.C.line) + '</g>';
+      if (type === 'food') this.r.heldFood.innerHTML = '<g transform="scale(1.3)">' + (MEDS[this.drag.food] ? careIcon(this.drag.food, this.C.line) : foodIcon(this.drag.food, this.species, PALETTES_PROPS, this.C.line)) + '</g>';
       if (type === 'sponge') this.r.spongeArt.innerHTML = spongeMarkup(this.C.line, false);
       if (this.menu) this._closeMenu();
       this._emit('drag', { tool: type, phase: 'start', food: type === 'food' ? this.drag.food : undefined });
     }
-    _itemOffset(type) { return type === 'food' ? [0, -55] : type === 'water' ? [0, -45] : type === 'sponge' ? [0, -34] : [-36, 36]; }
+    _itemOffset(type) { return type === 'food' ? [0, -55] : type === 'water' ? [0, -45] : type === 'sponge' ? [0, -34] : type === 'brush' ? [10, -40] : type === 'tooth' ? [14, -30] : [-36, 36]; }
     _releaseDrag() {
       const d = this.drag; if (!d) return;
       let used = false;
       if (d.type === 'food') {
         const m = this._mouthWorld();
         if (Math.hypot(d.x - m.x, d.y - m.y) < 90 * this.s + 24 && this._canInteract()) {
-          if (this.stats.fullness >= 96 && !FOODS[d.food].drink) this._startAction(ACTIONS.refuse(this));
+          if (MEDS[d.food]) { used = true; this._medTake(d.food); }
+          else if (this.stats.fullness >= 96 && !FOODS[d.food].drink) this._startAction(ACTIONS.refuse(this));
           else { used = true; this._clearActions(); this._startAction(ACTIONS.nom(this, d.food)); }
         }
       } else if (d.type === 'water') {
@@ -1692,10 +1960,10 @@
       d.returning = { t: 0, x0: d.x, y0: d.y, x1: sl.x, y1: sl.y };
     }
     _hideHeld() {
-      ['heldFood', 'heldWater', 'heldShower', 'heldSponge'].forEach((k) => this.r[k] && this.r[k].setAttribute('display', 'none'));
-      if (this.r.iconWater) ['iconWater', 'iconShower', 'iconSponge'].forEach((k) => this.r[k].setAttribute('display', 'inline'));
+      ['heldFood', 'heldWater', 'heldShower', 'heldSponge', 'heldBrush', 'heldTooth'].forEach((k) => this.r[k] && this.r[k].setAttribute('display', 'none'));
+      if (this.r.iconWater) ['iconWater', 'iconShower', 'iconSponge', 'iconBrush', 'iconTooth'].forEach((k) => this.r[k].setAttribute('display', 'inline'));
     }
-    _canInteract() { return !(this.action && this.action.busy) && !this.sleeping; }
+    _canInteract() { return !(this.action && this.action.busy) && !this.sleeping && !this.hidden; }
 
     _updateDrag(dt, T) {
       const d = this.drag;
@@ -1746,6 +2014,7 @@
         if (d.type === 'food' && near > 0.6 && Math.random() < dt * 2) this._spawn('drop', m.x + rand(-10, 10), m.y + 20 * this.s, { vy: 30, g: 300, life: 0.8, s: 0.7 });
         return;
       }
+      if (d.type === 'brush' || d.type === 'tooth') { this._updateGroom(d, dt, T, awake); return; }
       const l = this._toLocal(d.x, d.y);
       if (d.type === 'sponge') { // sünger: dokunduğu yeri köpürtür
         const over = this._hit(l.x, l.y);
@@ -1808,13 +2077,15 @@
       const ax = this.Wv + 10, ay = this.Hv - 20;
       r.hose.setAttribute('d', 'M' + f(ax) + ' ' + f(ay) + ' C' + f(ax - 30) + ' ' + f(ay - 90) + ' ' + f(hx + 90) + ' ' + f(hy + 20) + ' ' + f(hx) + ' ' + f(hy));
       if (!d) return;
-      const k = { food: 'heldFood', water: 'heldWater', shower: 'heldShower', sponge: 'heldSponge' }[d.type];
+      const k = { food: 'heldFood', water: 'heldWater', shower: 'heldShower', sponge: 'heldSponge', brush: 'heldBrush', tooth: 'heldTooth' }[d.type];
       r[k].setAttribute('display', 'inline');
       const wob = d.type === 'shower' ? Math.sin(this.t * 30) * 1.5 : 0;
       r[k].setAttribute('transform', 'translate(' + f(d.x) + ' ' + f(d.y) + ') rotate(' + f(wob) + ')');
       if (d.type === 'water') r.iconWater.setAttribute('display', 'none');
       if (d.type === 'shower') r.iconShower.setAttribute('display', 'none');
       if (d.type === 'sponge') r.iconSponge.setAttribute('display', 'none');
+      if (d.type === 'brush') r.iconBrush.setAttribute('display', 'none');
+      if (d.type === 'tooth') r.iconTooth.setAttribute('display', 'none');
     }
 
     // süngerin değdiği noktaya köpük (yerel koordinat)
@@ -1881,6 +2152,593 @@
       }
     }
 
+    // ================================================================ üst bilgi çubuğu (seviye, pati parası, butonlar)
+    _hudButtons() {
+      return [['quests', '📋', 'Görevler'], ['shop', '🛍️', 'Mağaza'], ['wardrobe', '👗', 'Dolap'], ['mood', '💬', 'Nasılsın?'], ['vet', '🩺', 'Veteriner']];
+    }
+    _layoutHud() {
+      const r = this.r; if (!r.hudBtns) return;
+      const SC = SCENE, x = this.Wv - 40;
+      this.hudHits = [];
+      let m = '';
+      this._hudButtons().forEach((b, i) => {
+        const y = 42 + i * 74;
+        this.hudHits.push({ id: b[0], x, y });
+        m += '<g transform="translate(' + f(x) + ' ' + y + ')"><circle r="26" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+          '<text y="9" text-anchor="middle" font-size="25">' + b[1] + '</text>' +
+          '<text y="42" text-anchor="middle" font-family="' + FONT + '" font-size="11" font-weight="800" fill="' + SC.text + '" stroke="#fff" stroke-width="3" paint-order="stroke">' + b[2] + '</text>' +
+          '<circle data-b="' + b[0] + '" cx="19" cy="-19" r="8" fill="#FF5E86" stroke="#fff" stroke-width="2.5" display="none"/></g>';
+      });
+      r.hudBtns.innerHTML = m;
+      this._renderHud();
+    }
+    _hudAt(w) {
+      if (!this.hudHits || this.scene !== 'room') return null;
+      const h = this.hudHits.find((b) => Math.hypot(w.x - b.x, w.y - b.y) < 30);
+      return h ? h.id : null;
+    }
+    _renderHud() {
+      const r = this.r; if (!r || !r.hudLv) return;
+      const pr = this.progress;
+      r.hudLv.textContent = pr.level;
+      r.hudXp.setAttribute('width', f(110 * clamp(pr.xp / this._xpNeed(pr.level), 0, 1)));
+      r.hudCoins.textContent = pr.coins;
+      if (this.cycle && CYCLE[this.cycle.phase]) {
+        const c = CYCLE[this.cycle.phase];
+        r.hudCycleTxt.textContent = c.label + (this.cycle.phase === 'period' && this.cycle.day ? ' · ' + this.cycle.day + '. gün' : '');
+        let w = 150; try { w = r.hudCycleTxt.getComputedTextLength() + 24 || w; } catch (e) { /* yoksay */ }
+        r.hudCycleBg.setAttribute('width', f(w));
+        r.hudCycle.setAttribute('display', 'inline');
+      } else r.hudCycle.setAttribute('display', 'none');
+      if (r.hudBtns) {
+        const badge = (id, on) => { const e = r.hudBtns.querySelector('[data-b="' + id + '"]'); if (e) e.setAttribute('display', on ? 'inline' : 'none'); };
+        badge('quests', pr.quests.list.some((q) => q.have >= QUESTS[q.id].n && !q.claimed));
+        badge('vet', this.stats.health < 40);
+        badge('mood', !this.userMood || this.userMood.date !== this._today());
+      }
+    }
+
+    // ================================================================ konuşma balonu
+    say(text, dur, opt) {
+      opt = opt || {};
+      const r = this.r; if (!r.speech || !text) return;
+      this.speech = { text, t: 0, dur: dur || 3, button: opt.button || null, onTap: opt.onTap || null };
+      const lines = [], words = String(text).split(' ');
+      let cur = '';
+      words.forEach((wd) => { if ((cur + ' ' + wd).trim().length > 24 && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); });
+      if (cur) lines.push(cur);
+      r.speechTxt.innerHTML = lines.map((l, i) => '<tspan x="0" dy="' + (i ? 22 : 0) + '">' + esc(l) + '</tspan>').join('');
+      let w = Math.max.apply(null, lines.map((l) => l.length)) * 9.5;
+      try { w = r.speechTxt.getBBox().width || w; } catch (e) { /* yoksay */ }
+      const btnH = this.speech.button ? 44 : 0;
+      if (this.speech.button) {
+        r.speechBtnTxt.textContent = this.speech.button;
+        let bw = 110; try { bw = r.speechBtnTxt.getComputedTextLength() + 34 || bw; } catch (e) { /* yoksay */ }
+        w = Math.max(w, bw);
+        this.speech.bw = bw;
+      }
+      this.speech.w = w + 32; this.speech.h = lines.length * 22 + 24 + btnH; this.speech.lines = lines.length;
+      r.speech.setAttribute('display', 'inline');
+      r.speechBtn.setAttribute('display', this.speech.button ? 'inline' : 'none');
+      this._emit('say', { text });
+    }
+    _updateSpeech(dt) {
+      const sp = this.speech, r = this.r; if (!sp || !r.speech) return;
+      sp.t += dt;
+      if (sp.t > sp.dur || this.hidden) { this.speech = null; r.speech.setAttribute('display', 'none'); return; }
+      const hl = this._headLocal(), a = this._toWorld(hl.x + 64, hl.y - 70);
+      const W = sp.w, H = sp.h;
+      let x0 = clamp(a.x - 34, 8, this.Wv - W - 64), y1 = Math.max(a.y, H + 62), y0 = y1 - H;
+      const tx = clamp(a.x - 18, x0 + 20, x0 + W - 30), x1 = x0 + W, rr = 18;
+      r.speechBg.setAttribute('d', 'M' + f(x0 + rr) + ' ' + f(y0) + ' H' + f(x1 - rr) + ' Q' + f(x1) + ' ' + f(y0) + ' ' + f(x1) + ' ' + f(y0 + rr) + ' V' + f(y1 - rr) + ' Q' + f(x1) + ' ' + f(y1) + ' ' + f(x1 - rr) + ' ' + f(y1) +
+        ' H' + f(tx + 16) + ' L' + f(tx - 8) + ' ' + f(y1 + 22) + ' L' + f(tx) + ' ' + f(y1) + ' H' + f(x0 + rr) + ' Q' + f(x0) + ' ' + f(y1) + ' ' + f(x0) + ' ' + f(y1 - rr) + ' V' + f(y0 + rr) + ' Q' + f(x0) + ' ' + f(y0) + ' ' + f(x0 + rr) + ' ' + f(y0) + ' Z');
+      r.speechTxt.setAttribute('transform', 'translate(' + f(x0 + W / 2) + ' ' + f(y0 + 28) + ')');
+      r.speechTxt.querySelectorAll('tspan').forEach((t) => t.setAttribute('x', '0'));
+      if (sp.button) {
+        const bw = sp.bw, bx = x0 + (W - bw) / 2, by = y1 - 48;
+        r.speechBtnBg.setAttribute('x', f(bx)); r.speechBtnBg.setAttribute('y', f(by)); r.speechBtnBg.setAttribute('width', f(bw));
+        r.speechBtnTxt.setAttribute('x', f(bx + bw / 2)); r.speechBtnTxt.setAttribute('y', f(by + 24));
+        sp.hit = { x: bx, y: by, w: bw, h: 36 };
+      }
+      const k = sp.t < 0.18 ? 0.6 + 0.4 * smooth01(sp.t / 0.18) : sp.t > sp.dur - 0.25 ? clamp((sp.dur - sp.t) / 0.25, 0, 1) : 1;
+      r.speech.setAttribute('transform', 'translate(' + f(tx) + ' ' + f(y1) + ') scale(' + Math.round(k * 100) / 100 + ') translate(' + f(-tx) + ' ' + f(-y1) + ')');
+      r.speech.setAttribute('opacity', f(Math.min(1, k * 1.4)));
+    }
+    _autoSay(mood) {
+      if (this._sayCool > 0 || this.speech || this.hidden) return;
+      const hr = this._clockInfo ? this._clockInfo.h : 12;
+      let lines = NEED_LINES[mood] || NEED_LINES.neutral, p = mood === 'happy' || mood === 'neutral' ? 0.3 : 0.75;
+      if ((hr >= 23 || hr < 6) && !this.lightsOff && Math.random() < 0.5) { lines = ['Geç oldu, uyuyalım mı? 🌙', 'Işığı kapatırsan uyurum 💤']; p = 1; }
+      else if (this.cycle && CYCLE[this.cycle.phase] && (mood === 'happy' || mood === 'neutral') && Math.random() < 0.5) { lines = CYCLE[this.cycle.phase].tips; p = 0.8; }
+      if (Math.random() > p) return;
+      this.say(lines[Math.floor(Math.random() * lines.length)], 3.2);
+      this._sayCool = rand(16, 26);
+    }
+
+    // ================================================================ ilerleme: seviye, pati parası, görevler
+    _xpNeed(lv) { return 40 + lv * 30; }
+    _rewardAt() { const hl = this._headLocal(); return this._toWorld(hl.x, hl.y - 120); }
+    reward(xp, coins, at) {
+      const pr = this.progress;
+      xp = Math.max(0, xp | 0); coins = Math.max(0, coins | 0);
+      pr.xp += xp; pr.coins += coins;
+      if (at && (xp || coins)) {
+        this._spawn('text', at.x, at.y, { text: (coins ? '+' + coins + ' 🪙  ' : '') + (xp ? '+' + xp + ' ⭐' : ''), vy: -45, life: 1.5, size: 17, color: '#D68A00' });
+        if (coins) this.sfx.play('coin');
+      }
+      let up = false;
+      while (pr.xp >= this._xpNeed(pr.level)) { pr.xp -= this._xpNeed(pr.level); pr.level++; up = true; }
+      if (up) {
+        pr.coins += 10;
+        const unlocked = Object.keys(CLOTHES).filter((id) => CLOTHES[id].level === pr.level).map((id) => CLOTHES[id].name);
+        this.say('Seviye ' + pr.level + ' oldum! ⭐' + (unlocked.length ? ' Mağazada yeni: ' + unlocked.join(', ') : ''), 4);
+        if (!this.sleeping && !this.hidden && !(this.action && this.action.busy)) this._startAction(ACTIONS.celebrate(this));
+        this.sfx.play('chime');
+        this._emit('level', { level: pr.level, unlocked });
+      }
+      this._renderHud();
+      this._emit('progress', this.getProgress());
+    }
+    getProgress() {
+      const pr = this.progress;
+      return { level: pr.level, xp: pr.xp, xpNeed: this._xpNeed(pr.level), coins: pr.coins, owned: pr.owned.slice(), wear: Object.assign({}, pr.wear),
+        quests: pr.quests.list.map((q) => ({ id: q.id, text: QUESTS[q.id].text, have: q.have, need: QUESTS[q.id].n, claimed: !!q.claimed })) };
+    }
+    _today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    _checkQuests() {
+      const pr = this.progress, today = this._today();
+      if (pr.quests.date === today && pr.quests.list.length) return;
+      let seed = 0;
+      for (let i = 0; i < today.length; i++) seed = (seed * 31 + today.charCodeAt(i)) % 2147483647;
+      const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+      const self = SELF_QUESTS[Math.floor(rnd() * SELF_QUESTS.length)];
+      const pool = Object.keys(QUESTS).filter((k) => SELF_QUESTS.indexOf(k) < 0);
+      const pick = [self];
+      while (pick.length < 3) { const k = pool[Math.floor(rnd() * pool.length)]; if (pick.indexOf(k) < 0) pick.push(k); }
+      pr.quests = { date: today, list: pick.map((id) => ({ id, have: 0, claimed: false })), bonus: false };
+      this._renderHud();
+    }
+    _quest(id, n) {
+      const q = this.progress.quests.list.find((x) => x.id === id);
+      if (!q || q.claimed) return;
+      const need = QUESTS[id].n;
+      if (q.have >= need) return;
+      q.have = Math.min(need, q.have + (n || 1));
+      if (q.have >= need) {
+        this._spawn('text', this.Wv / 2, 128, { text: 'Görev tamam! ' + QUESTS[id].icon + ' ✓', vy: -18, life: 2.2, size: 19, color: '#3FAE8C' });
+        this.sfx.play('sparkle');
+        this._emit('quest', { id, phase: 'done' });
+      }
+      this._renderHud();
+      if (this.panel && this.panel.kind === 'quests') this._openPanel('quests');
+    }
+    claimQuest(id) {
+      const pr = this.progress, q = pr.quests.list.find((x) => x.id === id);
+      if (!q || q.claimed || q.have < QUESTS[id].n) return false;
+      q.claimed = true;
+      this.reward(20, 15, { x: this.Wv / 2, y: 150 });
+      if (!pr.quests.bonus && pr.quests.list.every((x) => x.claimed)) {
+        pr.quests.bonus = true;
+        setTimeout(() => { this.reward(0, 20, { x: this.Wv / 2, y: 190 }); this.say('Bugünün tüm görevleri bitti! 🎉', 3); }, 600);
+      }
+      this._emit('quest', { id, phase: 'claimed' });
+      if (this.panel && this.panel.kind === 'quests') this._openPanel('quests');
+      return true;
+    }
+
+    // ---------------------------------------------------------------- mağaza / dolap
+    getShop() {
+      const pr = this.progress;
+      return Object.keys(CLOTHES).map((id) => ({ id, name: CLOTHES[id].name, slot: CLOTHES[id].slot, price: CLOTHES[id].price, level: CLOTHES[id].level,
+        owned: pr.owned.indexOf(id) >= 0, worn: pr.wear[CLOTHES[id].slot] === id }));
+    }
+    buy(id) {
+      const c = CLOTHES[id], pr = this.progress;
+      if (!c) return { ok: false, reason: 'unknown' };
+      if (pr.owned.indexOf(id) >= 0) return { ok: false, reason: 'owned' };
+      if (pr.level < c.level) return { ok: false, reason: 'level' };
+      if (pr.coins < c.price) return { ok: false, reason: 'coins' };
+      pr.coins -= c.price; pr.owned.push(id);
+      this.wear(id);
+      this.sfx.play('chime');
+      this._emit('buy', { id, price: c.price });
+      this._renderHud();
+      return { ok: true };
+    }
+    wear(id) {
+      const c = CLOTHES[id], pr = this.progress;
+      if (!c || pr.owned.indexOf(id) < 0) return false;
+      pr.wear[c.slot] = id;
+      this._renderWear();
+      if (!this.sleeping && !this.hidden && !this.action) this._startAction(ACTIONS.hop(this));
+      for (let i = 0; i < 4; i++) this._spawnL('sparkle', rand(130, 270), rand(60, 300), { vy: -30, life: 0.8, s: 0.8 });
+      this._emit('wear', Object.assign({}, pr.wear));
+      return true;
+    }
+    unwear(slot) {
+      const pr = this.progress;
+      if (slot) pr.wear[slot] = null; else CLOTH_SLOTS.forEach((k) => { pr.wear[k] = null; });
+      this._renderWear();
+      this._emit('wear', Object.assign({}, pr.wear));
+    }
+    _renderWear() {
+      const r = this.r; if (!r || !r.wearHead) return;
+      const w = this.progress.wear, sp = this.species, L = this.C.line;
+      r.wearHead.innerHTML = w.head ? clothMarkup(w.head, sp, L) : '';
+      r.wearEyes.innerHTML = w.eyes ? clothMarkup(w.eyes, sp, L) : '';
+      r.wearNeck.innerHTML = w.neck ? clothMarkup(w.neck, sp, L) : w.body === 'cape' ? '<circle cx="200" cy="236" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/>' : '';
+      r.wearBody.innerHTML = w.body === 'sweater' ? clothMarkup('sweater', sp, L) : '';
+      r.wearBack.innerHTML = w.body === 'cape' ? clothMarkup('cape', sp, L) : '';
+    }
+
+    // ================================================================ paneller (görevler, mağaza, dolap, ruh hali, veteriner)
+    _openPanel(kind) {
+      this._closeMenu();
+      const r = this.r; if (!r.panel) return;
+      const SC = SCENE, pr = this.progress, L = this.C.line;
+      const W = Math.min(this.Wv - 28, 620), hits = [];
+      const tx = (x, y, s, size, weight, color, anchor) => '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="' + (anchor || 'start') + '" font-family="' + FONT + '" font-size="' + size + '" font-weight="' + (weight || 700) + '" fill="' + (color || SC.text) + '">' + esc(s) + '</text>';
+      const title = { quests: '📋 Günlük görevler', shop: '🛍️ Mağaza', wardrobe: '👗 Dolap', mood: '💬 Bugün nasılsın?', vet: '🩺 Veteriner' }[kind];
+      let m = '', H = 70;
+      const grid = (ids, cellFn) => {
+        const cw = 108, ch = 128, gap = 10, cols = Math.max(2, Math.floor((W - 32 + gap) / (cw + gap)));
+        const gx = (W - (cols * cw + (cols - 1) * gap)) / 2;
+        ids.forEach((id, i) => {
+          const x = gx + (i % cols) * (cw + gap), y = H + Math.floor(i / cols) * (ch + gap);
+          m += '<g transform="translate(' + f(x) + ' ' + f(y) + ')">' + cellFn(id, cw, ch, x, y) + '</g>';
+        });
+        H += Math.ceil(ids.length / cols) * (ch + gap) + 6;
+      };
+      if (kind === 'quests') {
+        m += tx(24, 64, 'Her gün yeni görevler gelir 🌞', 13, 600, '#B08A82');
+        H = 82;
+        pr.quests.list.forEach((q) => {
+          const Q = QUESTS[q.id], done = q.have >= Q.n, y = H;
+          m += '<rect x="16" y="' + y + '" width="' + (W - 32) + '" height="72" rx="18" fill="' + (q.claimed ? '#F0FBF6' : '#FFF8FA') + '" stroke="#F6DCE3" stroke-width="2"/>' +
+            '<text x="46" y="' + (y + 46) + '" text-anchor="middle" font-size="28">' + Q.icon + '</text>' +
+            tx(76, y + 30, Q.text, 15, 800);
+          const bw = W - 32 - 76 - 130;
+          m += '<rect x="76" y="' + (y + 42) + '" width="' + f(bw) + '" height="10" rx="5" fill="#F6DCE3"/>' +
+            '<rect x="76" y="' + (y + 42) + '" width="' + f(bw * q.have / Q.n) + '" height="10" rx="5" fill="' + (done ? '#5CC9A7' : '#F4A259') + '"/>' +
+            tx(76 + bw + 8, y + 52, q.have + '/' + Q.n, 12, 800, '#B08A82');
+          const bx = W - 16 - 108;
+          if (q.claimed) m += tx(bx + 54, y + 42, '✓ Alındı', 14, 800, '#3FAE8C', 'middle');
+          else if (done) {
+            m += '<rect x="' + bx + '" y="' + (y + 16) + '" width="96" height="40" rx="20" fill="#F06C8B"/>' + tx(bx + 48, y + 42, 'Ödülü al 🎁', 14, 800, '#fff', 'middle');
+            hits.push({ x: bx, y: y + 16, w: 96, h: 40, fn: () => this.claimQuest(q.id) });
+          } else m += tx(bx + 54, y + 42, '🪙15  ⭐20', 13, 800, '#C9A79E', 'middle');
+          H += 82;
+        });
+        H += 4;
+      } else if (kind === 'shop' || kind === 'wardrobe') {
+        m += tx(W - 70, 42, '🪙 ' + pr.coins, 17, 900, '#D68A00', 'end');
+        const ids = kind === 'shop' ? Object.keys(CLOTHES) : pr.owned.filter((id) => CLOTHES[id]);
+        if (kind === 'wardrobe' && !ids.length) {
+          m += tx(W / 2, 100, 'Dolabın henüz boş.', 16, 800, SC.text, 'middle') + tx(W / 2, 124, 'Mağazadan kıyafet alabilirsin!', 14, 600, '#B08A82', 'middle');
+          m += '<rect x="' + (W / 2 - 90) + '" y="142" width="180" height="44" rx="22" fill="#F06C8B"/>' + tx(W / 2, 170, 'Mağazaya git 🛍️', 15, 800, '#fff', 'middle');
+          hits.push({ x: W / 2 - 90, y: 142, w: 180, h: 44, fn: () => this._openPanel('shop') });
+          H = 206;
+        } else {
+          grid(ids, (id, cw, ch, x, y) => {
+            const c = CLOTHES[id], owned = pr.owned.indexOf(id) >= 0, worn = pr.wear[c.slot] === id;
+            let s = '<rect width="' + cw + '" height="' + ch + '" rx="18" fill="#fff" stroke="' + (worn ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (worn ? 4 : 2) + '"/>' +
+              '<g transform="translate(' + cw / 2 + ' 48)">' + clothPreview(id, this.species, L) + '</g>' + tx(cw / 2, 96, c.name, 12, 800, SC.text, 'middle');
+            if (kind === 'wardrobe') s += tx(cw / 2, 116, worn ? '✓ Giyili' : 'Giy', 12, 800, worn ? '#F06C8B' : '#B08A82', 'middle');
+            else if (owned) s += tx(cw / 2, 116, worn ? '✓ Giyili' : '✓ Sende', 12, 800, '#3FAE8C', 'middle');
+            else if (pr.level < c.level) s += tx(cw / 2, 116, '🔒 Seviye ' + c.level, 12, 800, '#B9A6A0', 'middle');
+            else s += tx(cw / 2, 116, '🪙 ' + c.price, 13, 900, pr.coins >= c.price ? '#D68A00' : '#E05A5A', 'middle');
+            hits.push({ x, y, w: cw, h: ch, fn: (w) => this._clothTap(kind, id, w) });
+            return s;
+          });
+          if (kind === 'wardrobe' && CLOTH_SLOTS.some((k) => pr.wear[k])) {
+            m += '<rect x="' + (W / 2 - 80) + '" y="' + H + '" width="160" height="40" rx="20" fill="#F6DCE3"/>' + tx(W / 2, H + 26, 'Hepsini çıkar', 14, 800, SC.text, 'middle');
+            const yy = H; hits.push({ x: W / 2 - 80, y: yy, w: 160, h: 40, fn: () => { this.unwear(); this._openPanel('wardrobe'); } });
+            H += 52;
+          }
+        }
+      } else if (kind === 'mood') {
+        m += tx(24, 64, 'Hayvanın senin ruh haline göre sana destek olur 💕', 13, 600, '#B08A82');
+        H = 80;
+        const ids = Object.keys(USER_MOODS), cols = 3, gap = 10, cw = (W - 32 - gap * 2) / 3, ch = 100;
+        ids.forEach((id, i) => {
+          const x = 16 + (i % cols) * (cw + gap), y = H + Math.floor(i / cols) * (ch + gap), sel = this.userMood && this.userMood.mood === id && this.userMood.date === this._today();
+          m += '<rect x="' + f(x) + '" y="' + y + '" width="' + f(cw) + '" height="' + ch + '" rx="20" fill="' + (sel ? '#FFE3EC' : '#fff') + '" stroke="' + (sel ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (sel ? 3 : 2) + '"/>' +
+            '<text x="' + f(x + cw / 2) + '" y="' + (y + 54) + '" text-anchor="middle" font-size="40">' + USER_MOODS[id].emoji + '</text>' + tx(x + cw / 2, y + 86, USER_MOODS[id].name, 14, 800, SC.text, 'middle');
+          hits.push({ x, y, w: cw, h: ch, fn: () => { this._closePanel(); this.setUserMood(id); } });
+        });
+        H += Math.ceil(ids.length / cols) * (ch + gap) + 6;
+      } else if (kind === 'vet') {
+        const hp = Math.round(this.stats.health), sick = hp < 40;
+        m += tx(24, 74, 'Sağlık', 14, 800) + '<rect x="84" y="62" width="' + (W - 170) + '" height="14" rx="7" fill="#F6DCE3"/>' +
+          '<rect x="84" y="62" width="' + f((W - 170) * hp / 100) + '" height="14" rx="7" fill="' + (sick ? '#E05A5A' : hp < 70 ? '#F4A259' : '#5CC9A7') + '"/>' + tx(W - 24, 75, '%' + hp, 14, 900, SC.text, 'end');
+        m += tx(24, 104, sick ? '🤒 Hasta! Şurup ver, sonra bol bol dinlensin.' : hp < 70 ? '😐 Biraz halsiz. Vitamin iyi gelir.' : '💪 Sağlıklı ve mutlu!', 14, 700, sick ? '#E05A5A' : '#3FAE8C');
+        m += tx(24, 126, 'İlacı seç ve ağzına sürükle', 12, 600, '#B08A82');
+        H = 140;
+        const ids = Object.keys(MEDS), gap = 10, cw = (W - 32 - gap * 2) / 3, ch = 120;
+        ids.forEach((id, i) => {
+          const x = 16 + i * (cw + gap), y = H;
+          m += '<rect x="' + f(x) + '" y="' + y + '" width="' + f(cw) + '" height="' + ch + '" rx="18" fill="#fff" stroke="#F6DCE3" stroke-width="2"/>' +
+            '<g transform="translate(' + f(x + cw / 2) + ' ' + (y + 46) + ') scale(0.95)">' + careIcon(id, L) + '</g>' +
+            tx(x + cw / 2, y + 92, MEDS[id].name, 14, 800, SC.text, 'middle') + tx(x + cw / 2, y + 110, MEDS[id].desc, 11, 600, '#B08A82', 'middle');
+          hits.push({ x, y, w: cw, h: ch, fn: (w, pid) => { const from = this.panel ? { x: this.panel.x0 + x + cw / 2, y: this.panel.y0 + y + 46 } : null; this._closePanel(); this._startDrag('food', w.x, w.y, pid, { food: id, from }); } });
+        });
+        H += ch + 16;
+      }
+      const x0 = (this.Wv - W) / 2, y0 = Math.max(14, (this.Hv - this.trayH - H) / 2);
+      const card = '<rect x="0" y="0" width="' + this.Wv + '" height="' + this.Hv + '" fill="#2B2140" opacity="0.28"/>' +
+        '<g transform="translate(' + f(x0) + ' ' + f(y0) + ')"><rect width="' + W + '" height="' + H + '" rx="26" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+        tx(24, 42, title, 20, 900) +
+        '<circle cx="' + (W - 30) + '" cy="32" r="18" fill="#F6DCE3"/><path d="M' + (W - 37) + ' 25 l14 14 M' + (W - 23) + ' 25 l-14 14" stroke="' + SC.text + '" stroke-width="3.5" stroke-linecap="round"/>' +
+        m + '</g>';
+      hits.push({ x: W - 50, y: 12, w: 40, h: 40, fn: () => this._closePanel() });
+      r.panel.innerHTML = card;
+      this.panel = { kind, x0, y0, W, H, hits: hits.map((h) => ({ x: h.x + x0, y: h.y + y0, w: h.w, h: h.h, fn: h.fn })) };
+      this._emit('panel', { name: kind, phase: 'open' });
+    }
+    _closePanel() {
+      if (!this.panel) return;
+      const k = this.panel.kind;
+      this.panel = null; if (this.r.panel) this.r.panel.innerHTML = '';
+      this._emit('panel', { name: k, phase: 'close' });
+    }
+    openPanel(kind) { if (['quests', 'shop', 'wardrobe', 'mood', 'vet'].indexOf(kind) >= 0) this._openPanel(kind); }
+    _panelDown(w, pid) {
+      const P = this.panel;
+      const h = P.hits.find((b) => w.x > b.x && w.x < b.x + b.w && w.y > b.y && w.y < b.y + b.h);
+      if (h) { h.fn(w, pid); return; }
+      if (w.x < P.x0 || w.x > P.x0 + P.W || w.y < P.y0 || w.y > P.y0 + P.H) this._closePanel();
+    }
+    _clothTap(kind, id, w) {
+      const pr = this.progress, c = CLOTHES[id];
+      const toast = (t, col) => this._spawn('text', w.x, w.y - 20, { text: t, vy: -30, life: 1.4, size: 15, color: col || '#E05A5A' });
+      if (kind === 'wardrobe' || pr.owned.indexOf(id) >= 0) {
+        if (pr.wear[c.slot] === id) this.unwear(c.slot); else this.wear(id);
+      } else {
+        const res = this.buy(id);
+        if (!res.ok) { toast(res.reason === 'level' ? 'Seviye ' + c.level + ' gerekli 🔒' : 'Yeterli pati paran yok 🪙'); return; }
+        toast('Aldın! Hemen giydi 💕', '#3FAE8C');
+      }
+      this._openPanel(kind);
+    }
+
+    // ================================================================ tarak ve diş fırçası (banyoda)
+    _updateGroom(d, dt, T, awake) {
+      const mv = Math.hypot(d.x - d.lastMove[0], d.y - d.lastMove[1]); d.lastMove = [d.x, d.y];
+      if (d.type === 'brush') {
+        const tx = d.x, ty = d.y + 30, l = this._toLocal(tx, ty);
+        const over = this._hit(l.x, l.y);
+        if (!awake) return;
+        if (!over) { this._lookAtWorld(T, d.x, d.y); return; }
+        T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1; T.blush = 0.7; T.tilt = clamp((l.x - 200) / 8, -12, 12);
+        T.earLift = -0.3; T.wagFreq = 3; T.wagAmp = 20; T.brow = -0.1;
+        if (this.species === 'cat') T.whisker = 1; else { T.mouthOpen = 0.35; T.tongue = 0.6; }
+        if (mv > 2) {
+          this.groom = Math.min(1, this.groom + mv * 0.0011);
+          this.sfx.play('brush');
+          if (Math.random() < dt * 9) this._spawn('tuft', tx + rand(-16, 16), ty, { vx: rand(-70, 70), vy: rand(-90, -30), g: 140, life: 1.3, rot: rand(0, 360), vr: rand(-200, 200) });
+          if (Math.random() < dt * 5) this._spawn('sparkle', tx + rand(-34, 34), ty + rand(-24, 24), { vy: -30, life: 0.7, s: 0.7 });
+          if (this.groom >= 1) { this.groom = 0; this._groomDone(); }
+        }
+        return;
+      }
+      // diş fırçası: başı ağzına yaklaşınca ağzını kocaman açar, dişleri görünür
+      const m = this._mouthWorld(), hx = d.x - 12, hy = d.y - 17, dist = Math.hypot(hx - m.x, hy - m.y);
+      if (!awake) return;
+      if (dist > 70 * this.s + 20) { this._lookAtWorld(T, hx, hy); if (dist < 220) T.mouthOpen = Math.max(T.mouthOpen, 0.25); return; }
+      T.mouthOpen = 0.8; T.teeth = 1; T.squint = 0.7; T.eyeOpen = 0.55; T.smile = 0.9; T.brow = 0.35; T.tongue = 0; T.lookX = 0; T.lookY = 0.7; T.earLift = 0.1;
+      if (mv > 2) {
+        this.teethT = Math.min(1, this.teethT + mv * 0.0015);
+        this.sfx.play('scrub');
+        if (Math.random() < dt * 10) this._spawn('bubble', m.x + rand(-22, 22), m.y + rand(4, 22), { vx: rand(-40, 40), vy: rand(-60, -20), life: 0.7, s: rand(0.3, 0.55) });
+        if (this.teethT >= 1) { this.teethT = 0; this._teethDone(); }
+      }
+    }
+    _groomDone() {
+      const s = this.stats;
+      s.happiness = Math.min(100, s.happiness + 10); s.cleanliness = Math.min(100, s.cleanliness + 5); s.health = Math.min(100, s.health + 3);
+      this.shine = 20;
+      for (let i = 0; i < 8; i++) this._spawnL('sparkle', rand(120, 280), rand(70, 400), { vy: -40, vr: 120, life: 1, s: rand(0.8, 1.3) });
+      this.say('Tüylerim pırıl pırıl! ✨', 2.6);
+      this.sfx.play('chime');
+      this._quest('brush'); this.reward(8, 4, this._rewardAt());
+      this._emit('groom', { kind: 'brush' });
+    }
+    _teethDone() {
+      const s = this.stats;
+      s.health = Math.min(100, s.health + 5); s.happiness = Math.min(100, s.happiness + 6);
+      if (this.drag && this.drag.type === 'tooth') this._releaseDrag();
+      this._startAction(ACTIONS.grin(this));
+      this.say('Dişlerim pırıl pırıl! 😁', 2.6);
+      this._quest('teeth'); this.reward(8, 4, this._rewardAt());
+      this._emit('groom', { kind: 'teeth' });
+    }
+
+    // ================================================================ hastalık / veteriner
+    isSick() { return this.stats.health < 40; }
+    _medTake(id) {
+      this._clearActions();
+      this._startAction(ACTIONS.med(this, id));
+    }
+
+    // ================================================================ saklambaç
+    _hideSpots() {
+      const fy = this.groundY - 74, sb = fy + 46, back = sb - 196, W = Math.min(this.Wv * 0.9, 640), x0 = this.Wv / 2 - W / 2;
+      const bs = Math.min(1.1, this.s * 0.9);
+      return [
+        { id: 'sofa', x: x0 + 118, top: back, hx: x0 + 118, hy: back + 10 },
+        { id: 'box', x: this.Wv * 0.83, y: this.groundY - 10, bs, top: this.groundY - 10 - 50 * bs, hx: this.Wv * 0.83, hy: this.groundY - 30 },
+        { id: 'basket', x: this.Wv * 0.17, y: this.groundY - 10, bs, top: this.groundY - 10 - 48 * bs, hx: this.Wv * 0.17, hy: this.groundY - 30 }
+      ];
+    }
+    _startHide(g) {
+      const L = this.C.line, b = BREEDS[this.breed];
+      g.dur = 999; g.phase = 'count'; g.ct = 3.2; g.tries = 0;
+      g.spots = this._hideSpots();
+      g.spot = g.spots[Math.floor(Math.random() * g.spots.length)];
+      const u = this.uid, sp = g.spots, box = sp[1], bas = sp[2], sc = 0.85 * this.s;
+      g.el = document.createElementNS(SVGNS, 'g');
+      g.el.innerHTML =
+        '<clipPath id="' + u + '-pk"><rect x="-3000" y="-3000" width="6000" height="' + f(3000 + sp[0].top + 2) + '"/></clipPath>' +
+        '<g data-h="props" display="none">' +
+          '<g clip-path="url(#' + u + '-pk)"><g data-h="peek-sofa" display="none">' + peekMarkup(b, this.C) + '</g></g>' +
+          '<g data-h="prop-box" transform="translate(' + f(box.x) + ' ' + f(box.y) + ') scale(' + f(box.bs) + ')">' + boxMarkup(L, true) +
+            '<g data-h="peek-box" display="none">' + peekMarkup(b, this.C) + '</g>' + boxMarkup(L, false) + '</g>' +
+          '<g data-h="prop-basket" transform="translate(' + f(bas.x) + ' ' + f(bas.y) + ') scale(' + f(bas.bs) + ')">' +
+            '<g data-h="peek-basket" display="none">' + peekMarkup(b, this.C) + '</g>' + basketMarkup(L) + '</g>' +
+        '</g>' +
+        '<g data-h="cover"><rect x="0" y="0" width="' + f(this.Wv) + '" height="' + f(this.Hv) + '" fill="#2B2140" opacity="0.93"/>' +
+          '<text x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36) + '" text-anchor="middle" font-size="88">🙈</text>' +
+          '<text data-h="num" x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36 + 110) + '" text-anchor="middle" font-family="' + FONT + '" font-size="84" font-weight="900" fill="#FFD166">3</text>' +
+          '<text x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36 + 170) + '" text-anchor="middle" font-family="' + FONT + '" font-size="24" font-weight="800" fill="#fff">Gözlerini kapat, saklanıyorum…</text></g>';
+      this.r.gameLayer.appendChild(g.el);
+      const q = (k) => g.el.querySelector('[data-h="' + k + '"]');
+      g.q = { props: q('props'), cover: q('cover'), num: q('num'), peek: q('peek-' + g.spot.id), box: q('prop-box'), basket: q('prop-basket') };
+      g.peekSc = sc;
+    }
+    _updateHide(dt, T, g) {
+      const Q = g.q;
+      if (g.phase === 'count') {
+        g.ct -= dt;
+        Q.num.textContent = Math.max(1, Math.ceil(g.ct - 0.2));
+        if (g.ct <= 0) {
+          g.phase = 'seek'; g.st = 0;
+          this.hidden = true; this._clearActions();
+          Q.cover.remove(); Q.props.setAttribute('display', 'inline'); Q.peek.setAttribute('display', 'inline');
+          this._setBanner('🔍 Nerede saklandı? Dokun!   ✕');
+        }
+        return;
+      }
+      if (g.phase === 'found') { g.ft -= dt; if (g.ft <= 0) this.stopGame(); return; }
+      g.st += dt;
+      if (g.st > 30) { this._hideReveal(false); return; }
+      // ara ara başını uzatıp bakar (kulak uçları hep biraz görünür)
+      const cyc = g.st % 3.4, amt = 0.15 + 0.85 * bump(clamp((cyc - 1.8) / 1.4, 0, 1), 0, 1, 0.3);
+      const sc = g.peekSc, s = g.spot, wig = Math.sin(this.t * 14) * 3 * (amt > 0.5 ? 1 : 0);
+      if (s.id === 'sofa') Q.peek.setAttribute('transform', 'translate(' + f(s.x + wig) + ' ' + f(s.top + lerp(50, -16, amt) * sc) + ') scale(' + f(sc) + ')');
+      else Q.peek.setAttribute('transform', 'translate(' + f(wig / s.bs) + ' ' + f(-50 + lerp(50, -16, amt) * sc / s.bs) + ') scale(' + f(sc / s.bs) + ')');
+      if (s.id !== 'sofa' && amt > 0.6) Q[s.id].setAttribute('transform', 'translate(' + f(s.x) + ' ' + f(s.y) + ') rotate(' + f(Math.sin(this.t * 18) * 1.5) + ') scale(' + f(s.bs) + ')');
+    }
+    _hideTap(w) {
+      const g = this.game;
+      if (g.phase !== 'seek') return true;
+      let best = null, bd = 1e9;
+      g.spots.forEach((s) => { const d = Math.hypot(w.x - s.hx, w.y - s.hy); if (d < bd) { bd = d; best = s; } });
+      if (!best || bd > 110) return true;
+      if (best === g.spot) { this._hideReveal(true); return true; }
+      g.tries++;
+      for (let i = 0; i < 5; i++) this._spawn('dust', best.hx + rand(-30, 30), best.hy + rand(-10, 20), { vx: rand(-40, 40), vy: rand(-40, -10), life: 0.7 });
+      this._spawn('text', best.hx, best.hy - 40, { text: 'Burada yok!', vy: -30, life: 1.2, size: 18, color: '#8E5E55' });
+      if (best.id !== 'sofa') { const el = g.q[best.id]; let k = 0; const iv = setInterval(() => { el.setAttribute('transform', 'translate(' + f(best.x + (k % 2 ? 4 : -4)) + ' ' + f(best.y) + ') scale(' + f(best.bs) + ')'); if (++k > 5) { clearInterval(iv); el.setAttribute('transform', 'translate(' + f(best.x) + ' ' + f(best.y) + ') scale(' + f(best.bs) + ')'); } }, 50); }
+      return true;
+    }
+    _hideReveal(found) {
+      const g = this.game; if (!g) return;
+      g.phase = 'found'; g.ft = 2.8;
+      g.q.peek.setAttribute('display', 'none');
+      this.hidden = false;
+      const s = g.spot;
+      for (let i = 0; i < 8; i++) this._spawn('sparkle', s.hx + rand(-50, 50), s.hy + rand(-40, 20), { vy: -50, vr: 160, life: 0.9, s: rand(0.8, 1.2) });
+      this._startAction(ACTIONS.celebrate(this));
+      if (found) {
+        this.say(g.tries ? 'Buldun! 🎉' : 'Hemen buldun! Çok iyisin 🎉', 2.6);
+        this.sfx.play('chime');
+        this._quest('hide'); this.reward(10, 5, this._rewardAt());
+        this._emit('play', { kind: 'hide', found: true });
+      } else { this.say('Buradaydım! 😄', 2.4); this._emit('play', { kind: 'hide', found: false }); }
+      this._setBanner(found ? '🎉 Buldun!' : '😄 Bulamadın, olsun!');
+    }
+    _setBanner(label) {
+      const r = this.r;
+      r.bannerTxt.textContent = label;
+      this._bannerW = 300;
+      try { this._bannerW = r.bannerTxt.getComputedTextLength() + 40 || 300; } catch (e) { /* yoksay */ }
+      r.bannerBg.setAttribute('x', f(-this._bannerW / 2)); r.bannerBg.setAttribute('width', f(this._bannerW));
+      r.banner.setAttribute('display', 'inline');
+    }
+
+    // ================================================================ saat: pencerede sabah / öğle / akşam / gece
+    setHour(h) { this.hourOverride = h == null ? null : clamp(+h, 0, 24); this._clockT = 0; }
+    _clock() {
+      const d = new Date();
+      const h = this.hourOverride != null ? this.hourOverride : this.useClock ? d.getHours() + d.getMinutes() / 60 : 12;
+      const cn = h < 5 || h >= 20.5 ? 1 : h < 7 ? 1 - smooth01((h - 5) / 2) : h >= 18.5 ? smooth01((h - 18.5) / 2) : 0;
+      let sky = '#CFEAFB';
+      if (h >= 4.5 && h < 8.5) sky = mix('#FFC9A8', '#CFEAFB', smooth01((h - 6.5) / 2));
+      else if (h >= 16.5 && h < 21) sky = mix('#CFEAFB', '#F6A38E', smooth01((h - 16.5) / 2.2));
+      const st = clamp((h - 6) / 13, 0, 1);
+      return { h, cn, sky, sunX: lerp(-40, 40, st), sunY: -8 - Math.sin(st * Math.PI) * 26, night: cn > 0.5 };
+    }
+
+    // ================================================================ regl döngüsü, su hatırlatma, kullanıcının ruh hali
+    setCycle(c) {
+      const prev = this.cycle ? this.cycle.phase : null;
+      this.cycle = c && CYCLE[c.phase] ? { phase: c.phase, day: c.day | 0 || null } : null;
+      this._renderHud();
+      this._emit('cycle', this.cycle);
+      if (this.cycle && this.cycle.phase !== prev && !this._silentState) { this._cycleNext = 0; this._cycleFirst = true; }
+    }
+    _cycleAct() {
+      const c = this.cycle; if (!c) return;
+      const ph = c.phase, tips = CYCLE[ph].tips, tip = () => tips[Math.floor(Math.random() * tips.length)];
+      const first = this._cycleFirst; this._cycleFirst = false;
+      if (this.sleeping || this.hidden || this.scene !== 'room') return;
+      this._clearActions();
+      const roll = Math.random();
+      if (ph === 'period') {
+        if (first || roll < 0.35) { this._enqueue(ACTIONS.hug(this)); this.say(first ? 'Kendine iyi bak 💕 Ben yanındayım' : tip(), 3.4); if (first) this._enqueue(ACTIONS.offer(this, 'bottle')); }
+        else if (roll < 0.7) { this._enqueue(ACTIONS.offer(this, 'bottle')); this.say('Sıcak su torbası getirdim, karnına iyi gelir 💕', 3.4); }
+        else { this._enqueue(ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+      } else if (ph === 'pms') {
+        if (first || roll < 0.4) { this._enqueue(ACTIONS.offer(this, 'choco')); this.say('Biraz çikolata ister misin? 🍫', 3.4); }
+        else if (roll < 0.7) { this._enqueue(ACTIONS.hug(this)); this.say(tip(), 3.4); }
+        else { this._enqueue(ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+      } else if (ph === 'follicular' || ph === 'ovulation') {
+        this._enqueue(ACTIONS.dance(this)); this.say(tip(), 3.4);
+      } else { this._enqueue(roll < 0.5 ? ACTIONS.hug(this) : ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+      this._sayCool = 12;
+    }
+    setWaterReminder(min) { this.waterEvery = Math.max(0, +min || 0) * 60; this._waterT = 0; }
+    remindWater() {
+      if (this.scene !== 'room') this.goRoom();
+      if (this.hidden) this.stopGame();
+      if (this.sleeping || this.lightsOff) this.setLights(true);
+      this._waterT = 0;
+      this._enqueue(ACTIONS.offer(this, 'glass'));
+      this.say('Sen de bir bardak su iç 💧', 40, { button: 'İçtim ✓', onTap: () => this.userDrankWater() });
+      this._emit('waterReminder', {});
+    }
+    userDrankWater() {
+      if (this.speech && this.speech.button) this.speech = null, this.r.speech.setAttribute('display', 'none');
+      this._quest('userWater'); this.reward(3, 2, this._rewardAt());
+      if (!this.sleeping && !this.hidden) { this._clearActions(); this._startAction(ACTIONS.celebrate(this)); }
+      this.say('Aferin! Sağlığına 💧', 2.6);
+      this._emit('userWater', { time: Date.now() });
+    }
+    setUserMood(mood) {
+      if (!USER_MOODS[mood]) return false;
+      const fresh = !this.userMood || this.userMood.date !== this._today();
+      this.userMood = { mood, date: this._today() };
+      this._renderHud();
+      this._emit('userMood', { mood, date: this.userMood.date });
+      if (fresh) { this._quest('mood'); this.reward(3, 2, this._rewardAt()); }
+      if (this.hidden) this.stopGame();
+      if (this.scene !== 'room') this.goRoom();
+      if (this.lightsOff) this.setLights(true);
+      this._clearActions();
+      if (this.sleeping) this._enqueue(ACTIONS.wake(this));
+      const A = ACTIONS, q = (a) => this._enqueue(a);
+      const say = (t) => setTimeout(() => this.say(t, 3.6), this.sleeping ? 2800 : 0);
+      switch (mood) {
+        case 'happy': q(A.dance(this)); q(A.hop(this)); say('Ne güzel! Mutluluğun bana da geçti 💃'); break;
+        case 'sad': q(A.hug(this)); q(A.hug(this)); say('Yanındayım, sarılalım mı? 🤗'); break;
+        case 'tired': q(A.yawn(this)); q(A.stretch(this)); say('Biraz dinlen, ben buradayım 💤'); break;
+        case 'pain': q(A.offer(this, 'bottle')); q(A.hug(this)); say('Sıcak su torbası iyi gelir 💕 Geçmiş olsun'); break;
+        case 'angry': q(A.breathe(this)); say('Birlikte derin nefes alalım 🌬️'); break;
+        case 'anxious': q(A.hug(this)); q(A.breathe(this)); say('Her şey yoluna girecek 🌈'); break;
+      }
+      return true;
+    }
+
     // ---------------------------------------------------------------- genel API
     feed() {
       if (this.scene === 'bath' || (this.action && this.action.name === 'eat')) return false;
@@ -1935,6 +2793,40 @@
       run();
       return true;
     }
+    // otomatik tarama / diş fırçalama (uygulama butonları için; banyoya geçer)
+    brushFur() { return this._autoGroom('brush'); }
+    brushTeeth() { return this._autoGroom('tooth'); }
+    _autoGroom(type) {
+      if (!this.showTools || this.drag || this.auto) return false;
+      if (this.sleeping || this.lightsOff) this.setLights(true);
+      if (this.scene !== 'bath' || this._sceneMoving()) { this.goBath(() => this._autoGroom(type)); return true; }
+      const sl = this.slots[type];
+      this._startDrag(type, sl.x, sl.y, -1);
+      this.auto = { t: 0, dur: type === 'brush' ? 4.6 : 4.2, path: (t) => {
+        const k = smooth01(t / 0.6);
+        let p;
+        if (type === 'brush') { const a = t * 3.4; const w = this._toWorld(200 + Math.sin(a) * 60, (Math.floor(t / 1.2) % 2 ? 300 : 200) + Math.cos(a * 1.3) * 40 + this._upY()); p = [w.x, w.y - 30]; }
+        else { const m = this._mouthWorld(); p = [m.x + 12 + Math.sin(t * 16) * 22, m.y + 47]; }
+        return [lerp(sl.x, p[0], k), lerp(sl.y, p[1], k)];
+      } };
+      return true;
+    }
+    // ilacı otomatik verir: thermo | syrup | vitamin
+    giveMedicine(id) {
+      if (!MEDS[id] || !this.showTools || this.drag) return false;
+      if (this.scene !== 'room') this.goRoom();
+      if (this.hidden) this.stopGame();
+      const wasAsleep = this.sleeping, delay = wasAsleep ? 2.9 : 0;
+      if (wasAsleep || this.lightsOff) this.setLights(true);
+      const sl = this.hudHits ? this.hudHits.find((h) => h.id === 'vet') : null, from = sl || this.slots.food;
+      this._startDrag('food', from.x, from.y, -1, { food: id, from });
+      this.auto = { t: 0, dur: 1.6 + delay, path: (t) => {
+        const m = this._mouthWorld(), k = smooth01(Math.max(0, t - delay) / 1.3);
+        return [lerp(from.x, m.x, k), lerp(from.y, m.y + 55, k) - Math.sin(k * Math.PI) * 60];
+      } };
+      return true;
+    }
+
     // ---------------------------------------------------------------- sahne: oda ⇄ banyo
     goBath(done) { return this._goScene('bath', done); }
     goRoom(done) { return this._goScene('room', done); }
@@ -1942,6 +2834,7 @@
     _goScene(sc, done) {
       if (this.scene === sc) { if (done) done(); return false; }
       if (this.menu) this._closeMenu();
+      if (this.panel) this._closePanel();
       if (this.game) this.stopGame();
       if (this.drag) { this.drag = null; this.auto = null; this._hideHeld(); }
       this.showering = false; this.sfx.water(false);
@@ -1970,6 +2863,7 @@
         r.tools.setAttribute('display', e < 1 ? 'inline' : 'none');
         r.toolsBath.setAttribute('display', e > 0 ? 'inline' : 'none');
       }
+      if (r.hudBtns) { r.hudBtns.setAttribute('display', e < 0.5 ? 'inline' : 'none'); r.hudBtns.setAttribute('opacity', f(1 - e * 2)); }
     }
 
     sleep() {
@@ -2011,13 +2905,26 @@
       const r1 = (v) => Math.round(v * 10) / 10, s = this.stats;
       return {
         species: this.species, breed: this.breed, eyes: this.eyes, name: this.name, lightsOn: !this.lightsOff, scene: this.scene,
-        stats: { fullness: r1(s.fullness), hydration: r1(s.hydration), energy: r1(s.energy), happiness: r1(s.happiness), cleanliness: r1(s.cleanliness) },
+        stats: { fullness: r1(s.fullness), hydration: r1(s.hydration), energy: r1(s.energy), happiness: r1(s.happiness), cleanliness: r1(s.cleanliness), health: r1(s.health) },
+        progress: JSON.parse(JSON.stringify(this.progress)), userMood: this.userMood, cycle: this.cycle, sick: s.health < 40,
         sleeping: this.sleeping, mood: this.mood, lastUpdate: Date.now()
       };
     }
     setState(s) {
       if (!s) return;
       if (typeof s.name === 'string') { this.name = s.name.slice(0, 24); if (this.svg) this._renderName(); }
+      if (s.progress && typeof s.progress === 'object') {
+        const pr = this.progress, sp = s.progress;
+        if (sp.level > 0) pr.level = sp.level | 0;
+        if (sp.xp >= 0) pr.xp = +sp.xp; if (sp.coins >= 0) pr.coins = +sp.coins;
+        if (Array.isArray(sp.owned)) pr.owned = sp.owned.filter((id) => CLOTHES[id]);
+        if (sp.wear) CLOTH_SLOTS.forEach((k) => { pr.wear[k] = CLOTHES[sp.wear[k]] && pr.owned.indexOf(sp.wear[k]) >= 0 ? sp.wear[k] : null; });
+        if (sp.quests && Array.isArray(sp.quests.list)) pr.quests = { date: sp.quests.date || '', list: sp.quests.list.filter((q) => QUESTS[q.id]).map((q) => ({ id: q.id, have: q.have | 0, claimed: !!q.claimed })), bonus: !!sp.quests.bonus };
+        this._checkQuests();
+        if (this.svg) { this._renderWear(); this._renderHud(); }
+      }
+      if (s.userMood && USER_MOODS[s.userMood.mood]) this.userMood = { mood: s.userMood.mood, date: s.userMood.date };
+      if ('cycle' in s) { this._silentState = true; this.setCycle(s.cycle); this._silentState = false; }
       if (s.stats) Object.keys(this.stats).forEach((k) => { if (typeof s.stats[k] === 'number') this.stats[k] = clamp(s.stats[k], 0, 100); });
       if (typeof s.sleeping === 'boolean') {
         this.sleeping = s.sleeping; this.lightsOff = s.sleeping;
@@ -2043,10 +2950,14 @@
       s.energy = clamp(this.sleeping ? s.energy + d.energyRegen * h : s.energy - d.energy * h, 0, 100);
       const low = (s.fullness < 25) + (s.hydration < 25) + (s.energy < 15) + (s.cleanliness < 20);
       s.happiness = clamp(s.happiness - (d.happiness + low * d.lowStatPenalty) * h, 0, 100);
+      // bakımsızlık sağlığı bozar; iyi bakılınca yavaşça iyileşir
+      const neglect = (s.fullness < 15) + (s.hydration < 15) + (s.cleanliness < 15);
+      s.health = clamp(neglect ? s.health - 9 * neglect * h : s.health + 3 * h, 0, 100);
     }
     _computeMood() {
       const s = this.stats;
       if (this.sleeping) return 'sleeping';
+      if (s.health < 40) return 'sick';
       if (s.energy < 25) return 'tired';
       if (s.fullness < 30) return 'hungry';
       if (s.hydration < 30) return 'thirsty';
@@ -2081,6 +2992,7 @@
         case 'growl': el = mk('path', { d: 'M-14 0 Q-10 -6 -6 0 T2 0 T10 0 T18 0', fill: 'none', stroke: line, 'stroke-width': 3, 'stroke-linecap': 'round' }); break;
         case 'stink': el = mk('path', { d: 'M0 10 Q-6 4 0 -2 T0 -14', fill: 'none', stroke: PR.stink, 'stroke-width': 3.5, 'stroke-linecap': 'round' }); break;
         case 'dust': el = mk('ellipse', { rx: 18, ry: 4, fill: '#fff', opacity: 0.7 }); break;
+        case 'tuft': el = mk('path', { d: 'M-7 4 Q-3 -7 7 -5 Q1 -1 -7 4 Z', fill: this.C.fur, stroke: line, 'stroke-width': 1.5 }); break;
         case 'bubble':
           el = mk('g', {});
           el.innerHTML = '<circle r="10" fill="#fff" fill-opacity="0.85" stroke="' + PR.foamEdge + '" stroke-width="1.5"/><circle cx="-3.5" cy="-3.5" r="2.2" fill="#fff"/>';
@@ -2146,6 +3058,12 @@
       this._updateGame(dt, T);
       this._updateNight(dt);
       this._updateScene(dt);
+      this._updateSpeech(dt);
+      this._sayCool -= dt; this._cycleNext -= dt;
+      if (this.waterEvery > 0 && !this.sleeping) this._waterT += dt;
+      if (this.waterEvery > 0 && this._waterT >= this.waterEvery && !this.action && !this.drag && !this.game && !this.panel && this.scene === 'room' && !this.sleeping) this.remindWater();
+      this._questT -= dt;
+      if (this._questT <= 0) { this._questT = 20; this._checkQuests(); }
       this._applyPet(dt, T);
       this._smoothPose(dt, T);
       this._render(dt, T);
@@ -2184,6 +3102,11 @@
         if (this.fx.stink <= 0) { this.fx.stink = rand(1.2, 2.2); this._spawnL('stink', rand(130, 270), rand(230, 290), { vy: -40, life: 1.6, wobble: 5 }); }
       }
 
+      if (this.shine > 0) {
+        this.shine -= dt;
+        if (Math.random() < dt * 2.5) this._spawnL('sparkle', rand(130, 270), rand(80, 400) + this._upY(), { vy: -20, life: 0.7, s: rand(0.5, 0.9) });
+      }
+      if (this.hidden) return;
       if (this.action || this.pet.level > 0.2 || this.drag || this.ball.held) return;
       if (this.sleeping) {
         this.fx.z -= dt;
@@ -2204,7 +3127,10 @@
       if (this.idleNext > 0) return;
       this.idleNext = rand(5, 9);
       const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      if (this.cycle && this._cycleNext <= 0 && mood !== 'sick' && !this.game && !this.panel) { this._cycleNext = rand(45, 75); this._cycleAct(); return; }
+      if (!this.game && !this.panel) this._autoSay(mood);
       switch (mood) {
+        case 'sick': this._startAction(pick([ACTIONS.sneeze, ACTIONS.sigh, ACTIONS.sneeze])(this)); this.idleNext = rand(4, 7); break;
         case 'tired': this._startAction(pick([ACTIONS.yawn, ACTIONS.rubEye])(this)); this.idleNext = rand(6, 10); break;
         case 'hungry': this._startAction(pick([ACTIONS.growl, ACTIONS.lickLips, ACTIONS.growl])(this)); this.idleNext = rand(4.5, 8); break;
         case 'thirsty': this._startAction(pick([ACTIONS.fan, ACTIONS.lickLips])(this)); break;
@@ -2312,6 +3238,8 @@
       // üst gövde (oturunca aşağı iner, zıplayınca yükselir)
       const sq = R.squash, up = P.sit * SIT_DROP + R.hop + sq * 8;
       r.upper.setAttribute('transform', 'translate(0 ' + f(up) + ')');
+      r.wearBack.setAttribute('transform', 'translate(0 ' + f(up) + ')');
+      if (this._hiddenShown !== this.hidden) { this._hiddenShown = this.hidden; r.pet.setAttribute('display', this.hidden ? 'none' : 'inline'); }
       const sy = (1 + breath * 0.016) * (1 - sq * 0.07), sx = (1 - breath * 0.006) * (1 + sq * 0.05);
       r.body.setAttribute('transform', 'translate(200 414) scale(' + Math.round(sx * 1000) / 1000 + ' ' + Math.round(sy * 1000) / 1000 + ') translate(-200 -414)');
       r.tail.setAttribute('transform', 'translate(0 ' + f(P.sit * 40) + ') rotate(' + f(P.tailBase + wag * P.wagAmp) + ' 234 392)');
@@ -2353,6 +3281,13 @@
         const Sx = SHOULDER[i][0], Sy = SHOULDER[i][1] + shY;
         const res = ik(Sx, Sy, P['h' + i + 'x'], P['h' + i + 'y'], L1, L2, i === 0 ? 1 : -1);
         this._limb('arm', i, [[Sx, Sy], [res.ex, res.ey], [res.hx, res.hy]], ARM_W);
+        if (this.progress.wear.body === 'sweater') {
+          const at = (k) => f(lerp(Sx, res.ex, k)) + ' ' + f(lerp(Sy, res.ey, k));
+          r['sleeve' + i].setAttribute('display', 'inline');
+          r['sleeveO' + i].setAttribute('d', 'M' + at(0) + ' L' + at(0.9)); r['sleeveO' + i].setAttribute('stroke-width', f(ARM_W * 2 + 11));
+          r['sleeveF' + i].setAttribute('d', 'M' + at(0) + ' L' + at(0.9)); r['sleeveF' + i].setAttribute('stroke-width', f(ARM_W * 2 + 4));
+          r['sleeveC' + i].setAttribute('d', 'M' + at(0.72) + ' L' + at(0.9)); r['sleeveC' + i].setAttribute('stroke-width', f(ARM_W * 2 + 4));
+        } else r['sleeve' + i].setAttribute('display', 'none');
         const ang = Math.atan2(res.hy - res.ey, res.hx - res.ex) * 57.3;
         r['hand' + i].setAttribute('transform', 'translate(' + f(res.hx) + ' ' + f(res.hy) + ') rotate(' + f(ang - 90) + ')');
         hands.push([res.hx, res.hy]);
@@ -2394,6 +3329,7 @@
       }
       const dirt = f(clamp((45 - this.stats.cleanliness) / 30, 0, 1));
       r.mudBody.setAttribute('opacity', dirt); r.mudHead.setAttribute('opacity', dirt);
+      r.sickFx.setAttribute('opacity', f(clamp((48 - this.stats.health) / 12, 0, 1)));
     }
 
     _renderEye(i, e, open) {
@@ -2436,7 +3372,13 @@
         r.mouthOpen.setAttribute('d', shape); r.mouthClip.setAttribute('d', shape); r.mouthOpen.setAttribute('display', 'inline');
         r.mouthTongue.setAttribute('cx', m.x); r.mouthTongue.setAttribute('cy', f(m.y + D * 0.95));
         r.mouthTongue.setAttribute('rx', f(hw * 0.75)); r.mouthTongue.setAttribute('ry', f(D * 0.42));
-      } else { r.mouthOpen.setAttribute('display', 'none'); r.mouthTongue.setAttribute('rx', '0'); }
+        if (P.teeth > 0.02) {
+          const tY = m.y + D * 0.3, n = 4, tw = (Rx - Lx) / n;
+          let td = 'M' + f(Lx - 4) + ' ' + f(m.y - 14) + ' H' + f(Rx + 4) + ' V' + f(tY);
+          for (let i = n; i > 0; i--) { const x = Lx + i * tw; td += ' Q' + f(x - tw / 2) + ' ' + f(tY + 7) + ' ' + f(x - tw) + ' ' + f(tY); }
+          r.teeth.setAttribute('d', td + ' L' + f(Lx - 4) + ' ' + f(tY) + ' Z'); r.teeth.setAttribute('opacity', f(P.teeth));
+        } else r.teeth.setAttribute('opacity', '0');
+      } else { r.mouthOpen.setAttribute('display', 'none'); r.mouthTongue.setAttribute('rx', '0'); r.teeth.setAttribute('opacity', '0'); }
       const tg = clamp(P.tongue, 0, 1.3);
       if (tg > 0.05) {
         const w = S.tongueW, x = m.x + P.tongueX * 9, ys = m.y + 1 + open * m.depth * 0.45;
@@ -2865,6 +3807,125 @@
 
     // ---- top oyunu
     // tgt: { pos() → [x, y] (dünya), hit() } — top, lazer noktası, baloncuk, kelebek
+    // dişleri fırçalandıktan sonra kocaman sırıtır
+    grin() {
+      return {
+        name: 'grin', dur: 2, silent: true,
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.15);
+          T.mouthOpen = 0.55 * o; T.teeth = o; T.smile = 1; T.eyeOpen = 0; T.closedCurve = 1; T.blush = 0.6; T.earLift = 0.5;
+          T.wagFreq = 3; T.wagAmp = 20; T.h0x = 150; T.h0y = 300 - o * 20; T.h1x = 250; T.h1y = 300 - o * 20;
+        }
+      };
+    },
+    // sarılma: kollarını açar, sonra göğsünde kavuşturur
+    hug(pet) {
+      return {
+        name: 'hug', dur: 3.2, silent: true,
+        start() { this.h = 0; },
+        update(T, dt, p, t) {
+          const open = smooth01(p / 0.22), close = smooth01((p - 0.28) / 0.2), out = smooth01((p - 0.88) / 0.12);
+          const k = close * (1 - out);
+          T.h0x = lerp(lerp(T.h0x, 92, open), 238, k); T.h0y = lerp(lerp(T.h0y, 228, open), 292, k);
+          T.h1x = lerp(lerp(T.h1x, 308, open), 162, k); T.h1y = lerp(lerp(T.h1y, 228, open), 292, k);
+          T.eyeOpen = 1 - close; T.closedCurve = 1; T.smile = 1; T.blush = 0.9 * close; T.tilt = Math.sin(t * 2.4) * 8 * k; T.headX = Math.sin(t * 2.4) * 4 * k;
+          T.earLift = -0.2; T.wagFreq = 2.4; T.wagAmp = 18;
+          if (close > 0.5 && t - this.h > 0.5) { this.h = t; pet._spawnL('heart', 200 + rand(-60, 60), 230 + rand(-20, 20) + pet._upY(), { vx: rand(-20, 20), vy: -60, s: rand(0.9, 1.3) }); }
+        }
+      };
+    },
+    // eşya uzatır: sıcak su torbası, çikolata, su bardağı
+    offer(pet, icon) {
+      return {
+        name: 'offer', dur: 3.4, silent: true,
+        start() { pet.r.itemTreatS.innerHTML = careIcon(icon, pet.C.line); this.h = 0; },
+        update(T, dt, p, t) {
+          const o = bump(p, 0, 1, 0.12), up = smooth01((p - 0.25) / 0.3);
+          T.itemType = 'treat'; T.itemShow = o; T.itemScale = 1.15 + up * 0.35;
+          T.h0x = 178; T.h0y = lerp(300, 262, up); T.h1x = 222; T.h1y = lerp(300, 262, up);
+          T.smile = 1; T.blush = 0.6 * up; T.eyeOpen = up > 0.5 ? 0 : 1; T.closedCurve = 1; T.headY = -up * 3; T.tilt = up * 6;
+          T.wagFreq = 2.6; T.wagAmp = 20; T.earLift = 0.3;
+          if (up > 0.5 && t - this.h > 0.7) { this.h = t; pet._spawnL('heart', 200 + rand(-40, 40), 180 + pet._upY(), { vy: -50, s: 0.9 }); }
+        }
+      };
+    },
+    // nefes egzersizi: kollar yavaşça kalkar (nefes al) ve iner (nefes ver)
+    breathe(pet) {
+      return {
+        name: 'breathe', dur: 11.5, silent: true,
+        start() { this.cue = 0; },
+        update(T, dt, p, t) {
+          const ph = t < 3.6 ? 0 : clamp((t - 3.6) / 7.9, 0, 1);
+          const inh = ph < 0.45 ? smooth01(ph / 0.45) : ph < 0.55 ? 1 : 1 - smooth01((ph - 0.55) / 0.45);
+          T.eyeOpen = t < 3.6 ? 1 : 0; T.closedCurve = 1; T.smile = 0.6; T.brow = -0.1;
+          T.h0x = lerp(150, 110, inh); T.h0y = lerp(330, 220, inh); T.h1x = lerp(250, 290, inh); T.h1y = lerp(330, 220, inh);
+          T.headY = -inh * 6; T.breathAmp = 0.3; T.wagAmp = 3; T.earLift = inh * 0.4; T.mouthOpen = ph > 0.55 && ph < 0.9 ? 0.12 : 0;
+          if (this.cue === 0 && t > 3.6) { this.cue = 1; pet.say('Nefes al… 🌬️', 3.4); }
+          if (this.cue === 1 && ph > 0.55) { this.cue = 2; pet.say('Nefes ver… 😌', 3.4); }
+        }
+      };
+    },
+    // hasta: hapşırır
+    sneeze(pet) {
+      return {
+        name: 'sneeze', dur: 1.7, silent: true,
+        start() { this.done = false; },
+        update(T, dt, p, t) {
+          const pre = smooth01(p / 0.55);
+          if (p < 0.6) { T.headY = -pre * 8; T.tilt = -pre * 6; T.eyeOpen = 1 - pre * 0.8; T.squint = pre; T.mouthOpen = pre * 0.35; T.brow = -0.4 * pre; T.earLift = pre * 0.4; return; }
+          if (!this.done) {
+            this.done = true;
+            pet.sfx.play('achoo');
+            const m = pet._mouthUpper();
+            for (let i = 0; i < 7; i++) pet._spawnL('drop', m.x + rand(-14, 14), m.y + pet._upY() - 6, { vx: rand(-110, 110), vy: rand(-60, 60), g: 300, life: 0.6, s: 0.55 });
+            pet._spawnL('text', 290, 110 + pet._upY(), { text: 'Hapşu!', vy: -40, life: 1.1, size: 20, color: '#8E5E55' });
+          }
+          const k = 1 - smooth01((p - 0.6) / 0.4);
+          T.headY = 10 * k; T.tilt = 4 * k; T.eyeOpen = 0; T.closedCurve = -0.4; T.squint = 1; T.mouthOpen = 0.5 * k; T.earLift = -0.5;
+        }
+      };
+    },
+    // ilaç: termometre ağızda bekler, şurup "öğ" yüzü yaptırır, vitamin çiğnenir
+    med(pet, id) {
+      const M = MEDS[id] || MEDS.vitamin;
+      return {
+        name: 'med', dur: id === 'thermo' ? 3.4 : 3.2, busy: true,
+        start() { pet.r.itemTreatS.innerHTML = careIcon(id, pet.C.line); this.done = false; pet._emit('med', { id, phase: 'start' }); },
+        update(T, dt, p, t) {
+          const m = pet._mouthUpper();
+          T.itemType = 'treat'; T.lookX = 0;
+          const hold = () => { T.h0x = m.x - 22; T.h0y = m.y + 30; T.h1x = m.x + 22; T.h1y = m.y + 30; };
+          if (id === 'thermo') {
+            if (t < 2.4) { T.itemShow = 1; T.itemScale = 1; hold(); T.mouthOpen = 0.12; T.lookY = 0.9; T.pupil = 0.1; T.brow = 0.4; T.smile = 0.1; T.earLift = -0.2; }
+            else { T.itemShow = 0; T.smile = pet.stats.health < 40 ? -0.2 : 0.8; }
+            if (!this.done && t > 2.3) {
+              this.done = true;
+              const hp = pet.stats.health, sick = hp < 40;
+              const deg = sick ? (38.4 + (40 - hp) / 40 * 1.4).toFixed(1) : (36.5 + Math.random() * 0.5).toFixed(1);
+              pet.say(deg.replace('.', ',') + '°C ' + (sick ? '🤒 Ateşim var, şurup lazım' : '😊 Ateşim yok!'), 3.2);
+            }
+          } else if (id === 'syrup') {
+            if (t < 1.1) { T.itemShow = 1; T.itemScale = 1; hold(); T.mouthOpen = 0.5; T.eyeOpen = 0; T.closedCurve = 1; T.brow = 0.3; }
+            else if (t < 2.4) { T.itemShow = 0; T.eyeOpen = 0; T.closedCurve = -0.5; T.squint = 1; T.tongue = 0.9; T.tongueX = Math.sin(t * 14); T.smile = -0.6; T.brow = 0.8; T.faceX = Math.sin(t * 30) * 4; T.earLift = -0.8;
+              if (!this.done) { this.done = true; pet._spawnL('text', 290, 110 + pet._upY(), { text: 'Öğ!', vy: -40, life: 1, size: 20, color: '#8E5E55' }); } }
+            else { T.smile = 0.8; T.blush = 0.4; }
+          } else {
+            if (t < 1.6) { T.itemShow = 1; T.itemScale = 1 - smooth01(t / 1.5); hold(); const c = Math.max(0, Math.sin(t * 13)); T.mouthOpen = 0.08 + 0.3 * c; T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1; if (!this.done && t > 0.2) { this.done = true; pet.sfx.play('crunch'); } }
+            else { T.itemShow = 0; T.smile = 1; T.earLift = 0.5; T.h0x = 150; T.h0y = 250; T.h1x = 250; T.h1y = 250; }
+          }
+        },
+        end() {
+          const s = pet.stats;
+          Object.keys(M.fx).forEach((k) => { s[k] = clamp(s[k] + M.fx[k], 0, 100); });
+          if (id !== 'thermo') {
+            for (let i = 0; i < 4; i++) pet._spawnL('sparkle', rand(140, 260), rand(80, 260), { vy: -40, life: 0.9 });
+            pet.say(id === 'syrup' ? (s.health >= 40 ? 'Kendimi daha iyi hissediyorum 💪' : 'Biraz daha iyiyim…') : 'Güç doldu! ⚡', 2.6);
+          }
+          pet._emit('med', { id, phase: 'end', health: Math.round(s.health) });
+          pet._emit('stats', pet.getState());
+        }
+      };
+    },
     swat(pet, side, tgt) {
       tgt = tgt || { pos: () => [pet.ball.x, pet.ball.y], hit: () => { const dir = Math.sign(pet.ball.x - pet.petX) || (side ? 1 : -1); pet._hitBall(dir * rand(380, 620), -rand(600, 850)); } };
       return {
@@ -2928,7 +3989,12 @@
     return svg;
   };
   PetEngine.FOODS = FOODS;
-  PetEngine.ACTIONS = Object.keys(ACTIONS).filter((n) => ['fallAsleep', 'swat', 'kick', 'header'].indexOf(n) < 0);
+  PetEngine.CLOTHES = CLOTHES;
+  PetEngine.QUESTS = QUESTS;
+  PetEngine.USER_MOODS = USER_MOODS;
+  PetEngine.CYCLE = CYCLE;
+  PetEngine.MEDS = MEDS;
+  PetEngine.ACTIONS = Object.keys(ACTIONS).filter((n) => ['fallAsleep', 'swat', 'kick', 'header', 'med', 'offer'].indexOf(n) < 0);
   PetEngine.BREEDS = BREEDS;
   PetEngine.EYES = EYES;
   PetEngine.MOODS = Object.keys(MOOD_POSES);
@@ -2947,8 +4013,16 @@
  *   {type:'pause'} {type:'resume'} {type:'play', name:'growl'}
  *   {type:'feedFood', food:'kibble'|'meat'|'treat'|'veggie'|'milk'|'cake'}  {type:'getFoods'}
  *   {type:'lights', on:true|false}  {type:'toggleLights'}  {type:'game', name:'ball'|'laser'|'bubbles'|'butterfly'}  {type:'stopGame'}
- *   {type:'setName', name:'Pamuk'}  {type:'sound', on:true|false}  {type:'headThumb', breed:'kangal'}
- * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state', data:{...}}
+ *   {type:'setName', name:'Pamuk'}  {type:'sound', on:true|false}  {type:'headThumb', breed:'kangal'}  {type:'scene', scene:'bath'|'room'}
+ *   {type:'brushFur'} {type:'brushTeeth'} {type:'medicine', id:'thermo'|'syrup'|'vitamin'}  {type:'game', name:'hide'}
+ *   Regl uygulaması: {type:'cycle', phase:'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day:2}
+ *                   {type:'userMood', mood:'happy'|'sad'|'tired'|'pain'|'angry'|'anxious'}
+ *                   {type:'remindWater'} {type:'waterReminder', minutes:120} {type:'userDrankWater'}
+ *   İlerleme: {type:'reward', xp:10, coins:5} {type:'getProgress'} {type:'getShop'} {type:'buy', id:'crown'} {type:'wear', id:'crown'} {type:'unwear', slot:'head'}
+ *             {type:'claimQuest', id:'feed'} {type:'panel', name:'quests'|'shop'|'wardrobe'|'mood'|'vet'}
+ *   Diğer: {type:'say', text:'Merhaba!', duration:3} {type:'setHour', hour:21} (test için; null → telefon saati)
+ * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state'|
+ *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -2959,6 +4033,7 @@
     breed: q.get('breed') || undefined,
     eyes: q.get('eyes') || undefined,
     name: q.get('name') || '',
+    waterReminder: q.get('waterReminder') != null ? parseFloat(q.get('waterReminder')) : undefined,
     timeScale: parseFloat(q.get('timeScale') || '1')
   });
   window.pet = pet;
@@ -2988,6 +4063,24 @@
       case 'lights': pet.setLights(!!cmd.on); break;
       case 'toggleLights': pet.toggleLights(); break;
       case 'scene': if (cmd.scene === 'bath') pet.goBath(); else pet.goRoom(); break;
+      case 'brushFur': pet.brushFur(); break;
+      case 'brushTeeth': pet.brushTeeth(); break;
+      case 'medicine': pet.giveMedicine(cmd.id); break;
+      case 'cycle': pet.setCycle(cmd.phase ? { phase: cmd.phase, day: cmd.day } : null); break;
+      case 'userMood': pet.setUserMood(cmd.mood); break;
+      case 'remindWater': pet.remindWater(); break;
+      case 'waterReminder': pet.setWaterReminder(cmd.minutes); break;
+      case 'userDrankWater': pet.userDrankWater(); break;
+      case 'reward': pet.reward(cmd.xp || 0, cmd.coins || 0, cmd.show === false ? null : pet._rewardAt()); break;
+      case 'getProgress': send('progress', pet.getProgress()); return;
+      case 'getShop': send('shop', pet.getShop()); return;
+      case 'buy': send('buyResult', Object.assign({ id: cmd.id }, pet.buy(cmd.id))); break;
+      case 'wear': pet.wear(cmd.id); break;
+      case 'unwear': pet.unwear(cmd.slot); break;
+      case 'claimQuest': pet.claimQuest(cmd.id); break;
+      case 'panel': pet.openPanel(cmd.name); break;
+      case 'say': pet.say(cmd.text, cmd.duration); break;
+      case 'setHour': pet.setHour(cmd.hour); break;
       case 'game': pet.startGame(cmd.name); break;
       case 'stopGame': pet.stopGame(); break;
       case 'setName': pet.setName(cmd.name); break;

@@ -6,9 +6,11 @@ import { WebView, WebViewMessageEvent } from 'react-native-webview';
 import petHtml from './petHtml';
 
 export type Species = 'dog' | 'cat';
-export type Mood = 'happy' | 'neutral' | 'hungry' | 'thirsty' | 'tired' | 'dirty' | 'sad' | 'sleeping';
+export type Mood = 'happy' | 'neutral' | 'hungry' | 'thirsty' | 'tired' | 'dirty' | 'sad' | 'sick' | 'sleeping';
 
-export interface PetStats { fullness: number; hydration: number; energy: number; happiness: number; cleanliness: number; }
+export interface PetStats { fullness: number; hydration: number; energy: number; happiness: number; cleanliness: number; health: number; }
+export type CyclePhase = 'period' | 'pms' | 'follicular' | 'ovulation' | 'luteal';
+export type UserMood = 'happy' | 'sad' | 'tired' | 'pain' | 'angry' | 'anxious';
 export interface PetState { species: Species; breed: string; eyes: string | null; stats: PetStats; sleeping: boolean; mood: Mood | null; lastUpdate: number; }
 
 export interface PetViewHandle {
@@ -27,6 +29,23 @@ export interface PetViewHandle {
   /** banyoya geç / odaya dön (banyoda yemek ve oyun yok) */
   goBath(): void;
   goRoom(): void;
+  brushFur(): void;
+  brushTeeth(): void;
+  /** 'thermo' | 'syrup' | 'vitamin' */
+  giveMedicine(id: string): void;
+  /** Regl uygulaması: döngü evresi (null → kapalı), day: regl'in kaçıncı günü */
+  setCycle(phase: CyclePhase | null, day?: number): void;
+  setUserMood(mood: UserMood): void;
+  remindWater(): void;
+  /** dakika; 0 → kapalı */
+  setWaterReminder(minutes: number): void;
+  userDrankWater(): void;
+  reward(xp: number, coins: number): void;
+  buy(id: string): void;
+  wear(id: string): void;
+  unwear(slot?: 'head' | 'eyes' | 'neck' | 'body'): void;
+  openPanel(name: 'quests' | 'shop' | 'wardrobe' | 'mood' | 'vet'): void;
+  say(text: string, seconds?: number): void;
   setName(name: string): void;
   setSound(on: boolean): void;
   setBreed(breed: string): void;
@@ -59,6 +78,10 @@ interface Props {
   onMood?(mood: Mood, previous: Mood | null): void;
   onAction?(name: string, phase: 'start' | 'end'): void;
   onPet?(phase: 'start' | 'end'): void;
+  /** Kullanıcı balondaki "İçtim ✓" butonuna bastı */
+  onUserDrankWater?(): void;
+  /** Tüm olaylar (level, quest, userMood, buy, med, groom, say …) */
+  onEvent?(type: string, data: any): void;
 }
 
 export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, ref) {
@@ -81,6 +104,20 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     stopGame: () => send({ type: 'stopGame' }),
     goBath: () => send({ type: 'scene', scene: 'bath' }),
     goRoom: () => send({ type: 'scene', scene: 'room' }),
+    brushFur: () => send({ type: 'brushFur' }),
+    brushTeeth: () => send({ type: 'brushTeeth' }),
+    giveMedicine: (id: string) => send({ type: 'medicine', id }),
+    setCycle: (phase, day) => send({ type: 'cycle', phase, day }),
+    setUserMood: (mood) => send({ type: 'userMood', mood }),
+    remindWater: () => send({ type: 'remindWater' }),
+    setWaterReminder: (minutes: number) => send({ type: 'waterReminder', minutes }),
+    userDrankWater: () => send({ type: 'userDrankWater' }),
+    reward: (xp: number, coins: number) => send({ type: 'reward', xp, coins }),
+    buy: (id: string) => send({ type: 'buy', id }),
+    wear: (id: string) => send({ type: 'wear', id }),
+    unwear: (slot) => send({ type: 'unwear', slot }),
+    openPanel: (name) => send({ type: 'panel', name }),
+    say: (text: string, seconds?: number) => send({ type: 'say', text, duration: seconds }),
     setName: (name: string) => send({ type: 'setName', name }),
     setSound: (on: boolean) => send({ type: 'sound', on }),
     setBreed: (breed) => send({ type: 'setBreed', breed }),
@@ -104,6 +141,7 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     try { msg = JSON.parse(e.nativeEvent.data); } catch { return; }
     if (!msg || msg.source !== 'pet') return;
     const d = msg.data;
+    props.onEvent?.(msg.type, d);
     switch (msg.type) {
       case 'ready':
         if (props.breed) send({ type: 'setBreed', breed: props.breed });
@@ -116,6 +154,7 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
       case 'mood': props.onMood?.(d.mood, d.previous); break;
       case 'action': props.onAction?.(d.name, d.phase); break;
       case 'pet': props.onPet?.(d.phase); break;
+      case 'userWater': props.onUserDrankWater?.(); break;
     }
   };
 

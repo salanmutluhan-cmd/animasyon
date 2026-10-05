@@ -36,6 +36,24 @@ class PetController {
   /// banyoya geç / odaya dön (banyoda yemek ve oyun yok)
   Future<void> goBath() => send({'type': 'scene', 'scene': 'bath'});
   Future<void> goRoom() => send({'type': 'scene', 'scene': 'room'});
+  Future<void> brushFur() => send({'type': 'brushFur'});
+  Future<void> brushTeeth() => send({'type': 'brushTeeth'});
+  /// thermo, syrup, vitamin
+  Future<void> giveMedicine(String id) => send({'type': 'medicine', 'id': id});
+  /// Regl uygulaması: period, pms, follicular, ovulation, luteal (null → kapalı)
+  Future<void> setCycle(String? phase, {int day = 0}) => send({'type': 'cycle', 'phase': phase, 'day': day});
+  /// happy, sad, tired, pain, angry, anxious
+  Future<void> setUserMood(String mood) => send({'type': 'userMood', 'mood': mood});
+  Future<void> remindWater() => send({'type': 'remindWater'});
+  Future<void> setWaterReminder(int minutes) => send({'type': 'waterReminder', 'minutes': minutes});
+  Future<void> userDrankWater() => send({'type': 'userDrankWater'});
+  Future<void> reward(int xp, int coins) => send({'type': 'reward', 'xp': xp, 'coins': coins});
+  Future<void> buy(String id) => send({'type': 'buy', 'id': id});
+  Future<void> wear(String id) => send({'type': 'wear', 'id': id});
+  Future<void> unwear([String? slot]) => send({'type': 'unwear', 'slot': slot});
+  /// quests, shop, wardrobe, mood, vet
+  Future<void> openPanel(String name) => send({'type': 'panel', 'name': name});
+  Future<void> say(String text, {double seconds = 3}) => send({'type': 'say', 'text': text, 'duration': seconds});
   Future<void> setName(String name) => send({'type': 'setName', 'name': name});
   Future<void> setSound(bool on) => send({'type': 'sound', 'on': on});
   Future<void> setBreed(String breed) => send({'type': 'setBreed', 'breed': breed});
@@ -63,6 +81,8 @@ class PetView extends StatefulWidget {
     this.onStats,
     this.onMood,
     this.onAction,
+    this.onEvent,
+    this.onUserDrankWater,
   });
 
   final PetController controller;
@@ -72,6 +92,10 @@ class PetView extends StatefulWidget {
   final void Function(Map<String, dynamic> state)? onStats;
   final void Function(String mood)? onMood;
   final void Function(String name, String phase)? onAction;
+  /// Tüm olaylar (level, quest, userMood, buy, med, groom, say …)
+  final void Function(String type, dynamic data)? onEvent;
+  /// Kullanıcı balondaki "İçtim ✓" butonuna bastı
+  final void Function()? onUserDrankWater;
 
   @override
   State<PetView> createState() => _PetViewState();
@@ -100,6 +124,7 @@ class _PetViewState extends State<PetView> {
     final msg = jsonDecode(m.message);
     if (msg is! Map || msg['source'] != 'pet') return;
     final data = msg['data'];
+    widget.onEvent?.call(msg['type'], data);
     switch (msg['type']) {
       case 'ready':
         widget.controller.setSpecies(widget.species);
@@ -113,6 +138,9 @@ class _PetViewState extends State<PetView> {
         break;
       case 'action':
         widget.onAction?.call(data['name'], data['phase']);
+        break;
+      case 'userWater':
+        widget.onUserDrankWater?.call();
         break;
     }
   }

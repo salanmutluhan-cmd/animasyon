@@ -60,9 +60,24 @@
     <button data-cmd="laser">🔴 Lazer</button>
     <button data-cmd="bubbles">🫧 Baloncuk</button>
     <button data-cmd="butterfly">🦋 Kelebek</button>
+    <button data-cmd="hide">🙈 Saklambaç</button>
+    <button data-cmd="brush">✨ Tüy tara</button>
+    <button data-cmd="teeth">🦷 Diş fırçala</button>
+    <button data-cmd="syrup">💊 Şurup</button>
     <button data-cmd="celebrate">🎉 Kutla</button>
     <button data-cmd="sound" id="soundBtn">🔊 Ses açık</button>
   </div>
+
+  <h2>🌸 Regl uygulaması bağlantısı</h2>
+  <div class="row">Döngü:
+    <button data-cycle="">Kapalı</button><button data-cycle="period">🌸 Regl</button><button data-cycle="pms">🍫 PMS</button>
+    <button data-cycle="follicular">🌱 Foliküler</button><button data-cycle="ovulation">🌼 Yumurtlama</button><button data-cycle="luteal">🍂 Luteal</button>
+  </div>
+  <div class="row">Senin ruh halin:
+    <button data-umood="happy">😊</button><button data-umood="sad">😢</button><button data-umood="tired">😴</button>
+    <button data-umood="pain">😣</button><button data-umood="angry">😠</button><button data-umood="anxious">😰</button>
+  </div>
+  <div class="row"><button id="waterBtn">💧 Su hatırlat</button><button id="rewardBtn">🎁 Kayıt ödülü (+10⭐ +5🪙)</button><button id="sickBtn">🤒 Hasta yap</button></div>
 
   <div class="hint">
     <b>Mama:</b> Mama tuşuna bas, açılan menüden bir mama seç ve hayvanın ağzına sürükle. Her mamanın etkisi farklı; kartlarda 🍖 tokluk, 😊 mutluluk, 💧 su ve ⚡ enerji etkisi yazar.<br>
@@ -70,7 +85,11 @@
     <b>Banyo:</b> Banyo tuşuna bas, ekran kayarak banyoya geçer. Süngeri hayvanın üstünde gezdirip köpürt, sonra duş başlığıyla köpükleri durula. Köpük bitince duşu bırak, hayvan silkelenir. Odaya dönmek için <b>Oda</b> tuşuna bas. Banyoda yemek ve oyun yoktur.<br>
     <b>Oyun:</b> Oyun tuşundan top, lazer, baloncuk ya da kelebek seç.<br>
     <b>Işık:</b> Ampule basınca ışık kapanır, perde çekilir ve hayvan uyur. Tekrar basınca uyanır.<br>
-    <b>Sevme:</b> parmağını hayvanın üstünde gezdir. Kafasına ya da karnına dokunmayı da dene.
+    <b>Sevme:</b> parmağını hayvanın üstünde gezdir. Kafasına ya da karnına dokunmayı da dene.<br>
+    <b>Tarak ve diş fırçası:</b> banyoda tarağı tüylerinde gezdir; diş fırçasını ağzına götürüp sağa sola oynat.<br>
+    <b>Sağ üstteki butonlar:</b> 📋 günlük görevler, 🛍️ mağaza (pati parasıyla kıyafet al), 👗 dolap, 💬 bugün nasılsın, 🩺 veteriner (hastaysa ilaç ver).<br>
+    <b>Saklambaç:</b> Oyun → Saklambaç. Hayvan koltuğun arkasına, kutuya ya da sepete saklanır; kulakları nereden görünüyorsa oraya dokun.<br>
+    <b>Pencere:</b> telefonun saatine göre sabah, akşam ya da gece olur. Aşağıdaki saat kaydırıcısıyla deneyebilirsin.
   </div>
 
   <h2>🎨 Özelleştir</h2>
@@ -93,6 +112,10 @@
     Animasyon: <select id="anim"></select><button id="playAnim">Oynat</button>
   </div>
   <div class="row">
+    Saat <input id="hour" type="range" min="-1" max="23.5" step="0.5" value="-1"> <span id="hourLbl">telefon saati</span>
+  </div>
+  <div class="row"><button id="resetBtn">♻️ Kaydı sıfırla</button></div>
+  <div class="row">
     Zaman hızı <input id="speed" type="range" min="0" max="3" step="1" value="0"> <span id="speedLbl">1x</span>
   </div>
   <div class="log" id="log"></div>
@@ -102,10 +125,14 @@
 /*__PET_ENGINE__*/
 </script>
 <script>
-  var pet = new PetEngine(document.getElementById('pet'), { breed: 'golden' });
-  var NAMES = { fullness: 'Tokluk', hydration: 'Su', energy: 'Enerji', happiness: 'Mutluluk', cleanliness: 'Temizlik' };
-  var COLORS = { fullness: '#F4A259', hydration: '#4FA9D6', energy: '#8E7CF0', happiness: '#F06C8B', cleanliness: '#5CC9A7' };
-  var MOODS = { happy: 'Mutlu 😊', neutral: 'Sakin 🙂', hungry: 'Aç 🍖', thirsty: 'Susamış 💧', tired: 'Yorgun 🥱', sad: 'Üzgün 😢', sleeping: 'Uyuyor 💤', dirty: 'Kirli 🛁' };
+  // kayıt: her şey (istatistik, seviye, para, kıyafet, görevler) tarayıcıda saklanır
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem('petState') || 'null'); } catch (e) {}
+  var pet = new PetEngine(document.getElementById('pet'), { breed: 'golden', state: saved || undefined });
+  pet.on('stats', function (st) { try { localStorage.setItem('petState', JSON.stringify(st)); } catch (e) {} });
+  var NAMES = { fullness: 'Tokluk', hydration: 'Su', energy: 'Enerji', happiness: 'Mutluluk', cleanliness: 'Temizlik', health: 'Sağlık' };
+  var COLORS = { fullness: '#F4A259', hydration: '#4FA9D6', energy: '#8E7CF0', happiness: '#F06C8B', cleanliness: '#5CC9A7', health: '#E05A5A' };
+  var MOODS = { happy: 'Mutlu 😊', neutral: 'Sakin 🙂', hungry: 'Aç 🍖', thirsty: 'Susamış 💧', tired: 'Yorgun 🥱', sad: 'Üzgün 😢', sleeping: 'Uyuyor 💤', dirty: 'Kirli 🛁', sick: 'Hasta 🤒' };
   var statsEl = document.getElementById('stats');
   statsEl.innerHTML = Object.keys(NAMES).map(function (k) {
     return '<div class="stat"><label>' + NAMES[k] + '<b id="v-' + k + '"></b></label><div class="bar"><i id="b-' + k + '" style="background:' + COLORS[k] + '"></i></div></div>';
@@ -128,7 +155,10 @@
   document.querySelectorAll('[data-cmd]').forEach(function (b) {
     b.onclick = function () {
       var c = b.dataset.cmd;
-      if (c === 'laser' || c === 'bubbles' || c === 'butterfly') pet.startGame(c);
+      if (c === 'laser' || c === 'bubbles' || c === 'butterfly' || c === 'hide') pet.startGame(c);
+      else if (c === 'brush') pet.brushFur();
+      else if (c === 'teeth') pet.brushTeeth();
+      else if (c === 'syrup') pet.giveMedicine('syrup');
       else if (c === 'sound') { soundOn = !soundOn; pet.setSound(soundOn); b.textContent = soundOn ? '🔊 Ses açık' : '🔇 Ses kapalı'; }
       else pet[CMDS[c]]();
     };
@@ -143,6 +173,23 @@
   };
   pet.on('feed', function (e) { if (e.phase === 'end') log('yedi: ' + e.food); });
   pet.on('game', function (e) { log('oyun ' + e.name + ' ' + e.phase); });
+  ['level', 'quest', 'buy', 'wear', 'userMood', 'userWater', 'med', 'groom', 'say', 'cycle'].forEach(function (ev) {
+    pet.on(ev, function (d) { log(ev + ' ' + JSON.stringify(d)); });
+  });
+  // regl uygulaması bağlantısı
+  document.querySelectorAll('[data-cycle]').forEach(function (b) {
+    b.onclick = function () { var ph = b.dataset.cycle; pet.setCycle(ph ? { phase: ph, day: ph === 'period' ? 2 : 0 } : null); };
+  });
+  document.querySelectorAll('[data-umood]').forEach(function (b) { b.onclick = function () { pet.setUserMood(b.dataset.umood); }; });
+  document.getElementById('waterBtn').onclick = function () { pet.remindWater(); };
+  document.getElementById('rewardBtn').onclick = function () { pet.reward(10, 5, pet._rewardAt()); };
+  document.getElementById('sickBtn').onclick = function () { pet.wake(); pet.setStats({ health: 25 }); };
+  document.getElementById('hour').oninput = function (e) {
+    var h = parseFloat(e.target.value);
+    pet.setHour(h < 0 ? null : h);
+    document.getElementById('hourLbl').textContent = h < 0 ? 'telefon saati' : Math.floor(h) + ':' + (h % 1 ? '30' : '00');
+  };
+  document.getElementById('resetBtn').onclick = function () { try { localStorage.removeItem('petState'); } catch (e) {} location.reload(); };
 
   // ---- özelleştirme
   var curSp = 'dog';
@@ -184,7 +231,7 @@
     tired: { fullness: 80, hydration: 80, energy: 10, happiness: 60, cleanliness: 80 },
     sad: { fullness: 60, hydration: 60, energy: 60, happiness: 10, cleanliness: 80 },
     dirty: { fullness: 80, hydration: 80, energy: 80, happiness: 60, cleanliness: 5 },
-    happy: { fullness: 90, hydration: 95, energy: 95, happiness: 95, cleanliness: 95 }
+    happy: { fullness: 90, hydration: 95, energy: 95, happiness: 95, cleanliness: 95, health: 100 }
   };
   document.querySelectorAll('[data-preset]').forEach(function (b) { b.onclick = function () { pet.wake(); pet.setStats(PRESETS[b.dataset.preset]); }; });
   var SPEEDS = [1, 60, 600, 3600];

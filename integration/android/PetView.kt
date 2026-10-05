@@ -37,6 +37,10 @@ class PetView @JvmOverloads constructor(
     var onMood: ((String) -> Unit)? = null
     var onAction: ((name: String, phase: String) -> Unit)? = null
     var onReady: (() -> Unit)? = null
+    /** Tüm olaylar: "level", "quest", "userWater", "userMood", "buy", "med", "groom", "say" ... */
+    var onEvent: ((type: String, data: JSONObject?) -> Unit)? = null
+    /** Kullanıcı balondaki "İçtim ✓" butonuna bastı → uygulamada su kaydı ekleyebilirsiniz */
+    var onUserDrankWater: (() -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var pendingSpecies = "dog"
@@ -77,6 +81,30 @@ class PetView @JvmOverloads constructor(
     /** banyoya geç (ekran sağa kayar) / odaya dön. Banyodayken yemek ve oyun komutları çalışmaz */
     fun goBath() = send("""{"type":"scene","scene":"bath"}""")
     fun goRoom() = send("""{"type":"scene","scene":"room"}""")
+    fun brushFur() = send("""{"type":"brushFur"}""")         // banyoda tüylerini tarar
+    fun brushTeeth() = send("""{"type":"brushTeeth"}""")     // dişlerini fırçalar
+    /** thermo, syrup, vitamin */
+    fun giveMedicine(id: String) = send("""{"type":"medicine","id":"$id"}""")
+
+    // ---- Regl uygulamasıyla bağlantı
+    /** phase: "period", "pms", "follicular", "ovulation", "luteal" (null → kapalı). day: regl'in kaçıncı günü */
+    fun setCycle(phase: String?, day: Int = 0) = send(if (phase == null) """{"type":"cycle","phase":null}""" else """{"type":"cycle","phase":"$phase","day":$day}""")
+    /** happy, sad, tired, pain, angry, anxious */
+    fun setUserMood(mood: String) = send("""{"type":"userMood","mood":"$mood"}""")
+    fun remindWater() = send("""{"type":"remindWater"}""")
+    /** dakika; 0 → kapalı (varsayılan 120) */
+    fun setWaterReminder(minutes: Int) = send("""{"type":"waterReminder","minutes":$minutes}""")
+    fun userDrankWater() = send("""{"type":"userDrankWater"}""")
+
+    // ---- İlerleme: seviye, pati parası, kıyafet, görev
+    /** Örn. kullanıcı günlük kaydını girince ödül: reward(10, 5) */
+    fun reward(xp: Int, coins: Int) = send("""{"type":"reward","xp":$xp,"coins":$coins}""")
+    fun buy(id: String) = send("""{"type":"buy","id":"$id"}""")
+    fun wear(id: String) = send("""{"type":"wear","id":"$id"}""")
+    fun unwear(slot: String? = null) = send(if (slot == null) """{"type":"unwear"}""" else """{"type":"unwear","slot":"$slot"}""")
+    /** quests, shop, wardrobe, mood, vet */
+    fun openPanel(name: String) = send("""{"type":"panel","name":"$name"}""")
+    fun say(text: String, seconds: Double = 3.0) = send(JSONObject().put("type", "say").put("text", text).put("duration", seconds).toString())
     fun setName(name: String) = send(JSONObject().put("type", "setName").put("name", name).toString())
     fun setSound(on: Boolean) = send("""{"type":"sound","on":$on}""")
     /** golden, kangal, dalmatian, husky, bulldog, beagle, pug, labrador, collie, shiba, rottweiler, pomeranian,
@@ -105,6 +133,7 @@ class PetView @JvmOverloads constructor(
             if (msg.optString("source") != "pet") return
             val data = msg.optJSONObject("data")
             main.post {
+                onEvent?.invoke(msg.optString("type"), data)
                 when (msg.optString("type")) {
                     "ready" -> {
                         pendingState?.let { setState(it) }
@@ -113,6 +142,7 @@ class PetView @JvmOverloads constructor(
                     "stats" -> data?.let { onStats?.invoke(it) }
                     "mood" -> data?.let { onMood?.invoke(it.optString("mood")) }
                     "action" -> data?.let { onAction?.invoke(it.optString("name"), it.optString("phase")) }
+                    "userWater" -> onUserDrankWater?.invoke()
                 }
             }
         }
