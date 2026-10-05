@@ -24,6 +24,9 @@ export interface PetViewHandle {
   /** 'ball' | 'laser' | 'bubbles' | 'butterfly' */
   startGame(name: string): void;
   stopGame(): void;
+  /** banyoya geç / odaya dön (banyoda yemek ve oyun yok) */
+  goBath(): void;
+  goRoom(): void;
   setName(name: string): void;
   setSound(on: boolean): void;
   setBreed(breed: string): void;
@@ -76,6 +79,8 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     toggleLights: () => send({ type: 'toggleLights' }),
     startGame: (name: string) => send({ type: 'game', name }),
     stopGame: () => send({ type: 'stopGame' }),
+    goBath: () => send({ type: 'scene', scene: 'bath' }),
+    goRoom: () => send({ type: 'scene', scene: 'room' }),
     setName: (name: string) => send({ type: 'setName', name }),
     setSound: (on: boolean) => send({ type: 'sound', on }),
     setBreed: (breed) => send({ type: 'setBreed', breed }),

@@ -67,7 +67,7 @@
   <div class="hint">
     <b>Mama:</b> Mama tuşuna bas, açılan menüden bir mama seç ve hayvanın ağzına sürükle. Her mamanın etkisi farklı; kartlarda 🍖 tokluk, 😊 mutluluk, 💧 su ve ⚡ enerji etkisi yazar.<br>
     <b>Su:</b> Su kabını hayvana sürükle, kabı iki eliyle tutup içer.<br>
-    <b>Banyo:</b> Banyo tuşundan önce süngeri seç ve hayvanı köpürt. Sonra duş başlığıyla köpükleri durula. Köpük bitince duşu bırak, hayvan silkelenir.<br>
+    <b>Banyo:</b> Banyo tuşuna bas, ekran kayarak banyoya geçer. Süngeri hayvanın üstünde gezdirip köpürt, sonra duş başlığıyla köpükleri durula. Köpük bitince duşu bırak, hayvan silkelenir. Odaya dönmek için <b>Oda</b> tuşuna bas. Banyoda yemek ve oyun yoktur.<br>
     <b>Oyun:</b> Oyun tuşundan top, lazer, baloncuk ya da kelebek seç.<br>
     <b>Işık:</b> Ampule basınca ışık kapanır, perde çekilir ve hayvan uyur. Tekrar basınca uyanır.<br>
     <b>Sevme:</b> parmağını hayvanın üstünde gezdir. Kafasına ya da karnına dokunmayı da dene.
@@ -614,27 +614,26 @@
         case 'squish': this.noise(0.18, { filter: 'lowpass', freq: 1700, to: 320, q: 4, vol: 0.24 }); this.tone(220, 0.12, { to: 140, vol: 0.05 }); break;
         case 'pop': this.tone(700 + Math.random() * 500, 0.06, { to: 1700, vol: 0.16 }); break;
         case 'boing': this.tone(330, 0.35, { to: 140, type: 'triangle', vol: 0.28 }); this.tone(660, 0.2, { to: 300, vol: 0.07 }); break;
-        case 'click': this.tone(1800, 0.03, { type: 'square', vol: 0.1 }); this.tone(900, 0.05, { type: 'square', vol: 0.07, delay: 0.04 }); break;
-        case 'shake': this.noise(0.8, { freq: 900, q: 0.8, vol: 0.28, a: 0.05 }); break;
+        case 'shake': this.noise(0.8, { freq: 900, q: 0.8, vol: 0.16, a: 0.05 }); break;
         case 'chime': this.tone(880, 0.18, { vol: 0.13 }); this.tone(1320, 0.25, { vol: 0.11, delay: 0.1 }); this.tone(1760, 0.3, { vol: 0.09, delay: 0.2 }); break;
         case 'sparkle': this.tone(1500, 0.12, { vol: 0.06 }); this.tone(2000, 0.15, { vol: 0.05, delay: 0.06 }); break;
         case 'woof': this.tone(430, 0.15, { to: 250, type: 'sawtooth', vol: 0.09 }); this.noise(0.1, { filter: 'lowpass', freq: 900, vol: 0.06 }); break;
         case 'meow': this.tone(620, 0.32, { to: 920, vol: 0.1 }); this.tone(920, 0.22, { to: 560, vol: 0.08, delay: 0.17 }); break;
         case 'snore': this.noise(1.1, { filter: 'lowpass', freq: 320, q: 2, vol: 0.09, a: 0.35 }); break;
-        case 'pew': this.tone(1400, 0.12, { to: 500, type: 'square', vol: 0.05 }); break;
+        case 'pew': this.tone(1100, 0.14, { to: 1500, vol: 0.06 }); break;
       }
     }
     water(on) {
       if (on && !this.loop) {
         const c = this._c(); if (!c) return;
         const src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
-        src.buffer = this.noiseBuf; src.loop = true; fl.type = 'bandpass'; fl.frequency.value = 2400; fl.Q.value = 0.5;
-        g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.13, c.currentTime + 0.15);
+        src.buffer = this.noiseBuf; src.loop = true; fl.type = 'lowpass'; fl.frequency.value = 1500; fl.Q.value = 0.4;
+        g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.04, c.currentTime + 0.3);
         src.connect(fl); fl.connect(g); g.connect(this.out); src.start();
         this.loop = { src, g };
       } else if (!on && this.loop && this.ctx) {
         const c = this.ctx, l = this.loop; this.loop = null;
-        try { l.g.gain.cancelScheduledValues(c.currentTime); l.g.gain.setValueAtTime(0.1, c.currentTime); l.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.2); l.src.stop(c.currentTime + 0.25); } catch (e) { /* yoksay */ }
+        try { l.g.gain.cancelScheduledValues(c.currentTime); l.g.gain.setValueAtTime(0.04, c.currentTime); l.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.2); l.src.stop(c.currentTime + 0.25); } catch (e) { /* yoksay */ }
       }
     }
     setOn(v) { if (!v) this.water(false); this.on = !!v; }
@@ -950,6 +949,68 @@
     return s;
   }
 
+  // Banyo: fayanslı duvar, küvet, lavabo ve ayna, havlu, paspas
+  function bathMarkup(Wv, Hv, fy, gy) {
+    const L = '#5B7A8C', cx = Wv / 2;
+    let s = '<rect x="0" y="0" width="' + f(Wv) + '" height="' + f(fy) + '" fill="#E6F6FA"/>';
+    let dots = '';
+    for (let y = 40, row = 0; y < fy - 200; y += 70, row++) for (let x = (row % 2) * 45 + 30; x < Wv; x += 90) dots += '<circle cx="' + x + '" cy="' + y + '" r="9" fill="none" stroke="#fff" stroke-width="3"/>';
+    s += '<g opacity="0.8">' + dots + '</g>';
+    // alt duvar fayansları
+    const ty = fy - 190;
+    s += '<rect x="0" y="' + f(ty) + '" width="' + f(Wv) + '" height="' + f(fy - ty) + '" fill="#BFE8E2"/>';
+    let tl = '';
+    for (let y = ty + 46; y < fy; y += 46) tl += '<path d="M0 ' + f(y) + ' H' + f(Wv) + '"/>';
+    for (let x = 46; x < Wv; x += 46) tl += '<path d="M' + x + ' ' + f(ty) + ' V' + f(fy) + '"/>';
+    s += '<g stroke="#fff" stroke-width="3" opacity="0.85">' + tl + '</g>';
+    s += '<rect x="0" y="' + f(ty - 12) + '" width="' + f(Wv) + '" height="14" fill="#8FD3C8" stroke="' + L + '" stroke-width="2"/>';
+    // ayna + lavabo (sol)
+    const mx = Math.max(90, Wv * 0.15), my = ty - 110;
+    if (my > 70) s += '<g transform="translate(' + f(mx) + ' ' + f(my) + ')"><ellipse rx="56" ry="70" fill="#F4D6A0" stroke="' + L + '" stroke-width="4"/><ellipse rx="44" ry="58" fill="#D8F0FA"/>' +
+      '<path d="M-24 -30 L4 -46 M-28 -10 L14 -34" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.8"/></g>';
+    s += '<g transform="translate(' + f(mx) + ' ' + f(ty + 20) + ')" stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round">' +
+      '<rect x="-12" y="-46" width="8" height="24" rx="3" fill="#C9D6DF"/><path d="M-12 -46 h26 v8 h-18" fill="#C9D6DF"/>' +
+      '<path d="M-24 40 L-16 ' + f(fy - ty - 20) + ' L16 ' + f(fy - ty - 20) + ' L24 40 Z" fill="#fff"/>' +
+      '<path d="M-62 -24 H62 Q60 40 0 44 Q-60 40 -62 -24 Z" fill="#fff"/><path d="M-52 -18 H52" stroke="#D5E6EE" stroke-width="5"/>' +
+      '<rect x="34" y="-60" width="18" height="34" rx="6" fill="#FFB7CC"/><rect x="38" y="-68" width="10" height="9" rx="2" fill="#9B8DE8"/></g>';
+    // havlu askısı (sol üst, aynanın sağı)
+    const hx = mx + 110, hy = ty - 150;
+    if (hy > 60) s += '<g transform="translate(' + f(hx) + ' ' + f(hy) + ')"><rect x="-40" y="-6" width="80" height="8" rx="4" fill="#C9D6DF" stroke="' + L + '" stroke-width="2.5"/>' +
+      '<path d="M-32 0 H32 V70 Q32 80 22 80 H-22 Q-32 80 -32 70 Z" fill="#FFB7CC" stroke="' + L + '" stroke-width="3"/><path d="M-32 58 H32" stroke="#fff" stroke-width="5"/><path d="M-32 66 H32" stroke="#F28AA4" stroke-width="3"/></g>';
+    // küvet (sağ)
+    const bx = Math.min(Wv * 0.8, Wv - 120), bw = 250, bt = fy - 120;
+    s += '<g transform="translate(' + f(bx) + ' 0)">' +
+      '<path d="M90 ' + f(bt - 160) + ' V' + f(bt - 70) + '" stroke="#C9D6DF" stroke-width="8" stroke-linecap="round"/>' +
+      '<path d="M90 ' + f(bt - 160) + ' Q90 ' + f(bt - 190) + ' 60 ' + f(bt - 190) + ' L40 ' + f(bt - 190) + '" stroke="#C9D6DF" stroke-width="8" fill="none" stroke-linecap="round"/>' +
+      '<ellipse cx="34" cy="' + f(bt - 184) + '" rx="22" ry="9" fill="#C9D6DF" stroke="' + L + '" stroke-width="3"/>' +
+      '<g fill="#fff" stroke="#BFE3F2" stroke-width="2"><circle cx="-80" cy="' + f(bt - 10) + '" r="18"/><circle cx="-52" cy="' + f(bt - 18) + '" r="22"/><circle cx="-20" cy="' + f(bt - 12) + '" r="18"/><circle cx="18" cy="' + f(bt - 16) + '" r="20"/><circle cx="52" cy="' + f(bt - 10) + '" r="17"/><circle cx="80" cy="' + f(bt - 6) + '" r="14"/></g>' +
+      '<g stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round">' +
+        '<path d="M' + f(-bw / 2 + 14) + ' ' + f(fy + 6) + ' l-8 18 h22 l4 -18 Z M' + f(bw / 2 - 14) + ' ' + f(fy + 6) + ' l8 18 h-22 l-4 -18 Z" fill="#F4D6A0"/>' +
+        '<path d="M' + f(-bw / 2) + ' ' + f(bt) + ' H' + f(bw / 2) + ' Q' + f(bw / 2) + ' ' + f(fy + 14) + ' ' + f(bw / 2 - 60) + ' ' + f(fy + 14) + ' H' + f(-bw / 2 + 60) + ' Q' + f(-bw / 2) + ' ' + f(fy + 14) + ' ' + f(-bw / 2) + ' ' + f(bt) + ' Z" fill="#fff"/>' +
+        '<rect x="' + f(-bw / 2 - 10) + '" y="' + f(bt - 8) + '" width="' + f(bw + 20) + '" height="16" rx="8" fill="#fff"/></g>' +
+      '<path d="M' + f(-bw / 2 + 20) + ' ' + f(bt + 30) + ' Q' + f(-bw / 2 + 24) + ' ' + f(fy - 4) + ' ' + f(-bw / 2 + 70) + ' ' + f(fy + 2) + '" stroke="#D5E6EE" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+      // lastik ördek
+      '<g transform="translate(' + f(-bw / 2 + 30) + ' ' + f(bt - 26) + ')" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round">' +
+        '<path d="M-20 4 Q-22 18 0 18 Q22 18 20 2 Q14 -4 8 2 Q2 -6 -10 -2 Q-18 -2 -20 4 Z" fill="#FFD84D"/><circle cx="-6" cy="-12" r="11" fill="#FFD84D"/>' +
+        '<path d="M-16 -12 L-26 -9 L-16 -6 Z" fill="#FF9B3D"/><circle cx="-9" cy="-14" r="2" fill="' + L + '" stroke="none"/></g></g>';
+    // zemin: dama fayans
+    s += '<rect x="0" y="' + f(fy - 8) + '" width="' + f(Wv) + '" height="8" fill="#8FD3C8"/>';
+    s += '<rect x="0" y="' + f(fy) + '" width="' + f(Wv) + '" height="' + f(Hv - fy) + '" fill="#F3F7F8"/>';
+    let ck = '';
+    for (let y = fy, r = 0; y < Hv; y += 40, r++) for (let x = (r % 2) * 40; x < Wv; x += 80) ck += '<rect x="' + x + '" y="' + f(y) + '" width="40" height="40"/>';
+    s += '<g fill="#DCEBF0">' + ck + '</g>';
+    // paspas
+    s += '<rect x="' + f(cx - Wv * 0.3) + '" y="' + f(gy - 30) + '" width="' + f(Wv * 0.6) + '" height="64" rx="32" fill="#9FD8F5" stroke="' + L + '" stroke-width="3"/>' +
+      '<rect x="' + f(cx - Wv * 0.3 + 12) + '" y="' + f(gy - 20) + '" width="' + f(Wv * 0.6 - 24) + '" height="44" rx="22" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="3 9" stroke-linecap="round"/>';
+    return s;
+  }
+  function homeIconMarkup(line) {
+    return '<path d="M-24 -2 L0 -24 L24 -2" fill="none" stroke="' + line + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M-18 -6 V20 H18 V-6 L0 -20 Z" fill="#F7A9BC" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<rect x="-6" y="4" width="12" height="16" rx="3" fill="#FFF3C4" stroke="' + line + '" stroke-width="2.5"/>' +
+      '<path d="M6 -26 L14 -34 M-30 10 h-8" stroke="none"/>';
+  }
+
   // ================================================================ Motor
   class PetEngine {
     constructor(container, options) {
@@ -967,13 +1028,15 @@
       this.showBackground = options.background !== false;
       this.hq = options.quality !== 'low';
       this.scaleOpt = options.petScale || 0;
-      this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo' }, options.labels || {});
+      this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo', home: 'Oda', sponge: 'Sünger', shower: 'Duş' }, options.labels || {});
       this.name = options.name || '';
       this.sfx = new Sfx(options.sound !== false);
       this.lightsOff = false; this.night = 0;   // ampul: ışık kapalıyken perde kapanır, oda kararır, hayvan uyur
       this.menu = null;                          // açık tepsi menüsü (mama / banyo / oyun)
       this.game = null;                          // aktif mini oyun (lazer / baloncuk / kelebek)
       this.soaped = false;                       // süngerle köpürtüldü mü
+      this.scene = 'room'; this.sceneK = 0;      // 'room' | 'bath' — banyo ayrı sahne, sağa kayarak geçilir
+      this._sceneDone = null;
       this.listeners = {};
       this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80 }, options.stats || {});
       this.sleeping = false;
@@ -1035,7 +1098,7 @@
         '<defs>' + built.defs +
           '<linearGradient id="' + u + '-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + SC.wallTop + '"/><stop offset="1" stop-color="' + SC.wallBottom + '"/></linearGradient>' +
         '</defs>' +
-        (this.showBackground ? '<g data-r="room"></g>' : '') +
+        (this.showBackground ? '<g data-r="world"><g data-r="room"></g><g data-r="bathroom"></g></g>' : '') +
         '<ellipse data-r="ballShadow" fill="' + P.shadow + '" display="none"/>' +
         '<g data-r="pet">' + built.pet + '</g>' +
         '<g data-r="gameLayer"></g>' +
@@ -1051,7 +1114,12 @@
             slot('Water', waterIconMarkup(P, C.line), this.labels.water) +
             slot('Game', '<g transform="scale(0.9)">' + gamepadMarkup(C.line) + '</g>', this.labels.game) +
             slot('Light', '<g transform="translate(0 -2) scale(0.85)">' + bulbMarkup(C.line) + '</g>', this.labels.light) +
-            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.bath) +
+            slot('Bath', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.bath) +
+          '</g>' +
+          '<g data-r="toolsBath">' +
+            slot('Home', '<g transform="translate(0 2) scale(0.95)">' + homeIconMarkup(C.line) + '</g>', this.labels.home) +
+            slot('Sponge', '<g transform="scale(0.9)">' + spongeMarkup(C.line, true) + '</g>', this.labels.sponge) +
+            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
           '</g>' +
           '<g data-r="menu"></g>' +
           '<g data-r="held" style="pointer-events:none">' +
@@ -1077,6 +1145,7 @@
       this._bindPointer();
       this._layout();
       this._renderName();
+      this._renderScene();
     }
 
     _limbDeco() {
@@ -1108,6 +1177,7 @@
         const q = (k) => this.r.room.querySelector('[data-c="' + k + '"]');
         this.win = { sky: q('sky'), sun: q('sun'), moon: q('moon'), cloud: q('cloud'), curtL: q('curtL'), curtR: q('curtR') };
         this._lastNight = -1;
+        this.r.bathroom.innerHTML = bathMarkup(Wv, Hv, fy, this.groundY);
       }
       this.r.night.setAttribute('width', f(Wv)); this.r.night.setAttribute('height', f(Hv));
       this.r.nameTag.setAttribute('transform', 'translate(' + f(Wv / 2) + ' 30)');
@@ -1116,14 +1186,16 @@
       this.floorY = this.groundY + 22; // topun durduğu zemin
       if (this.showTools) {
         const ty = Hv - this.trayH / 2 - 4;
-        this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, game: { x: 242, y: ty }, light: { x: 336, y: ty }, bath: { x: Wv - 54, y: ty } };
-        this.slots.shower = this.slots.bath; this.slots.sponge = this.slots.bath;
+        this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, game: { x: 242, y: ty }, light: { x: 336, y: ty }, bath: { x: Wv - 54, y: ty },
+          home: { x: 54, y: ty }, sponge: { x: Wv - 148, y: ty }, shower: { x: Wv - 54, y: ty } };
         const place = (el, sl) => el.setAttribute('transform', 'translate(' + f(sl.x) + ' ' + f(sl.y) + ')');
         place(this.r.slotFood, this.slots.food); place(this.r.slotWater, this.slots.water); place(this.r.slotGame, this.slots.game);
-        place(this.r.slotLight, this.slots.light); place(this.r.slotShower, this.slots.bath);
+        place(this.r.slotLight, this.slots.light); place(this.r.slotBath, this.slots.bath);
+        place(this.r.slotHome, this.slots.home); place(this.r.slotSponge, this.slots.sponge); place(this.r.slotShower, this.slots.shower);
       }
       const B = this.ball;
       if (B.active) { B.x = clamp(B.x, B.r, Wv - B.r); B.y = Math.min(B.y, this.floorY - B.r); }
+      if (this.r) this._renderScene();
     }
 
     // ---------------------------------------------------------------- özelleştirme
@@ -1204,19 +1276,22 @@
             if (cell) { this._menuPick(cell, w, e.pointerId); return; }
             const kind = this.menu.kind; this._closeMenu();
             const sk = this._slotAt(w);
-            if (sk && ({ food: 'food', bath: 'bath', game: 'game' })[sk] === kind) return; // aynı tuş: menüyü kapat
+            if (sk && ({ food: 'food', game: 'game' })[sk] === kind) return; // aynı tuş: menüyü kapat
           }
           // oyun şeridindeki ✕
           if (this.game && this.r.banner.getAttribute('display') !== 'none' && Math.abs(w.x - this.Wv / 2) < this._bannerW / 2 && Math.abs(w.y - 76) < 22) { this.stopGame(); return; }
           const B = this.ball;
           if (B.active && !B.held && Math.hypot(w.x - B.x, w.y - B.y) < B.r + 22) { this._grabBall(w, e.pointerId); return; }
+          if (this._sceneMoving()) return;
           const sk = this.showTools && !this.auto && !this.drag ? this._slotAt(w) : null;
           if (sk) {
             if (sk === 'food') this._openMenu('food');
             else if (sk === 'water') this._startDrag('water', w.x, w.y, e.pointerId);
             else if (sk === 'game') { if (this.game) this.stopGame(); else this._openMenu('game'); }
             else if (sk === 'light') this.toggleLights();
-            else if (sk === 'bath') this._openMenu('bath');
+            else if (sk === 'bath') this.goBath();
+            else if (sk === 'home') this.goRoom();
+            else if (sk === 'sponge' || sk === 'shower') this._startDrag(sk, w.x, w.y, e.pointerId);
             return;
           }
           if (this.game && this._gamePointerDown(w, e.pointerId)) return;
@@ -1296,7 +1371,7 @@
 
     _slotAt(w) {
       if (!this.showTools) return null;
-      for (const k of ['food', 'water', 'game', 'light', 'bath']) {
+      for (const k of this.scene === 'bath' ? ['home', 'sponge', 'shower'] : ['food', 'water', 'game', 'light', 'bath']) {
         const sl = this.slots[k];
         if (Math.abs(w.x - sl.x) < 44 && Math.abs(w.y - sl.y) < 46) return k;
       }
@@ -1307,9 +1382,6 @@
     _menuItems(kind) {
       const sp = this.species;
       if (kind === 'food') return Object.keys(FOODS).map((id) => ({ id, kind, label: foodName(id, sp), sub: FOODS[id].desc, fx: FOODS[id].fx, icon: foodIcon(id, sp, PALETTES_PROPS, this.C.line) }));
-      if (kind === 'bath') return [
-        { id: 'sponge', kind, label: 'Sünger', sub: 'Köpürt', icon: '<g transform="scale(0.9)">' + spongeMarkup(this.C.line, true) + '</g>' },
-        { id: 'shower', kind, label: 'Duş', sub: 'Durula', icon: '<g transform="translate(-4 8) rotate(-20) scale(0.62)">' + showerMarkup(PALETTES_PROPS, this.C.line) + '</g>' }];
       return [
         { id: 'ball', kind, label: 'Top', sub: 'Fırlat', icon: '<g transform="scale(0.85)">' + ballMarkup(this.C.line) + '</g>' },
         { id: 'laser', kind, label: 'Lazer', sub: 'Parmağını gezdir', icon: '<circle r="16" fill="#FF3B5C" opacity="0.25"/><circle r="8" fill="#FF3B5C"/><circle cx="-2" cy="-2" r="2.5" fill="#fff"/>' },
@@ -1347,14 +1419,12 @@
       });
       this.r.menu.innerHTML = m;
       this.menu = { kind, cells };
-      this.sfx.play('click');
     }
     _closeMenu() { if (this.r.menu) this.r.menu.innerHTML = ''; this.menu = null; }
     _menuPick(cell, w, pid) {
       const it = cell.item, from = { x: cell.x + cell.w / 2, y: cell.y + 36 };
       this._closeMenu();
       if (it.kind === 'food') this._startDrag('food', w.x, w.y, pid, { food: it.id, from });
-      else if (it.kind === 'bath') this._startDrag(it.id, w.x, w.y, pid, { from });
       else if (it.id === 'ball') this._grabBall(w, pid);
       else this.startGame(it.id);
     }
@@ -1377,8 +1447,7 @@
     // ---------------------------------------------------------------- ışık / uyku
     setLights(on) {
       if (on) { this.lightsOff = false; if (this.sleeping || (this.action && this.action.name === 'sleep')) this.wake(); else this._clearSleepQueue(); }
-      else if (!this.lightsOff) { this.lightsOff = true; this.sleep(); }
-      this.sfx.play('click');
+      else if (!this.lightsOff) { this.lightsOff = true; this.sleep(); }  // banyodaysa sleep() odaya döner
       this._emit('lights', { on: !this.lightsOff });
     }
     toggleLights() { this.setLights(this.lightsOff); }
@@ -1410,6 +1479,7 @@
 
     // ---------------------------------------------------------------- mini oyunlar
     startGame(kind) {
+      if (this.scene === 'bath') return false;
       if (kind === 'ball') { this.throwBall(); return; }
       if (['laser', 'bubbles', 'butterfly'].indexOf(kind) < 0) return;
       this.stopGame(true);
@@ -1572,6 +1642,7 @@
       this._emit('drag', { tool: 'ball', phase: 'end', used: B.active });
     }
     throwBall() { // programatik: top köşeden hayvana doğru atılır
+      if (this.scene === 'bath') return false;
       const B = this.ball;
       B.active = true; B.held = false; B.x = 40; B.y = this.groundY - 260 * this.s;
       B.vx = (this.petX - 40) * 1.6; B.vy = -380;
@@ -1708,7 +1779,7 @@
     }
     _hideHeld() {
       ['heldFood', 'heldWater', 'heldShower', 'heldSponge'].forEach((k) => this.r[k] && this.r[k].setAttribute('display', 'none'));
-      if (this.r.iconWater) { this.r.iconWater.setAttribute('display', 'inline'); this.r.iconShower.setAttribute('display', 'inline'); }
+      if (this.r.iconWater) ['iconWater', 'iconShower', 'iconSponge'].forEach((k) => this.r[k].setAttribute('display', 'inline'));
     }
     _canInteract() { return !(this.action && this.action.busy) && !this.sleeping; }
 
@@ -1819,7 +1890,7 @@
       const sl = this.slots.shower;
       let hx = sl.x + 29, hy = sl.y - 33;
       if (d && d.type === 'shower') { hx = d.x + 58; hy = d.y - 58; }
-      r.hose.setAttribute('display', d && d.type === 'shower' ? 'inline' : 'none');
+      r.hose.setAttribute('display', d && d.type === 'shower' && this.scene === 'bath' ? 'inline' : 'none');
       const ax = this.Wv + 10, ay = this.Hv - 20;
       r.hose.setAttribute('d', 'M' + f(ax) + ' ' + f(ay) + ' C' + f(ax - 30) + ' ' + f(ay - 90) + ' ' + f(hx + 90) + ' ' + f(hy + 20) + ' ' + f(hx) + ' ' + f(hy));
       if (!d) return;
@@ -1829,6 +1900,7 @@
       r[k].setAttribute('transform', 'translate(' + f(d.x) + ' ' + f(d.y) + ') rotate(' + f(wob) + ')');
       if (d.type === 'water') r.iconWater.setAttribute('display', 'none');
       if (d.type === 'shower') r.iconShower.setAttribute('display', 'none');
+      if (d.type === 'sponge') r.iconSponge.setAttribute('display', 'none');
     }
 
     // süngerin değdiği noktaya köpük (yerel koordinat)
@@ -1897,7 +1969,7 @@
 
     // ---------------------------------------------------------------- genel API
     feed() {
-      if (this.action && this.action.name === 'eat') return false;
+      if (this.scene === 'bath' || (this.action && this.action.name === 'eat')) return false;
       this._clearActions();
       if (this.sleeping) this._enqueue(ACTIONS.wake(this));
       this._enqueue(ACTIONS.eatBowl(this));
@@ -1907,7 +1979,7 @@
     // seçilen mamayı otomatik olarak ağzına götürür (uygulama butonları için)
     feedFood(id) {
       if (!FOODS[id]) id = 'treat';
-      if (!this.showTools || this.drag) return false;
+      if (!this.showTools || this.drag || this.scene === 'bath') return false;
       const wasAsleep = this.sleeping, delay = wasAsleep ? 2.9 : 0;
       if (wasAsleep || this.lightsOff) this.setLights(true);
       const sl = this.slots.food;
@@ -1919,7 +1991,7 @@
       return true;
     }
     giveWater() {
-      if (this.action && this.action.name === 'drink') return false;
+      if (this.scene === 'bath' || (this.action && this.action.name === 'drink')) return false;
       this._clearActions();
       if (this.sleeping) this._enqueue(ACTIONS.wake(this));
       this._enqueue(ACTIONS.drink(this));
@@ -1927,9 +1999,10 @@
     }
     // otomatik banyo: önce süngerle köpürtür, sonra duşla durular
     bathe() {
-      if (!this.showTools || this.drag) return false;
+      if (!this.showTools || this.drag || this.auto) return false;
       if (this.sleeping || this.lightsOff) this.setLights(true);
-      const sl = this.slots.bath;
+      if (this.scene !== 'bath' || this._sceneMoving()) { this.goBath(() => this.bathe()); return true; }
+      const sl = this.slots.sponge, sh = this.slots.shower;
       const run = () => {
         this._startDrag('sponge', sl.x, sl.y, -1);
         this.auto = { t: 0, dur: 3.4, path: (t) => {
@@ -1937,10 +2010,10 @@
           const p = this._toWorld(200 + Math.sin(a) * 70, (Math.floor(t / 1.1) % 2 ? 300 : 120) + Math.cos(a * 1.3) * 30 + this._upY());
           return [lerp(sl.x, p.x, k), lerp(sl.y, p.y + 34, k)];
         }, onEnd: () => {
-          this._startDrag('shower', sl.x, sl.y, -1);
+          this._startDrag('shower', sh.x, sh.y, -1);
           this.auto = { t: 0, dur: 4.2, path: (t) => {
             const hd = this._toWorld(200, this._headLocal().y - 150), k = smooth01(t / 0.6);
-            return [lerp(sl.x, hd.x + 36 + Math.sin(t * 2.4) * 80 * this.s, k), lerp(sl.y, hd.y - 36, k)];
+            return [lerp(sh.x, hd.x + 36 + Math.sin(t * 2.4) * 80 * this.s, k), lerp(sh.y, hd.y - 36, k)];
           }, onEnd: () => { if (this.foam.length) { this.foam.slice().forEach((b) => this._popFoamBubble(b)); if (this.wet > 0.15) this._startAction(ACTIONS.shakeDry(this)); } } };
         } };
       };
@@ -1948,8 +2021,46 @@
       run();
       return true;
     }
+    // ---------------------------------------------------------------- sahne: oda ⇄ banyo
+    goBath(done) { return this._goScene('bath', done); }
+    goRoom(done) { return this._goScene('room', done); }
+    _sceneMoving() { return Math.abs(this.sceneK - (this.scene === 'bath' ? 1 : 0)) > 0.001; }
+    _goScene(sc, done) {
+      if (this.scene === sc) { if (done) done(); return false; }
+      if (this.menu) this._closeMenu();
+      if (this.game) this.stopGame();
+      if (this.drag) { this.drag = null; this.auto = null; this._hideHeld(); }
+      this.showering = false; this.sfx.water(false);
+      const B = this.ball;
+      if (B.active) { B.active = false; B.held = false; this.r.ball.setAttribute('display', 'none'); this.r.ballShadow.setAttribute('display', 'none'); }
+      if (sc === 'bath' && (this.sleeping || this.lightsOff)) this.setLights(true);
+      if (this.action && /^(eat|nom|drink)/.test(this.action.name)) this._clearActions();
+      this.scene = sc; this._sceneDone = done || null;
+      this._startAction(ACTIONS.hop(this));
+      this._emit('scene', { scene: sc });
+      return true;
+    }
+    _updateScene(dt) {
+      const target = this.scene === 'bath' ? 1 : 0;
+      if (this.sceneK === target) return;
+      this.sceneK = target > this.sceneK ? Math.min(1, this.sceneK + dt / 0.9) : Math.max(0, this.sceneK - dt / 0.9);
+      this._renderScene();
+      if (this.sceneK === target && this._sceneDone) { const d = this._sceneDone; this._sceneDone = null; d(); }
+    }
+    _renderScene() {
+      const r = this.r, e = smooth01(this.sceneK), Wv = this.Wv;
+      if (r.world) { r.world.setAttribute('transform', 'translate(' + f(-e * Wv) + ' 0)'); r.bathroom.setAttribute('transform', 'translate(' + f(Wv) + ' 0)'); }
+      if (r.tools) {
+        r.tools.setAttribute('transform', 'translate(' + f(-e * Wv) + ' 0)');
+        r.toolsBath.setAttribute('transform', 'translate(' + f((1 - e) * Wv) + ' 0)');
+        r.tools.setAttribute('display', e < 1 ? 'inline' : 'none');
+        r.toolsBath.setAttribute('display', e > 0 ? 'inline' : 'none');
+      }
+    }
+
     sleep() {
       if (this.sleeping) return false;
+      if (this.scene === 'bath') this.goRoom();
       this.lightsOff = true;
       if (this.game) this.stopGame();
       this._clearActions();
@@ -1985,7 +2096,7 @@
     getState() {
       const r1 = (v) => Math.round(v * 10) / 10, s = this.stats;
       return {
-        species: this.species, breed: this.breed, eyes: this.eyes, name: this.name, lightsOn: !this.lightsOff,
+        species: this.species, breed: this.breed, eyes: this.eyes, name: this.name, lightsOn: !this.lightsOff, scene: this.scene,
         stats: { fullness: r1(s.fullness), hydration: r1(s.hydration), energy: r1(s.energy), happiness: r1(s.happiness), cleanliness: r1(s.cleanliness) },
         sleeping: this.sleeping, mood: this.mood, lastUpdate: Date.now()
       };
@@ -2120,6 +2231,7 @@
       this._updateBall(dt, T);
       this._updateGame(dt, T);
       this._updateNight(dt);
+      this._updateScene(dt);
       this._applyPet(dt, T);
       this._smoothPose(dt, T);
       this._render(dt, T);

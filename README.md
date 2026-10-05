@@ -16,9 +16,9 @@ Her şey tek bir HTML dosyasında çalışıyor, dış bağlantı gerekmiyor.
 
 ![](docs/cinsler.png)
 
-| Mama menüsü | Oyun: kelebek | Işık kapalı (uyku) |
-|---|---|---|
-| ![](docs/mama-menusu.png) | ![](docs/kelebek.png) | ![](docs/isik-kapali.png) |
+| Mama menüsü | Oyun: kelebek | Işık kapalı (uyku) | Banyo |
+|---|---|---|---|
+| ![](docs/mama-menusu.png) | ![](docs/kelebek.png) | ![](docs/isik-kapali.png) | ![](docs/banyo.png) |
 
 **Top oyunu** (patiyle vurma, kafa topu):
 
@@ -37,8 +37,9 @@ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. D
 | Mamayı ağzına sürükle | Mamaya bakar, iki eliyle uzanır, ağzını açar, salyası akar. Bırakınca mamayı patileriyle tutup ısırarak yer, sonra **patisiyle ağzını siler** ve karnını sıvazlar. Tokken başını çevirir ve eliyle "hayır" yapar |
 | **Su** kabını hayvana sürükle | Kabı iki eliyle tutup diliyle içer, sonra ağzını siler |
 | **Top**u tutup fırlat | Gözleriyle topu izler. Top tutulurken kollarını açıp hazır bekler. Top yakına gelince patisiyle vurur, kafasının üstüne düşerse kafa atar, yerde ayaklarının yanındaysa tekme atar ("boing!"). Top duvarlardan ve yerden seker |
-| **Banyo** tuşuna bas → **sünger** | Süngeri hayvanın üstünde gezdir, her yer köpüklenir. Gözlerini sıkar, kendini ovalar |
-| **Banyo** → **duş başlığı** | Su köpükleri durular, köpükler patlar |
+| **Banyo** tuşuna bas | Ekran sağa kayar, hayvan zıplayarak **banyoya** geçer (küvet, lavabo, ayna, havlu, paspas). Banyoda sadece **Sünger**, **Duş** ve **Oda** tuşları var; yemek ve oyun yok |
+| **Sünger**i hayvanın üstünde gezdir | Her yer köpüklenir. Gözlerini sıkar, kendini ovalar |
+| **Duş** başlığını üstüne tut | Su köpükleri durular, köpükler patlar |
 | Duş başlığını bırak | Kollarını çırparak **silkelenir**, su saçar, köpükler patlar, tüyleri kabarır, kollarını havaya kaldırıp "tertemiz!" pozu verir |
 | Parmağını hayvanın üstünde gezdir | Elleri göğsünde birleşir, sallanır, gözleri ^^ olur, yanakları kızarır. Kedi mırlar |
 | Kafasına dokun | Patilerini yanaklarına koyup kıkırdar |
@@ -71,7 +72,7 @@ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. D
 
 ## Sesler ve isim
 
-- Ses efektleri telefonda üretilir, ses dosyası gerekmez: yeme (çıtırtı), su içme (şapırtı), köpük, duş suyu, silkelenme, topa vurma, baloncuk patlaması, havlama/miyavlama, horlama.
+- Ses efektleri telefonda üretilir, ses dosyası gerekmez: yeme (çıtırtı), su içme (şapırtı), köpük, duş suyu, silkelenme, topa vurma, baloncuk patlaması, havlama/miyavlama, horlama. Tuşlara basınca ses çıkmaz.
 - Telefonlar sesi ancak kullanıcı ekrana bir kez dokunduktan sonra açar. Bu normaldir.
 - `pet.setSound(false)` sesi kapatır.
 - `pet.setName('Pamuk')` hayvanın üstünde isim etiketi gösterir. İsim `stats` ile birlikte kaydedilir.
@@ -136,6 +137,7 @@ petView.feedFood("meat"); petView.giveWater(); petView.bathe(); petView.sleep();
 petView.startGame("laser"); petView.stopGame()      // ball, laser, bubbles, butterfly
 petView.setLights(false); petView.toggleLights()    // ışık kapalı → uyur
 petView.setName("Pamuk"); petView.setSound(true)
+petView.goBath(); petView.goRoom()                  // banyo sahnesi
 ```
 
 React Native (`integration/react-native/`) ve Flutter (`integration/flutter/`) için de aynı metodlar var.
@@ -150,7 +152,7 @@ React Native (`integration/react-native/`) ve Flutter (`integration/flutter/`) i
 {type:'getBreeds', species:'dog'}
 {type:'feedFood', food:'cake'} {type:'getFoods'}
 {type:'game', name:'bubbles'} {type:'stopGame'}
-{type:'lights', on:false} {type:'toggleLights'}
+{type:'lights', on:false} {type:'toggleLights'} {type:'scene', scene:'bath'|'room'}
 {type:'setName', name:'Pamuk'} {type:'sound', on:true} {type:'headThumb', breed:'van'}
 {type:'setState', state:{ breed, eyes, stats:{fullness, hydration, energy, happiness, cleanliness}, sleeping, lastUpdate }}
 {type:'setTimeScale', value:1} {type:'pause'} {type:'resume'} {type:'getState'}
@@ -158,7 +160,7 @@ React Native (`integration/react-native/`) ve Flutter (`integration/flutter/`) i
 
 **Hayvan → uygulama** (`{source:'pet', type, data}`):
 `ready`, `stats` (saniyede bir; `breed` ve `eyes` dahil, kaydetmek için ideal), `mood`, `action`, `play` (topa vurdu),
-`drag`, `pet`, `sleep`, `wake`, `breed`, `breeds`, `state`, `foods`, `headThumb`.
+`drag`, `pet`, `sleep`, `wake`, `breed`, `breeds`, `state`, `foods`, `headThumb`, `scene`.
 
 ## Durumu kaydetme
 
@@ -178,6 +180,6 @@ Cins, göz rengi ve istatistikler birlikte geri yüklenir. `lastUpdate` sayesind
 | `quality` | `'high'` | `'low'` → tüy dokusu kapalı (çok eski telefonlar için) |
 | `name` | `''` | hayvanın adı |
 | `sound` | `true` | ses efektleri |
-| `labels` | `{food:'Mama', water:'Su', game:'Oyun', light:'Işık', bath:'Banyo'}` | tuş yazıları |
+| `labels` | `{food:'Mama', water:'Su', game:'Oyun', light:'Işık', bath:'Banyo', home:'Oda', sponge:'Sünger', shower:'Duş'}` | tuş yazıları |
 
 Önerilen alan oranı **3:4 civarı dikey**.

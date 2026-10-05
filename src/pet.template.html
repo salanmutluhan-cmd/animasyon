@@ -66,6 +66,7 @@
       case 'getFoods': send('foods', pet.getFoods()); return;
       case 'lights': pet.setLights(!!cmd.on); break;
       case 'toggleLights': pet.toggleLights(); break;
+      case 'scene': if (cmd.scene === 'bath') pet.goBath(); else pet.goRoom(); break;
       case 'game': pet.startGame(cmd.name); break;
       case 'stopGame': pet.stopGame(); break;
       case 'setName': pet.setName(cmd.name); break;

@@ -74,6 +74,9 @@ class PetView @JvmOverloads constructor(
     /** ball, laser, bubbles, butterfly */
     fun startGame(name: String) = send("""{"type":"game","name":"$name"}""")
     fun stopGame() = send("""{"type":"stopGame"}""")
+    /** banyoya geç (ekran sağa kayar) / odaya dön. Banyodayken yemek ve oyun komutları çalışmaz */
+    fun goBath() = send("""{"type":"scene","scene":"bath"}""")
+    fun goRoom() = send("""{"type":"scene","scene":"room"}""")
     fun setName(name: String) = send(JSONObject().put("type", "setName").put("name", name).toString())
     fun setSound(on: Boolean) = send("""{"type":"sound","on":$on}""")
     /** golden, kangal, dalmatian, husky, bulldog, beagle, pug, labrador, collie, shiba, rottweiler, pomeranian,
