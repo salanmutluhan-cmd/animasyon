@@ -25,6 +25,16 @@ class PetController {
   Future<void> feedTreat() => send({'type': 'treat'});
   Future<void> bathe() => send({'type': 'bath'});
   Future<void> throwBall() => send({'type': 'ball'});
+  /// kibble, meat, treat, veggie, milk, cake
+  Future<void> feedFood(String food) => send({'type': 'feedFood', 'food': food});
+  /// false → ışık söner, perde kapanır, hayvan uyur
+  Future<void> setLights(bool on) => send({'type': 'lights', 'on': on});
+  Future<void> toggleLights() => send({'type': 'toggleLights'});
+  /// ball, laser, bubbles, butterfly
+  Future<void> startGame(String name) => send({'type': 'game', 'name': name});
+  Future<void> stopGame() => send({'type': 'stopGame'});
+  Future<void> setName(String name) => send({'type': 'setName', 'name': name});
+  Future<void> setSound(bool on) => send({'type': 'sound', 'on': on});
   Future<void> setBreed(String breed) => send({'type': 'setBreed', 'breed': breed});
   Future<void> setEyes(String? eyes) => send({'type': 'setEyes', 'eyes': eyes});
   Future<void> giveWater() => send({'type': 'water'});

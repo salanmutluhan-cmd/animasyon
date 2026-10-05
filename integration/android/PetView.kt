@@ -66,6 +66,16 @@ class PetView @JvmOverloads constructor(
     fun giveWater() = send("""{"type":"water"}""")
     fun bathe() = send("""{"type":"bath"}""")          // duş + silkelenme
     fun throwBall() = send("""{"type":"ball"}""")      // top oyunu
+    /** kibble, meat, treat, veggie, milk, cake — hayvan seçilen mamayı yer */
+    fun feedFood(food: String) = send("""{"type":"feedFood","food":"$food"}""")
+    /** false → ışık söner, perde kapanır, hayvan uyur. true → uyanır */
+    fun setLights(on: Boolean) = send("""{"type":"lights","on":$on}""")
+    fun toggleLights() = send("""{"type":"toggleLights"}""")
+    /** ball, laser, bubbles, butterfly */
+    fun startGame(name: String) = send("""{"type":"game","name":"$name"}""")
+    fun stopGame() = send("""{"type":"stopGame"}""")
+    fun setName(name: String) = send(JSONObject().put("type", "setName").put("name", name).toString())
+    fun setSound(on: Boolean) = send("""{"type":"sound","on":$on}""")
     /** golden, kangal, dalmatian, husky, bulldog, beagle, pug, labrador, collie, shiba, rottweiler, pomeranian,
      *  tabby, van, ankara, british, siamese, tuxedo, calico, black, silver, mainecoon, scottish */
     fun setBreed(breed: String) = send("""{"type":"setBreed","breed":"$breed"}""")

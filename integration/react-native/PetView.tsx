@@ -16,6 +16,16 @@ export interface PetViewHandle {
   feedTreat(): void;
   bathe(): void;
   throwBall(): void;
+  /** 'kibble' | 'meat' | 'treat' | 'veggie' | 'milk' | 'cake' */
+  feedFood(food: string): void;
+  /** false → ışık söner, perde kapanır, hayvan uyur */
+  setLights(on: boolean): void;
+  toggleLights(): void;
+  /** 'ball' | 'laser' | 'bubbles' | 'butterfly' */
+  startGame(name: string): void;
+  stopGame(): void;
+  setName(name: string): void;
+  setSound(on: boolean): void;
   setBreed(breed: string): void;
   setEyes(eyes: string | null): void;
   giveWater(): void;
@@ -61,6 +71,13 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     feedTreat: () => send({ type: 'treat' }),
     bathe: () => send({ type: 'bath' }),
     throwBall: () => send({ type: 'ball' }),
+    feedFood: (food: string) => send({ type: 'feedFood', food }),
+    setLights: (on: boolean) => send({ type: 'lights', on }),
+    toggleLights: () => send({ type: 'toggleLights' }),
+    startGame: (name: string) => send({ type: 'game', name }),
+    stopGame: () => send({ type: 'stopGame' }),
+    setName: (name: string) => send({ type: 'setName', name }),
+    setSound: (on: boolean) => send({ type: 'sound', on }),
     setBreed: (breed) => send({ type: 'setBreed', breed }),
     setEyes: (eyes) => send({ type: 'setEyes', eyes }),
     giveWater: () => send({ type: 'water' }),

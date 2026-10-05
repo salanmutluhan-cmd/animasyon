@@ -28,8 +28,9 @@
   .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
   .chip { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; font-size: 12px; text-align: center; line-height: 1.2; border: 2px solid transparent; }
   .chip.on { border-color: var(--accent); }
-  .sw { display: flex; border-radius: 99px; overflow: hidden; width: 54px; height: 18px; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.12); }
-  .sw i { flex: 1; }
+  .thumb { display: block; width: 76px; height: 54px; }
+  .name { display: flex; gap: 8px; margin: 12px 0; }
+  .name input { flex: 1; font: inherit; font-size: 15px; padding: 10px 14px; border-radius: 14px; border: 2px solid #F3CFD9; background: #fff; color: var(--text); }
   .eyes { display: flex; flex-wrap: wrap; gap: 8px; }
   .eye { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12px; border: 2px solid transparent; }
   .eye.on { border-color: var(--accent); }
@@ -46,23 +47,29 @@
 
   <div class="stats" id="stats"></div>
 
+  <div class="name"><input id="petName" maxlength="24" placeholder="Hayvanına bir isim ver…"><button class="primary" id="saveName">Kaydet</button></div>
+
   <div class="btns">
     <button class="primary" data-cmd="treat">🦴 Elle besle</button>
-    <button class="primary" data-cmd="bath">🚿 Yıkat</button>
-    <button class="primary" data-cmd="ball">⚽ Top at</button>
+    <button class="primary" data-cmd="bath">🧽 Yıkat</button>
+    <button class="primary" data-cmd="light">💡 Işık</button>
     <button data-cmd="feed">🍖 Mama kabı</button>
     <button data-cmd="water">💧 Su ver</button>
     <button data-cmd="pet">🤚 Sev</button>
-    <button data-cmd="sleep">😴 Uyut</button>
-    <button data-cmd="wake">☀️ Uyandır</button>
+    <button data-cmd="ball">⚽ Top</button>
+    <button data-cmd="laser">🔴 Lazer</button>
+    <button data-cmd="bubbles">🫧 Baloncuk</button>
+    <button data-cmd="butterfly">🦋 Kelebek</button>
     <button data-cmd="celebrate">🎉 Kutla</button>
+    <button data-cmd="sound" id="soundBtn">🔊 Ses açık</button>
   </div>
 
   <div class="hint">
-    <b>Mama:</b> sol alttaki mamayı hayvanın ağzına sürükle. Elleriyle uzanır, ağzını açar. Bırakınca patileriyle tutup yer, sonra ağzını siler.<br>
-    <b>Su:</b> su kabını hayvana sürükle. Kabı iki eliyle tutup içer.<br>
-    <b>Top:</b> topu tut ve hayvana doğru fırlat. Patisiyle vurur, kafa atar ya da tekme atar.<br>
-    <b>Duş:</b> duş başlığını hayvanın üstüne götür. Elleriyle köpükleri ovalar. Yerine bırakınca silkelenip kurulanır.<br>
+    <b>Mama:</b> Mama tuşuna bas, açılan menüden bir mama seç ve hayvanın ağzına sürükle. Her mamanın etkisi farklı; kartlarda 🍖 tokluk, 😊 mutluluk, 💧 su ve ⚡ enerji etkisi yazar.<br>
+    <b>Su:</b> Su kabını hayvana sürükle, kabı iki eliyle tutup içer.<br>
+    <b>Banyo:</b> Banyo tuşundan önce süngeri seç ve hayvanı köpürt. Sonra duş başlığıyla köpükleri durula. Köpük bitince duşu bırak, hayvan silkelenir.<br>
+    <b>Oyun:</b> Oyun tuşundan top, lazer, baloncuk ya da kelebek seç.<br>
+    <b>Işık:</b> Ampule basınca ışık kapanır, perde çekilir ve hayvan uyur. Tekrar basınca uyanır.<br>
     <b>Sevme:</b> parmağını hayvanın üstünde gezdir. Kafasına ya da karnına dokunmayı da dene.
   </div>
 
@@ -466,6 +473,173 @@
       '<circle cx="20" cy="2" r="2"/><circle cx="-12" cy="5" r="2"/><circle cx="0" cy="5.5" r="2"/><circle cx="12" cy="5" r="2"/></g>';
   }
 
+  // ================================================================ Mama çeşitleri
+  // fx: istatistiklere etkisi. Menüde küçük renkli çubuklarla gösterilir.
+  const FOODS = {
+    kibble: { name: 'Kuru mama', desc: 'Çok besleyici', fx: { fullness: 30, happiness: 1, energy: 2 } },
+    meat:   { name: { dog: 'Tavuk but', cat: 'Ton balığı' }, desc: 'Enerji verir', fx: { fullness: 22, energy: 8, happiness: 5 } },
+    treat:  { name: { dog: 'Kemik bisküvi', cat: 'Balık ödülü' }, desc: 'Mutlu eder', fx: { fullness: 8, happiness: 12 } },
+    veggie: { name: { dog: 'Havuç', cat: 'Kedi otu' }, desc: 'Sağlıklı', fx: { fullness: 6, hydration: 6, happiness: 3, energy: 4 } },
+    milk:   { name: 'Süt', desc: 'Susuzluk giderir', fx: { fullness: 8, hydration: 18, happiness: 5 }, drink: true },
+    cake:   { name: 'Pati kurabiyesi', desc: 'Çok mutlu eder', fx: { fullness: 10, happiness: 18, energy: 4 } }
+  };
+  const foodName = (id, sp) => (typeof FOODS[id].name === 'string' ? FOODS[id].name : FOODS[id].name[sp]);
+  const STAT_COLORS = { fullness: '#F4A259', happiness: '#F06C8B', hydration: '#4FA9D6', energy: '#8E7CF0', cleanliness: '#5CC9A7' };
+
+  // İki geçişli çizim: önce kalın kontur, sonra dolgu → birleşik dış çizgi
+  const twoPass = (shapes, fill, line, w) => '<g fill="' + line + '" stroke="' + line + '" stroke-width="' + (w || 6) + '" stroke-linejoin="round">' + shapes + '</g><g fill="' + fill + '">' + shapes + '</g>';
+  function foodIcon(id, sp, P, line) {
+    switch (id) {
+      case 'kibble': {
+        let k = '';
+        [[-12, 7], [0, 8], [12, 7], [-6, -1], [6, -1], [0, -9]].forEach((q, i) => {
+          k += '<ellipse cx="' + q[0] + '" cy="' + q[1] + '" rx="7.5" ry="6" fill="' + (i % 2 ? P.kibble : P.kibble2) + '" stroke="' + line + '" stroke-width="2.2"/>' +
+            '<ellipse cx="' + (q[0] - 2) + '" cy="' + (q[1] - 2) + '" rx="2.5" ry="1.4" fill="#fff" opacity="0.45"/>';
+        });
+        return k;
+      }
+      case 'meat':
+        if (sp === 'cat') {
+          return '<rect x="-20" y="-6" width="40" height="20" rx="5" fill="#5BB3E0" stroke="' + line + '" stroke-width="3"/>' +
+            '<path d="M-6 4 q6 -6 12 0 q-6 6 -12 0 Z M6 4 l5 -4 l0 8 Z" fill="#fff" opacity="0.9"/>' +
+            '<ellipse cx="0" cy="-6" rx="20" ry="6" fill="#D9E2EA" stroke="' + line + '" stroke-width="3"/>' +
+            '<ellipse cx="0" cy="-6" rx="15" ry="3.6" fill="#F59A8B"/><path d="M-9 -7 L-3 -5 M2 -7 L8 -5" stroke="#FFC2B8" stroke-width="1.6"/>';
+        }
+        return '<g transform="rotate(-30)">' + twoPass('<ellipse cx="-6" cy="0" rx="16" ry="12"/><rect x="6" y="-3.5" width="16" height="7"/><circle cx="23" cy="-5" r="5"/><circle cx="23" cy="5" r="5"/>', '#C8743A', line) +
+          '<g fill="#FFF8EC"><rect x="8" y="-3.5" width="14" height="7"/><circle cx="23" cy="-5" r="5"/><circle cx="23" cy="5" r="5"/></g>' +
+          '<ellipse cx="-10" cy="-4" rx="6" ry="3" fill="#fff" opacity="0.35"/></g>';
+      case 'veggie':
+        if (sp === 'cat') {
+          return '<g stroke="' + line + '" stroke-width="2.4" stroke-linejoin="round">' +
+            '<path d="M0 16 Q-14 2 -12 -14 Q2 -6 0 16 Z" fill="#7CC48A"/><path d="M0 16 Q14 2 12 -14 Q-2 -6 0 16 Z" fill="#8FD39B"/>' +
+            '<path d="M0 16 Q-4 -2 0 -18 Q4 -2 0 16 Z" fill="#6AB57A"/></g><path d="M0 16 V22" stroke="#5FA36A" stroke-width="3" stroke-linecap="round"/>';
+        }
+        return '<g transform="rotate(35)"><path d="M-6 -12 Q0 -16 6 -12 L1.5 20 Q0 23 -1.5 20 Z" fill="#F7931E" stroke="' + line + '" stroke-width="2.6" stroke-linejoin="round"/>' +
+          '<path d="M-3 -3 h4 M-2 5 h4 M-1 12 h3" stroke="#C96A10" stroke-width="1.6" stroke-linecap="round"/>' +
+          '<path d="M0 -13 Q-8 -24 -4 -27 M0 -13 Q0 -26 3 -28 M0 -13 Q8 -22 9 -25" stroke="#5FA36A" stroke-width="3.2" fill="none" stroke-linecap="round"/></g>';
+      case 'milk':
+        return '<path d="M-11 -12 L-11 -16 L11 -16 L11 -12 L15 -2 L15 20 Q15 24 11 24 L-11 24 Q-15 24 -15 20 L-15 -2 Z" fill="#FFFFFF" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+          '<rect x="-12" y="-24" width="24" height="9" rx="3" fill="#7FC8F8" stroke="' + line + '" stroke-width="3"/>' +
+          '<rect x="-15" y="2" width="30" height="13" fill="#CFEAFB"/><path d="M0 12 C-6 7 -4 3 0 6 C4 3 6 7 0 12 Z" fill="#FF6F91"/>' +
+          '<path d="M-10 -6 V18" stroke="#fff" stroke-width="3" opacity="0.8" stroke-linecap="round"/>';
+      case 'cake':
+        return '<path d="M-16 2 L-11 22 L11 22 L16 2 Z" fill="#F7A9BC" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+          '<path d="M-9 4 L-6 21 M0 4 V21 M9 4 L6 21" stroke="#E07A93" stroke-width="2"/>' +
+          '<path d="M-19 3 Q-21 -8 -10 -10 Q-8 -20 2 -18 Q14 -20 14 -9 Q22 -7 19 3 Z" fill="#FFF3E0" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+          '<circle cx="-6" cy="-4" r="1.8" fill="#7FC8F8"/><circle cx="7" cy="-2" r="1.8" fill="#FFD166"/><circle cx="1" cy="-10" r="1.8" fill="#8BD3B6"/>' +
+          '<circle cx="3" cy="-21" r="5" fill="#E8344E" stroke="' + line + '" stroke-width="2.4"/><path d="M4 -26 q3 -5 7 -6" stroke="#5FA36A" stroke-width="2" fill="none"/>';
+      default:
+        return treatMarkup(sp, P, line);
+    }
+  }
+  function spongeMarkup(line, foamy) {
+    return '<rect x="-28" y="-17" width="56" height="34" rx="12" fill="#FFD45C" stroke="' + line + '" stroke-width="3.5"/>' +
+      '<rect x="-28" y="3" width="56" height="14" rx="8" fill="#7FC8A9" stroke="' + line + '" stroke-width="3.5"/>' +
+      '<g fill="#E8B23A"><ellipse cx="-14" cy="-8" rx="4" ry="3"/><ellipse cx="2" cy="-10" rx="3" ry="2.4"/><ellipse cx="15" cy="-6" rx="4" ry="3"/><ellipse cx="-4" cy="-3" rx="2.4" ry="2"/></g>' +
+      (foamy ? '<g fill="#fff" stroke="#B9DDF2" stroke-width="1.5"><circle cx="-16" cy="-19" r="7"/><circle cx="-4" cy="-23" r="9"/><circle cx="10" cy="-20" r="7"/><circle cx="20" cy="-15" r="5"/></g>' : '');
+  }
+  function bulbMarkup(line) {
+    return '<circle data-r="bulbGlow" cx="0" cy="-6" r="26" fill="#FFE066" opacity="0.35"/>' +
+      '<path data-r="bulbGlass" d="M-15 -6 A15 15 0 1 1 15 -6 Q15 4 8 10 L8 15 L-8 15 L-8 10 Q-15 4 -15 -6 Z" fill="#FFE066" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M-5 -2 Q0 -10 5 -2 M0 -6 V10" stroke="#E0A229" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+      '<rect x="-9" y="15" width="18" height="10" rx="3" fill="#B9C3CC" stroke="' + line + '" stroke-width="3"/>' +
+      '<path d="M-9 20 H9" stroke="' + line + '" stroke-width="2"/><path d="M-8 -14 Q-12 -8 -10 -2" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>';
+  }
+  function gamepadMarkup(line) {
+    return '<path d="M-26 -6 Q-28 -16 -16 -16 L16 -16 Q28 -16 26 -6 L30 12 Q32 22 22 20 L14 10 L-14 10 L-22 20 Q-32 22 -30 12 Z" fill="#9B8DE8" stroke="' + line + '" stroke-width="3" stroke-linejoin="round"/>' +
+      '<path d="M-16 -8 V4 M-22 -2 H-10" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
+      '<circle cx="12" cy="-6" r="3.6" fill="#FF6F91"/><circle cx="19" cy="1" r="3.6" fill="#FFD166"/>';
+  }
+  function butterflyMarkup(line) {
+    return '<g data-w="1"><path d="M0 0 C-8 -22 -30 -26 -28 -8 C-27 2 -12 4 0 0 Z" fill="#FF8FB1" stroke="' + line + '" stroke-width="2.4"/>' +
+      '<path d="M0 2 C-12 4 -24 10 -18 20 C-12 26 -4 14 0 2 Z" fill="#FFB7CC" stroke="' + line + '" stroke-width="2.4"/>' +
+      '<circle cx="-16" cy="-10" r="4" fill="#fff" opacity="0.8"/></g>' +
+      '<g data-w="2"><path d="M0 0 C8 -22 30 -26 28 -8 C27 2 12 4 0 0 Z" fill="#FF8FB1" stroke="' + line + '" stroke-width="2.4"/>' +
+      '<path d="M0 2 C12 4 24 10 18 20 C12 26 4 14 0 2 Z" fill="#FFB7CC" stroke="' + line + '" stroke-width="2.4"/>' +
+      '<circle cx="16" cy="-10" r="4" fill="#fff" opacity="0.8"/></g>' +
+      '<ellipse cx="0" cy="4" rx="3.2" ry="13" fill="' + line + '"/><path d="M-1 -8 Q-6 -18 -10 -19 M1 -8 Q6 -18 10 -19" stroke="' + line + '" stroke-width="2" fill="none" stroke-linecap="round"/>';
+  }
+  function soapBubbleMarkup() {
+    return '<circle r="16" fill="#E6F6FF" fill-opacity="0.35" stroke="#9FD8F5" stroke-width="2"/>' +
+      '<path d="M-9 -6 A10 10 0 0 1 -2 -12" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+      '<circle cx="7" cy="7" r="2" fill="#fff" opacity="0.8"/><path d="M10 -10 A14 14 0 0 1 14 -2" stroke="#FFB7CC" stroke-width="2" fill="none" opacity="0.7"/>';
+  }
+
+  // ================================================================ Ses efektleri (dosyasız, WebAudio ile sentez)
+  class Sfx {
+    constructor(on) { this.on = on !== false; this.ctx = null; this.last = {}; this.loop = null; }
+    _c() {
+      if (!this.on) return null;
+      if (!this.ctx) {
+        const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+        if (!AC) return null;
+        try { this.ctx = new AC(); } catch (e) { return null; }
+        this.out = this.ctx.createGain(); this.out.gain.value = 0.6; this.out.connect(this.ctx.destination);
+        const len = this.ctx.sampleRate, buf = this.ctx.createBuffer(1, len, len), d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        this.noiseBuf = buf;
+      }
+      if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) { /* yoksay */ } }
+      return this.ctx;
+    }
+    unlock() { this._c(); }
+    _env(g, t, a, peak, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
+    tone(freq, dur, o) {
+      const c = this._c(); if (!c) return; o = o || {};
+      const t = c.currentTime + (o.delay || 0), osc = c.createOscillator(), g = c.createGain();
+      osc.type = o.type || 'sine'; osc.frequency.setValueAtTime(freq, t);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+      this._env(g, t, o.a || 0.01, o.vol || 0.2, dur);
+      osc.connect(g); g.connect(this.out); osc.start(t); osc.stop(t + dur + 0.05);
+    }
+    noise(dur, o) {
+      const c = this._c(); if (!c) return; o = o || {};
+      const t = c.currentTime + (o.delay || 0), src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = this.noiseBuf; src.loop = true;
+      fl.type = o.filter || 'bandpass'; fl.frequency.setValueAtTime(o.freq || 1000, t);
+      if (o.to) fl.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+      fl.Q.value = o.q || 1;
+      this._env(g, t, o.a || 0.005, o.vol || 0.2, dur);
+      src.connect(fl); fl.connect(g); g.connect(this.out); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.05);
+    }
+    play(name) {
+      if (!this.on) return;
+      const now = Date.now(), gap = { crunch: 90, lap: 110, squish: 160, pop: 45, boing: 150, sparkle: 120, snore: 2500 }[name] || 60;
+      if (this.last[name] && now - this.last[name] < gap) return;
+      this.last[name] = now;
+      switch (name) {
+        case 'crunch': for (let i = 0; i < 3; i++) this.noise(0.05, { freq: 2200 + Math.random() * 1400, q: 2.5, vol: 0.32, delay: i * 0.055 }); break;
+        case 'lap': this.tone(480, 0.09, { to: 950, vol: 0.16 }); this.noise(0.05, { freq: 1800, q: 3, vol: 0.06 }); break;
+        case 'gulp': this.tone(320, 0.12, { to: 170, vol: 0.16 }); break;
+        case 'squish': this.noise(0.18, { filter: 'lowpass', freq: 1700, to: 320, q: 4, vol: 0.24 }); this.tone(220, 0.12, { to: 140, vol: 0.05 }); break;
+        case 'pop': this.tone(700 + Math.random() * 500, 0.06, { to: 1700, vol: 0.16 }); break;
+        case 'boing': this.tone(330, 0.35, { to: 140, type: 'triangle', vol: 0.28 }); this.tone(660, 0.2, { to: 300, vol: 0.07 }); break;
+        case 'click': this.tone(1800, 0.03, { type: 'square', vol: 0.1 }); this.tone(900, 0.05, { type: 'square', vol: 0.07, delay: 0.04 }); break;
+        case 'shake': this.noise(0.8, { freq: 900, q: 0.8, vol: 0.28, a: 0.05 }); break;
+        case 'chime': this.tone(880, 0.18, { vol: 0.13 }); this.tone(1320, 0.25, { vol: 0.11, delay: 0.1 }); this.tone(1760, 0.3, { vol: 0.09, delay: 0.2 }); break;
+        case 'sparkle': this.tone(1500, 0.12, { vol: 0.06 }); this.tone(2000, 0.15, { vol: 0.05, delay: 0.06 }); break;
+        case 'woof': this.tone(430, 0.15, { to: 250, type: 'sawtooth', vol: 0.09 }); this.noise(0.1, { filter: 'lowpass', freq: 900, vol: 0.06 }); break;
+        case 'meow': this.tone(620, 0.32, { to: 920, vol: 0.1 }); this.tone(920, 0.22, { to: 560, vol: 0.08, delay: 0.17 }); break;
+        case 'snore': this.noise(1.1, { filter: 'lowpass', freq: 320, q: 2, vol: 0.09, a: 0.35 }); break;
+        case 'pew': this.tone(1400, 0.12, { to: 500, type: 'square', vol: 0.05 }); break;
+      }
+    }
+    water(on) {
+      if (on && !this.loop) {
+        const c = this._c(); if (!c) return;
+        const src = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+        src.buffer = this.noiseBuf; src.loop = true; fl.type = 'bandpass'; fl.frequency.value = 2400; fl.Q.value = 0.5;
+        g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.13, c.currentTime + 0.15);
+        src.connect(fl); fl.connect(g); g.connect(this.out); src.start();
+        this.loop = { src, g };
+      } else if (!on && this.loop && this.ctx) {
+        const c = this.ctx, l = this.loop; this.loop = null;
+        try { l.g.gain.cancelScheduledValues(c.currentTime); l.g.gain.setValueAtTime(0.1, c.currentTime); l.g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.2); l.src.stop(c.currentTime + 0.25); } catch (e) { /* yoksay */ }
+      }
+    }
+    setOn(v) { if (!v) this.water(false); this.on = !!v; }
+  }
+
   // Desenler (cinse göre). Kafa / gövde / kuyruk katmanları, ilgili şekle kırpılır.
   function patternMarkup(part, b, C, uid) {
     const pt = b.pattern || [], dog = b.species === 'dog';
@@ -713,11 +887,14 @@
       const wx = Wv * 0.2;
       s += '<g transform="translate(' + f(wx) + ' ' + f(wy) + ')">' +
         '<rect x="-74" y="-66" width="148" height="132" rx="16" fill="#fff" stroke="' + SC.trayEdge + '" stroke-width="6"/>' +
-        '<rect x="-62" y="-54" width="124" height="108" rx="9" fill="#CFEAFB"/>' +
-        '<circle cx="34" cy="-24" r="15" fill="#FFE08A"/>' +
-        '<path d="M-56 28 q14 -14 30 -4 q14 -12 30 2 q12 -8 22 2 L-8 54 L-62 54 Z" fill="#fff" opacity="0.9"/>' +
+        '<rect data-c="sky" x="-62" y="-54" width="124" height="108" rx="9" fill="#CFEAFB"/>' +
+        '<g data-c="moon" opacity="0"><circle cx="30" cy="-22" r="14" fill="#FFF3C4"/><circle cx="37" cy="-27" r="12" fill="#2B3A6B"/>' +
+          '<g fill="#FFF3C4"><circle cx="-40" cy="-36" r="2"/><circle cx="-18" cy="-20" r="1.6"/><circle cx="-44" cy="-4" r="1.8"/><circle cx="8" cy="-40" r="1.5"/><circle cx="44" cy="12" r="1.7"/><circle cx="-24" cy="30" r="1.5"/></g></g>' +
+        '<circle data-c="sun" cx="34" cy="-24" r="15" fill="#FFE08A"/>' +
+        '<path data-c="cloud" d="M-56 28 q14 -14 30 -4 q14 -12 30 2 q12 -8 22 2 L-8 54 L-62 54 Z" fill="#fff" opacity="0.9"/>' +
         '<path d="M0 -54 V54 M-62 0 H62" stroke="#fff" stroke-width="7"/>' +
-        '<path d="M-80 -74 Q-56 -10 -82 72 L-98 72 Q-90 -10 -98 -74 Z M80 -74 Q56 -10 82 72 L98 72 Q90 -10 98 -74 Z" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="3"/>' +
+        '<path data-c="curtL" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
+        '<path data-c="curtR" fill="' + SC.rug + '" stroke="' + SC.rugEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
         '<rect x="-106" y="-82" width="212" height="10" rx="5" fill="' + SC.rugEdge + '"/></g>';
     }
     // raf: kitaplar, saksı, çerçeve
@@ -790,7 +967,13 @@
       this.showBackground = options.background !== false;
       this.hq = options.quality !== 'low';
       this.scaleOpt = options.petScale || 0;
-      this.labels = Object.assign({ food: 'Mama', water: 'Su', ball: 'Top', shower: 'Duş' }, options.labels || {});
+      this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo' }, options.labels || {});
+      this.name = options.name || '';
+      this.sfx = new Sfx(options.sound !== false);
+      this.lightsOff = false; this.night = 0;   // ampul: ışık kapalıyken perde kapanır, oda kararır, hayvan uyur
+      this.menu = null;                          // açık tepsi menüsü (mama / banyo / oyun)
+      this.game = null;                          // aktif mini oyun (lazer / baloncuk / kelebek)
+      this.soaped = false;                       // süngerle köpürtüldü mü
       this.listeners = {};
       this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80 }, options.stats || {});
       this.sleeping = false;
@@ -855,17 +1038,26 @@
         (this.showBackground ? '<g data-r="room"></g>' : '') +
         '<ellipse data-r="ballShadow" fill="' + P.shadow + '" display="none"/>' +
         '<g data-r="pet">' + built.pet + '</g>' +
+        '<g data-r="gameLayer"></g>' +
         '<g data-r="ball" display="none">' + ballMarkup(C.line) + '</g>' +
+        '<rect data-r="night" x="0" y="0" width="10" height="10" fill="#141A3D" opacity="0" style="pointer-events:none"/>' +
+        '<g data-r="nameTag" display="none"><rect data-r="nameBg" x="0" y="-19" height="38" rx="19" fill="rgba(255,255,255,0.92)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+          '<text data-r="nameTxt" y="7" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="21" font-weight="800" fill="' + SC.text + '"></text></g>' +
+        '<g data-r="banner" display="none"><rect data-r="bannerBg" x="0" y="-18" height="36" rx="18" fill="#9B8DE8"/>' +
+          '<text data-r="bannerTxt" y="6" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="16" font-weight="800" fill="#fff"></text></g>' +
         (this.showTools ? '<path data-r="hose" fill="none" stroke="' + P.hose + '" stroke-width="8" stroke-linecap="round"/>' +
           '<g data-r="tools">' +
-            slot('Food', '<g transform="scale(0.95)">' + treatMarkup(this.species, P, C.line) + '</g>', this.labels.food) +
+            slot('Food', '<g transform="translate(0 2) scale(0.95)">' + foodIcon('kibble', this.species, P, C.line) + '</g>', this.labels.food) +
             slot('Water', waterIconMarkup(P, C.line), this.labels.water) +
-            slot('Ball', '<g transform="scale(0.85)">' + ballMarkup(C.line) + '</g>', this.labels.ball) +
-            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
+            slot('Game', '<g transform="scale(0.9)">' + gamepadMarkup(C.line) + '</g>', this.labels.game) +
+            slot('Light', '<g transform="translate(0 -2) scale(0.85)">' + bulbMarkup(C.line) + '</g>', this.labels.light) +
+            slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.bath) +
           '</g>' +
+          '<g data-r="menu"></g>' +
           '<g data-r="held" style="pointer-events:none">' +
-            '<g data-r="heldFood" display="none"><g transform="scale(1.25)">' + treatMarkup(this.species, P, C.line) + '</g></g>' +
+            '<g data-r="heldFood" display="none"></g>' +
             '<g data-r="heldWater" display="none"><g transform="scale(1.3)">' + waterIconMarkup(P, C.line) + '</g></g>' +
+            '<g data-r="heldSponge" display="none"><g data-r="spongeArt">' + spongeMarkup(C.line, false) + '</g></g>' +
             '<g data-r="heldShower" display="none">' + showerMarkup(P, C.line) + '</g>' +
           '</g>' : '') +
         '<g data-r="fx" style="pointer-events:none"></g>' +
@@ -880,8 +1072,11 @@
       // desen noktaları (kol/bacak)
       this._limbDeco();
       this.particles = []; this.foam = [];
+      this.menu = null;
+      if (this.game) this.stopGame(true);
       this._bindPointer();
       this._layout();
+      this._renderName();
     }
 
     _limbDeco() {
@@ -908,15 +1103,24 @@
       this.s = this.scaleOpt || clamp(Math.min((this.groundY - 40) / 440, Wv * 0.6 / 330), 0.6, 1.25);
       this.petX = Wv / 2;
       const fy = this.groundY - 74;
-      if (this.r.room) this.r.room.innerHTML = roomMarkup(Wv, Hv, fy, this.groundY, SCENE, this.uid);
+      if (this.r.room) {
+        this.r.room.innerHTML = roomMarkup(Wv, Hv, fy, this.groundY, SCENE, this.uid);
+        const q = (k) => this.r.room.querySelector('[data-c="' + k + '"]');
+        this.win = { sky: q('sky'), sun: q('sun'), moon: q('moon'), cloud: q('cloud'), curtL: q('curtL'), curtR: q('curtR') };
+        this._lastNight = -1;
+      }
+      this.r.night.setAttribute('width', f(Wv)); this.r.night.setAttribute('height', f(Hv));
+      this.r.nameTag.setAttribute('transform', 'translate(' + f(Wv / 2) + ' 30)');
+      this.r.banner.setAttribute('transform', 'translate(' + f(Wv / 2) + ' 76)');
+      if (this.menu) this._closeMenu();
       this.floorY = this.groundY + 22; // topun durduğu zemin
       if (this.showTools) {
         const ty = Hv - this.trayH / 2 - 4;
-        this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, ball: { x: 242, y: ty }, shower: { x: Wv - 54, y: ty } };
-        this.r.slotFood.setAttribute('transform', 'translate(54 ' + f(ty) + ')');
-        this.r.slotWater.setAttribute('transform', 'translate(148 ' + f(ty) + ')');
-        this.r.slotBall.setAttribute('transform', 'translate(242 ' + f(ty) + ')');
-        this.r.slotShower.setAttribute('transform', 'translate(' + f(Wv - 54) + ' ' + f(ty) + ')');
+        this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, game: { x: 242, y: ty }, light: { x: 336, y: ty }, bath: { x: Wv - 54, y: ty } };
+        this.slots.shower = this.slots.bath; this.slots.sponge = this.slots.bath;
+        const place = (el, sl) => el.setAttribute('transform', 'translate(' + f(sl.x) + ' ' + f(sl.y) + ')');
+        place(this.r.slotFood, this.slots.food); place(this.r.slotWater, this.slots.water); place(this.r.slotGame, this.slots.game);
+        place(this.r.slotLight, this.slots.light); place(this.r.slotShower, this.slots.bath);
       }
       const B = this.ball;
       if (B.active) { B.x = clamp(B.x, B.r, Wv - B.r); B.y = Math.min(B.y, this.floorY - B.r); }
@@ -993,17 +1197,29 @@
           const w = this._screenToWorld(e);
           try { svg.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
           e.preventDefault();
+          this.sfx.unlock();
+          // açık menü: bir seçeneğe dokunuldu mu?
+          if (this.menu) {
+            const cell = this.menu.cells.find((c) => w.x > c.x && w.x < c.x + c.w && w.y > c.y && w.y < c.y + c.h);
+            if (cell) { this._menuPick(cell, w, e.pointerId); return; }
+            const kind = this.menu.kind; this._closeMenu();
+            const sk = this._slotAt(w);
+            if (sk && ({ food: 'food', bath: 'bath', game: 'game' })[sk] === kind) return; // aynı tuş: menüyü kapat
+          }
+          // oyun şeridindeki ✕
+          if (this.game && this.r.banner.getAttribute('display') !== 'none' && Math.abs(w.x - this.Wv / 2) < this._bannerW / 2 && Math.abs(w.y - 76) < 22) { this.stopGame(); return; }
           const B = this.ball;
           if (B.active && !B.held && Math.hypot(w.x - B.x, w.y - B.y) < B.r + 22) { this._grabBall(w, e.pointerId); return; }
-          if (this.showTools && !this.auto && !this.drag) {
-            for (const k of ['food', 'water', 'ball', 'shower']) {
-              const sl = this.slots[k];
-              if (Math.abs(w.x - sl.x) < 44 && Math.abs(w.y - sl.y) < 46) {
-                if (k === 'ball') { this._grabBall(w, e.pointerId); return; }
-                this._startDrag(k, w.x, w.y, e.pointerId); return;
-              }
-            }
+          const sk = this.showTools && !this.auto && !this.drag ? this._slotAt(w) : null;
+          if (sk) {
+            if (sk === 'food') this._openMenu('food');
+            else if (sk === 'water') this._startDrag('water', w.x, w.y, e.pointerId);
+            else if (sk === 'game') { if (this.game) this.stopGame(); else this._openMenu('game'); }
+            else if (sk === 'light') this.toggleLights();
+            else if (sk === 'bath') this._openMenu('bath');
+            return;
           }
+          if (this.game && this._gamePointerDown(w, e.pointerId)) return;
           this.pointer = { id: e.pointerId, x: w.x, y: w.y, t0: performance.now(), moved: 0 };
         },
         move: (e) => {
@@ -1011,6 +1227,8 @@
           const B = this.ball;
           if (B.held && B.pid === e.pointerId) { B.fx = w.x; B.fy = w.y; B.hist.push({ t: performance.now(), x: w.x, y: w.y }); if (B.hist.length > 12) B.hist.shift(); e.preventDefault(); return; }
           if (this.drag && this.drag.id === e.pointerId && !this.drag.returning) { this.drag.fx = w.x; this.drag.fy = w.y; e.preventDefault(); return; }
+          const g = this.game;
+          if (g && g.kind === 'laser' && g.pid === e.pointerId) { g.dot.x = w.x; g.dot.y = Math.min(w.y, this.floorY); e.preventDefault(); return; }
           const ptr = this.pointer; if (!ptr || ptr.id !== e.pointerId) return;
           const d = Math.hypot(w.x - ptr.x, w.y - ptr.y);
           ptr.x = w.x; ptr.y = w.y; ptr.moved += d;
@@ -1022,6 +1240,8 @@
           const B = this.ball;
           if (B.held && B.pid === e.pointerId) { this._throwBall(); return; }
           if (this.drag && this.drag.id === e.pointerId && !this.drag.returning) { this._releaseDrag(); return; }
+          const g = this.game;
+          if (g && g.kind === 'laser' && g.pid === e.pointerId) { g.dot.on = false; g.pid = null; return; }
           const ptr = this.pointer; if (!ptr || ptr.id !== e.pointerId) return;
           if (ptr.moved < 10 && performance.now() - ptr.t0 < 350) {
             const w = this._screenToWorld(e), l = this._toLocal(w.x, w.y);
@@ -1070,7 +1290,266 @@
       if (this.sleeping) { this._startAction(ACTIONS.stir(this)); return; }
       this._spawn('heart', wx, wy - 8, { vx: 0, vy: -60, s: 1 });
       this._startAction(part === 'head' ? ACTIONS.boop(this) : ACTIONS.giggle(this));
+      this.sfx.play(this.species === 'dog' ? 'woof' : 'meow');
       this.stats.happiness = Math.min(100, this.stats.happiness + 1);
+    }
+
+    _slotAt(w) {
+      if (!this.showTools) return null;
+      for (const k of ['food', 'water', 'game', 'light', 'bath']) {
+        const sl = this.slots[k];
+        if (Math.abs(w.x - sl.x) < 44 && Math.abs(w.y - sl.y) < 46) return k;
+      }
+      return null;
+    }
+
+    // ---------------------------------------------------------------- tepsi menüleri
+    _menuItems(kind) {
+      const sp = this.species;
+      if (kind === 'food') return Object.keys(FOODS).map((id) => ({ id, kind, label: foodName(id, sp), sub: FOODS[id].desc, fx: FOODS[id].fx, icon: foodIcon(id, sp, PALETTES_PROPS, this.C.line) }));
+      if (kind === 'bath') return [
+        { id: 'sponge', kind, label: 'Sünger', sub: 'Köpürt', icon: '<g transform="scale(0.9)">' + spongeMarkup(this.C.line, true) + '</g>' },
+        { id: 'shower', kind, label: 'Duş', sub: 'Durula', icon: '<g transform="translate(-4 8) rotate(-20) scale(0.62)">' + showerMarkup(PALETTES_PROPS, this.C.line) + '</g>' }];
+      return [
+        { id: 'ball', kind, label: 'Top', sub: 'Fırlat', icon: '<g transform="scale(0.85)">' + ballMarkup(this.C.line) + '</g>' },
+        { id: 'laser', kind, label: 'Lazer', sub: 'Parmağını gezdir', icon: '<circle r="16" fill="#FF3B5C" opacity="0.25"/><circle r="8" fill="#FF3B5C"/><circle cx="-2" cy="-2" r="2.5" fill="#fff"/>' },
+        { id: 'bubbles', kind, label: 'Baloncuk', sub: 'Patlat', icon: '<g transform="translate(-8 4) scale(0.8)">' + soapBubbleMarkup() + '</g><g transform="translate(12 -10) scale(0.5)">' + soapBubbleMarkup() + '</g>' },
+        { id: 'butterfly', kind, label: 'Kelebek', sub: 'Yakala', icon: '<g transform="scale(0.75)">' + butterflyMarkup(this.C.line) + '</g>' }];
+    }
+    _openMenu(kind) {
+      this._closeMenu();
+      const items = this._menuItems(kind), SC = SCENE;
+      const cw = 104, ch = kind === 'food' ? 132 : 112, gap = 8, pad = 10;
+      const cols = Math.min(items.length, Math.max(2, Math.floor((this.Wv - 20 - pad * 2 + gap) / (cw + gap))), kind === 'food' ? 3 : 4);
+      const rows = Math.ceil(items.length / cols);
+      const W = cols * cw + (cols - 1) * gap + pad * 2, H = rows * ch + (rows - 1) * gap + pad * 2;
+      const sl = this.slots[kind];
+      const x0 = clamp(sl.x - W / 2, 8, this.Wv - W - 8), y0 = this.Hv - this.trayH - 10 - H;
+      const cells = [];
+      let m = '<rect x="' + f(x0) + '" y="' + f(y0) + '" width="' + f(W) + '" height="' + f(H) + '" rx="24" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+        '<path d="M' + f(sl.x - 12) + ' ' + f(y0 + H - 1.5) + ' L' + f(sl.x) + ' ' + f(y0 + H + 11) + ' L' + f(sl.x + 12) + ' ' + f(y0 + H - 1.5) + ' Z" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
+        '<rect x="' + f(sl.x - 14) + '" y="' + f(y0 + H - 5) + '" width="28" height="5" fill="#FFF8FA"/>';
+      items.forEach((it, i) => {
+        const cx = x0 + pad + (i % cols) * (cw + gap), cy = y0 + pad + Math.floor(i / cols) * (ch + gap);
+        cells.push({ x: cx, y: cy, w: cw, h: ch, item: it });
+        m += '<g transform="translate(' + f(cx) + ' ' + f(cy) + ')">' +
+          '<rect width="' + cw + '" height="' + ch + '" rx="18" fill="#fff" stroke="#F6DCE3" stroke-width="2"/>' +
+          '<g transform="translate(' + cw / 2 + ' 36)">' + it.icon + '</g>' +
+          '<text x="' + cw / 2 + '" y="78" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="13.5" font-weight="800" fill="' + SC.text + '">' + it.label + '</text>' +
+          '<text x="' + cw / 2 + '" y="95" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="10.5" font-weight="600" fill="#B08A82">' + it.sub + '</text>';
+        if (it.fx) { // etkiler: 🍖 tokluk, 😊 mutluluk, 💧 su, ⚡ enerji
+          const ic = { fullness: '🍖', happiness: '😊', hydration: '💧', energy: '⚡' };
+          const txt = ['fullness', 'happiness', 'hydration', 'energy'].filter((k) => it.fx[k]).map((k) => ic[k] + it.fx[k]).join(' ');
+          m += '<rect x="6" y="104" width="' + (cw - 12) + '" height="20" rx="10" fill="#FFF1F4"/>' +
+            '<text x="' + cw / 2 + '" y="118" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="11" font-weight="800" fill="' + SC.text + '">' + txt + '</text>';
+        }
+        m += '</g>';
+      });
+      this.r.menu.innerHTML = m;
+      this.menu = { kind, cells };
+      this.sfx.play('click');
+    }
+    _closeMenu() { if (this.r.menu) this.r.menu.innerHTML = ''; this.menu = null; }
+    _menuPick(cell, w, pid) {
+      const it = cell.item, from = { x: cell.x + cell.w / 2, y: cell.y + 36 };
+      this._closeMenu();
+      if (it.kind === 'food') this._startDrag('food', w.x, w.y, pid, { food: it.id, from });
+      else if (it.kind === 'bath') this._startDrag(it.id, w.x, w.y, pid, { from });
+      else if (it.id === 'ball') this._grabBall(w, pid);
+      else this.startGame(it.id);
+    }
+    getFoods() {
+      return Object.keys(FOODS).map((id) => ({ id, name: foodName(id, this.species), desc: FOODS[id].desc, effects: Object.assign({}, FOODS[id].fx) }));
+    }
+
+    // ---------------------------------------------------------------- isim
+    setName(name) { this.name = String(name || '').slice(0, 24); this._renderName(); this._emit('name', { name: this.name }); }
+    _renderName() {
+      const r = this.r; if (!r.nameTag) return;
+      if (!this.name) { r.nameTag.setAttribute('display', 'none'); return; }
+      r.nameTag.setAttribute('display', 'inline');
+      r.nameTxt.textContent = '🐾 ' + this.name;
+      let w = 60 + this.name.length * 12;
+      try { w = r.nameTxt.getComputedTextLength() + 40 || w; } catch (e) { /* yoksay */ }
+      r.nameBg.setAttribute('x', f(-w / 2)); r.nameBg.setAttribute('width', f(w));
+    }
+
+    // ---------------------------------------------------------------- ışık / uyku
+    setLights(on) {
+      if (on) { this.lightsOff = false; if (this.sleeping || (this.action && this.action.name === 'sleep')) this.wake(); else this._clearSleepQueue(); }
+      else if (!this.lightsOff) { this.lightsOff = true; this.sleep(); }
+      this.sfx.play('click');
+      this._emit('lights', { on: !this.lightsOff });
+    }
+    toggleLights() { this.setLights(this.lightsOff); }
+    _clearSleepQueue() { if (this.queue.some((a) => a.name === 'sleep')) this._clearActions(); }
+    _updateNight(dt) {
+      const target = this.lightsOff || this.sleeping ? 1 : 0;
+      this.night += (target - this.night) * (1 - Math.exp(-dt * 2.5));
+      const n = this.night;
+      if (Math.abs(n - this._lastNight) < 0.002) return;
+      this._lastNight = n;
+      this.r.night.setAttribute('opacity', f(n * 0.5 * 100) / 100);
+      const w = this.win;
+      if (w && w.sky) {
+        w.sky.setAttribute('fill', mix('#CFEAFB', '#2B3A6B', n));
+        w.sun.setAttribute('opacity', f(1 - n)); w.cloud.setAttribute('opacity', f(0.9 * (1 - n))); w.moon.setAttribute('opacity', f(n));
+        const curt = (sg) => { // perde: açıkken kenarda toplanır, kapalıyken pencereyi örter
+          const top = lerp(-80, 1, n), mid = lerp(-58, 0, n), bot = lerp(-82, 1, n);
+          const X = (v) => f(v * sg);
+          return 'M' + X(-104) + ' -74 L' + X(top) + ' -74 Q' + X(mid + (1 - n) * 6) + ' 0 ' + X(bot) + ' 72 L' + X(-104) + ' 72 Z' +
+            (n > 0.3 ? ' M' + X(lerp(-90, -50, n)) + ' -70 Q' + X(lerp(-86, -48, n)) + ' 0 ' + X(lerp(-92, -52, n)) + ' 70' : '');
+        };
+        w.curtL.setAttribute('d', curt(1)); w.curtR.setAttribute('d', curt(-1));
+      }
+      if (this.r.bulbGlass) {
+        this.r.bulbGlass.setAttribute('fill', mix('#FFE066', '#C9CED6', n));
+        this.r.bulbGlow.setAttribute('opacity', f(0.35 * (1 - n)));
+      }
+    }
+
+    // ---------------------------------------------------------------- mini oyunlar
+    startGame(kind) {
+      if (kind === 'ball') { this.throwBall(); return; }
+      if (['laser', 'bubbles', 'butterfly'].indexOf(kind) < 0) return;
+      this.stopGame(true);
+      if (this.sleeping || this.lightsOff) this.setLights(true);
+      const g = this.game = { kind, t: 0, dur: 40, cool: 0.6, spawn: 0, items: [], pid: null };
+      const layer = this.r.gameLayer;
+      if (kind === 'laser') {
+        g.dot = { x: this.petX + 120, y: this.floorY - 30, on: false };
+        g.el = document.createElementNS(SVGNS, 'g');
+        g.el.innerHTML = '<circle r="22" fill="#FF3B5C" opacity="0.22"/><circle r="11" fill="#FF3B5C" opacity="0.45"/><circle r="6.5" fill="#FF2244"/><circle cx="-2" cy="-2" r="2.2" fill="#fff"/>';
+        layer.appendChild(g.el);
+      } else if (kind === 'butterfly') {
+        g.bf = { x: -40, y: this.groundY - 330 * this.s, vx: 0, vy: 0, tx: this.petX - 120 * this.s, ty: this.groundY - 340 * this.s, retarget: 1.5, land: 0, ph: 0 };
+        g.el = document.createElementNS(SVGNS, 'g');
+        g.el.innerHTML = butterflyMarkup(this.C.line);
+        g.wings = g.el.querySelectorAll('[data-w]');
+        layer.appendChild(g.el);
+      }
+      const label = { laser: '🔴 Lazer: parmağını sahnede gezdir', bubbles: '🫧 Baloncukları patlat', butterfly: '🦋 Kelebeğe dokun' }[kind];
+      this.r.bannerTxt.textContent = label + '   ✕';
+      this._bannerW = 300;
+      try { this._bannerW = this.r.bannerTxt.getComputedTextLength() + 40 || 300; } catch (e) { /* yoksay */ }
+      this.r.bannerBg.setAttribute('x', f(-this._bannerW / 2)); this.r.bannerBg.setAttribute('width', f(this._bannerW));
+      this.r.banner.setAttribute('display', 'inline');
+      this._emit('game', { name: kind, phase: 'start' });
+    }
+    stopGame(silent) {
+      const g = this.game; if (!g) return;
+      if (g.el) g.el.remove();
+      g.items.forEach((b) => b.el.remove());
+      this.game = null;
+      if (this.r.banner) this.r.banner.setAttribute('display', 'none');
+      if (!silent) this._emit('game', { name: g.kind, phase: 'end' });
+    }
+    _gamePointerDown(w, pid) {
+      const g = this.game;
+      if (w.y > this.Hv - this.trayH - 6) return false;
+      if (g.kind === 'laser') { g.pid = pid; g.dot.on = true; g.dot.x = w.x; g.dot.y = Math.min(w.y, this.floorY); return true; }
+      if (g.kind === 'bubbles') {
+        const b = g.items.find((it) => Math.hypot(it.x - w.x, it.y - w.y) < it.r + 16);
+        if (b) { this._popGameBubble(b, false); return true; }
+      }
+      if (g.kind === 'butterfly' && Math.hypot(g.bf.x - w.x, g.bf.y - w.y) < 50) { // kelebek burnuna konar
+        g.bf.land = 3; this.stats.happiness = Math.min(100, this.stats.happiness + 3); this.sfx.play('sparkle'); return true;
+      }
+      return false;
+    }
+    _popGameBubble(b, byPet) {
+      const g = this.game; if (!g) return;
+      const i = g.items.indexOf(b); if (i < 0) return;
+      g.items.splice(i, 1); b.el.remove();
+      this._spawn('bubble', b.x, b.y, { vy: -20, life: 0.4, s: b.r / 10 });
+      for (let k = 0; k < 5; k++) this._spawn('drop', b.x, b.y, { vx: rand(-120, 120), vy: rand(-120, 40), g: 300, life: 0.5, s: 0.5 });
+      this.sfx.play('pop');
+      this.stats.happiness = Math.min(100, this.stats.happiness + (byPet ? 1.5 : 0.5));
+      this._emit('play', { kind: 'bubble' });
+    }
+    _updateGame(dt, T) {
+      const g = this.game; if (!g) return;
+      g.t += dt; g.cool -= dt;
+      if (g.t > g.dur) { this.stopGame(); return; }
+      const awake = !this.sleeping && !(this.action && this.action.busy);
+      let tgt = null;
+      if (g.kind === 'laser') {
+        const dot = g.dot;
+        g.el.setAttribute('display', dot.on ? 'inline' : 'none');
+        g.el.setAttribute('transform', 'translate(' + f(dot.x + Math.sin(this.t * 40) * 1.2) + ' ' + f(dot.y) + ')');
+        if (dot.on) tgt = { x: dot.x, y: dot.y, obj: dot };
+      } else if (g.kind === 'bubbles') {
+        g.spawn -= dt;
+        if (g.spawn <= 0 && g.items.length < 9) {
+          g.spawn = rand(0.45, 0.8);
+          const el = document.createElementNS(SVGNS, 'g'); el.innerHTML = soapBubbleMarkup();
+          this.r.gameLayer.appendChild(el);
+          const fromLeft = Math.random() < 0.5;
+          g.items.push({ el, x: fromLeft ? rand(30, this.Wv * 0.3) : rand(this.Wv * 0.7, this.Wv - 30), y: this.floorY + 10, vy: -rand(55, 95), ph: rand(0, 6), r: rand(13, 22) });
+        }
+        for (let i = g.items.length - 1; i >= 0; i--) {
+          const b = g.items[i];
+          b.y += b.vy * dt; b.ph += dt * 2; const x = b.x + Math.sin(b.ph) * 18;
+          b.cx = x;
+          if (b.y < -30) { b.el.remove(); g.items.splice(i, 1); continue; }
+          b.el.setAttribute('transform', 'translate(' + f(x) + ' ' + f(b.y) + ') scale(' + f(b.r / 16) + ')');
+        }
+        let best = null, bd = 1e9; const hl = this._headLocal(), hw = this._toWorld(hl.x, hl.y);
+        g.items.forEach((b) => { const d = Math.hypot(b.cx - hw.x, b.y - hw.y); if (d < bd) { bd = d; best = b; } });
+        if (best) tgt = { x: best.cx, y: best.y, obj: best };
+      } else if (g.kind === 'butterfly') {
+        const bf = g.bf; bf.ph += dt * 22;
+        if (bf.land > 0) { // burnuna kondu: şaşı mutlu bakış
+          bf.land -= dt;
+          const m = this._mouthWorld();
+          bf.x += (m.x - bf.x) * (1 - Math.exp(-dt * 8)); bf.y += (m.y - 52 * this.s - bf.y) * (1 - Math.exp(-dt * 8));
+          if (!this.sleeping) { T.lookX = 0; T.lookY = 0.2; T.pupil = 1; T.smile = 1; T.blush = 0.8; T.mouthOpen = 0.25; T.wagFreq = 3; T.wagAmp = 22;
+            this.P.lookX *= 0.5; }
+          if (bf.land <= 0) { bf.tx = this.petX + rand(-220, 220) * this.s; bf.ty = this.groundY - rand(260, 420) * this.s; bf.retarget = 1.6; }
+        } else {
+          bf.retarget -= dt;
+          if (bf.retarget <= 0) {
+            bf.retarget = rand(1.2, 2.2);
+            bf.tx = clamp(this.petX + rand(-230, 230) * this.s, 40, this.Wv - 40); bf.ty = clamp(this.groundY - rand(140, 430) * this.s, 60, this.floorY - 40);
+          }
+          const ax = (bf.tx - bf.x) * 2.2, ay = (bf.ty - bf.y) * 2.2 + Math.sin(this.t * 7) * 60;
+          bf.vx += (ax - bf.vx) * dt * 2; bf.vy += (ay - bf.vy) * dt * 2;
+          bf.x += bf.vx * dt; bf.y += bf.vy * dt;
+          tgt = { x: bf.x, y: bf.y, obj: bf };
+        }
+        const flap = Math.abs(Math.sin(bf.ph)) * 0.75 + 0.25;
+        g.el.setAttribute('transform', 'translate(' + f(bf.x) + ' ' + f(bf.y) + ') rotate(' + f(clamp(bf.vx / 20, -20, 20)) + ') scale(0.9)');
+        g.wings[0].setAttribute('transform', 'scale(' + f(flap) + ' 1)'); g.wings[1].setAttribute('transform', 'scale(' + f(flap) + ' 1)');
+      }
+      if (!tgt || this.sleeping) return;
+      this._lookAtWorld(T, tgt.x, tgt.y, 0.8);
+      T.pupil = 1; T.wagFreq = Math.max(T.wagFreq, 2.6); T.wagAmp = Math.max(T.wagAmp, 18); T.earLift = Math.max(T.earLift, 0.4); T.smile = Math.max(T.smile, 0.8);
+      if (!awake || g.cool > 0) return;
+      const u = this._toUpper(tgt.x, tgt.y), l = this._toLocal(tgt.x, tgt.y);
+      const live = () => (g.kind === 'bubbles' ? [tgt.obj.cx, tgt.obj.y] : [tgt.obj.x, tgt.obj.y]);
+      const onHit = () => {
+        if (!this.game) return;
+        const [x, y] = live();
+        if (g.kind === 'bubbles') this._popGameBubble(tgt.obj, true);
+        else if (g.kind === 'butterfly') { // kelebek kaçar
+          tgt.obj.tx = clamp(tgt.obj.x + (tgt.obj.x < this.petX ? -1 : 1) * 260 * this.s, 40, this.Wv - 40); tgt.obj.ty = this.groundY - rand(320, 440) * this.s; tgt.obj.retarget = 1.8;
+          this._spawn('text', x, y - 26, { text: 'hihi!', vy: -40, life: 0.9, size: 17, color: '#F06C8B' }); this.sfx.play('sparkle');
+          this.stats.happiness = Math.min(100, this.stats.happiness + 2);
+        } else { this._spawn('sparkle', x, y, { vy: -50, vr: 200, life: 0.6 }); this.sfx.play('pew'); this.stats.happiness = Math.min(100, this.stats.happiness + 2); }
+        this.stats.energy = Math.max(0, this.stats.energy - 0.4);
+        if (g.kind !== 'bubbles') this._emit('play', { kind: g.kind });
+      };
+      if (g.kind === 'laser' && l.y > 405 && Math.abs(l.x - 200) < 140) { // yerdeki noktaya atlar
+        g.cool = 1.4; this._startAction(ACTIONS.hop(this)); setTimeout(onHit, 300); return;
+      }
+      for (let i = 0; i < 2; i++) {
+        const S = SHOULDER[i];
+        if (Math.hypot(u.x - S[0], u.y - S[1]) < 125 && (i === 0 ? u.x < 215 : u.x > 185)) {
+          g.cool = g.kind === 'bubbles' ? 0.6 : 1.1;
+          this._startAction(ACTIONS.swat(this, i, { pos: live, hit: onHit }));
+          return;
+        }
+      }
     }
 
     // ---------------------------------------------------------------- top
@@ -1179,6 +1658,7 @@
     _hitBall(vx, vy) {
       const B = this.ball;
       B.vx = vx; B.vy = vy; B.cool = 0.5;
+      this.sfx.play('boing');
       this._spawn('sparkle', B.x, B.y, { vy: -60, s: 0.9, vr: 200, life: 0.6 });
       this._spawn('text', B.x, B.y - 30, { text: 'boing!', vy: -50, life: 0.8, size: 18, color: '#F06C8B' });
       this.stats.happiness = Math.min(100, this.stats.happiness + 2.5);
@@ -1187,20 +1667,24 @@
     }
 
     // ---------------------------------------------------------------- sürüklenen araçlar
-    _startDrag(type, x, y, id) {
-      const sl = this.slots[type];
-      this.drag = { type, id, fx: x, fy: y, x: sl.x, y: sl.y, returning: null };
-      this._emit('drag', { tool: type, phase: 'start' });
+    _startDrag(type, x, y, id, opt) {
+      opt = opt || {};
+      const sl = opt.from || this.slots[type];
+      this.drag = { type, id, fx: x, fy: y, x: sl.x, y: sl.y, returning: null, food: opt.food || 'treat', lastMove: [x, y] };
+      if (type === 'food') this.r.heldFood.innerHTML = '<g transform="scale(1.3)">' + foodIcon(this.drag.food, this.species, PALETTES_PROPS, this.C.line) + '</g>';
+      if (type === 'sponge') this.r.spongeArt.innerHTML = spongeMarkup(this.C.line, false);
+      if (this.menu) this._closeMenu();
+      this._emit('drag', { tool: type, phase: 'start', food: type === 'food' ? this.drag.food : undefined });
     }
-    _itemOffset(type) { return type === 'food' ? [0, -55] : type === 'water' ? [0, -45] : [-36, 36]; }
+    _itemOffset(type) { return type === 'food' ? [0, -55] : type === 'water' ? [0, -45] : type === 'sponge' ? [0, -34] : [-36, 36]; }
     _releaseDrag() {
       const d = this.drag; if (!d) return;
       let used = false;
       if (d.type === 'food') {
         const m = this._mouthWorld();
         if (Math.hypot(d.x - m.x, d.y - m.y) < 90 * this.s + 24 && this._canInteract()) {
-          if (this.stats.fullness >= 96) this._startAction(ACTIONS.refuse(this));
-          else { used = true; this._clearActions(); this._startAction(ACTIONS.nom(this)); }
+          if (this.stats.fullness >= 96 && !FOODS[d.food].drink) this._startAction(ACTIONS.refuse(this));
+          else { used = true; this._clearActions(); this._startAction(ACTIONS.nom(this, d.food)); }
         }
       } else if (d.type === 'water') {
         const l = this._toLocal(d.x, d.y);
@@ -1210,7 +1694,12 @@
       } else if (d.type === 'shower') {
         if (this.showering) this._emit('action', { name: 'bath', phase: 'end' });
         this.showering = false;
-        if (this.wet > 0.15) { this._clearActions(); this._startAction(ACTIONS.shakeDry(this)); }
+        this.sfx.water(false);
+        // köpük tamamen durulandıysa silkelenir; köpük kaldıysa beklemeye devam eder
+        if (this.wet > 0.15 && this.foam.length === 0) { this._clearActions(); this._startAction(ACTIONS.shakeDry(this)); }
+        else if (this.foam.length) { const hw = this._toWorld(200, this._headLocal().y - 120); this._spawn('text', hw.x, hw.y, { text: 'Durula! 🚿', vy: -30, life: 1.4, size: 18, color: '#4FA9D6' }); }
+      } else if (d.type === 'sponge') {
+        this.showering = false;
       }
       this._emit('drag', { tool: d.type, phase: 'end', used });
       if (used) { this.drag = null; this._hideHeld(); return; }
@@ -1218,7 +1707,7 @@
       d.returning = { t: 0, x0: d.x, y0: d.y, x1: sl.x, y1: sl.y };
     }
     _hideHeld() {
-      ['heldFood', 'heldWater', 'heldShower'].forEach((k) => this.r[k] && this.r[k].setAttribute('display', 'none'));
+      ['heldFood', 'heldWater', 'heldShower', 'heldSponge'].forEach((k) => this.r[k] && this.r[k].setAttribute('display', 'none'));
       if (this.r.iconWater) { this.r.iconWater.setAttribute('display', 'inline'); this.r.iconShower.setAttribute('display', 'inline'); }
     }
     _canInteract() { return !(this.action && this.action.busy) && !this.sleeping; }
@@ -1229,9 +1718,9 @@
         const a = this.auto; a.t += dt;
         const pos = a.path(a.t);
         d.fx = pos[0]; d.fy = pos[1];
-        if (a.t >= a.dur) { this.auto = null; this._releaseDrag(); }
+        if (a.t >= a.dur) { this.auto = null; this._releaseDrag(); if (a.onEnd) a.onEnd(); }
       }
-      if (!d) { this.showering = false; this._renderHeld(); return; }
+      if (!d) { this.showering = false; this.sfx.water(false); this._renderHeld(); return; }
       const off = this._itemOffset(d.type);
       if (d.returning) {
         const rt = d.returning; rt.t += dt * 3.5;
@@ -1243,7 +1732,7 @@
         d.x += (d.fx + off[0] - d.x) * k; d.y += (d.fy + off[1] - d.y) * k;
       }
       this._renderHeld();
-      if (d.returning) { this.showering = false; return; }
+      if (d.returning) { this.showering = false; this.sfx.water(false); return; }
 
       const awake = !this.sleeping && !(this.action && this.action.busy);
       if (d.type === 'food' || d.type === 'water') {
@@ -1252,7 +1741,7 @@
         const dist = Math.hypot(d.x - m.x, d.y - m.y);
         this._lookAtWorld(T, d.x, d.y);
         const k = clamp(1 - (dist - 60) / 280, 0, 1);
-        if (d.type === 'food' && this.stats.fullness >= 96) { // tok: başını çevirir, eliyle "hayır" yapar
+        if (d.type === 'food' && this.stats.fullness >= 96 && !FOODS[d.food].drink) { // tok: başını çevirir, eliyle "hayır" yapar
           T.faceX = -Math.sign(d.x - m.x || 1) * 9; T.lookX = -T.lookX; T.smile = 0.1; T.mouthOpen = 0; T.tongue = 0; T.brow = 0.3;
           T.h1x = 250 + Math.sin(this.t * 14) * 14; T.h1y = 240;
           return;
@@ -1272,34 +1761,56 @@
         if (d.type === 'food' && near > 0.6 && Math.random() < dt * 2) this._spawn('drop', m.x + rand(-10, 10), m.y + 20 * this.s, { vy: 30, g: 300, life: 0.8, s: 0.7 });
         return;
       }
-      // duş
+      const l = this._toLocal(d.x, d.y);
+      if (d.type === 'sponge') { // sünger: dokunduğu yeri köpürtür
+        const over = this._hit(l.x, l.y);
+        const mv = Math.hypot(d.x - d.lastMove[0], d.y - d.lastMove[1]); d.lastMove = [d.x, d.y];
+        this.showering = !!over;
+        if (!over) { if (awake) this._lookAtWorld(T, d.x, d.y); return; }
+        if (mv > 1.5) {
+          this.fx.foam -= dt;
+          if (this.fx.foam <= 0) { this.fx.foam = 0.06; this._addFoamAt(l.x, l.y + 24); }
+          this.sfx.play('squish');
+          if (Math.random() < dt * 10) this._spawn('bubble', d.x + rand(-25, 25), d.y - 10, { vx: rand(-30, 30), vy: rand(-80, -40), life: 0.8, s: rand(0.3, 0.6) });
+          this.stats.cleanliness = Math.min(100, this.stats.cleanliness + dt * 6);
+          if (!this.soaped && this.foam.length > 6) { this.soaped = true; this.r.spongeArt.innerHTML = spongeMarkup(this.C.line, true); }
+        }
+        if (awake) this._bathPose(T);
+        return;
+      }
+      // duş başlığı: su akar, köpükleri durular
+      this.sfx.water(true);
       this.fx.spray -= dt;
       while (this.fx.spray <= 0) {
         this.fx.spray += 1 / 45;
         this._spawn('drop', d.x + rand(-26, 26), d.y + 8, { vx: rand(-25, 25), vy: rand(260, 340), g: 500, life: 0.55, s: rand(0.5, 0.8) });
       }
-      const l = this._toLocal(d.x, d.y);
       const over = Math.abs(l.x - 200) < 150 && l.y < 330 + this._upY();
       if (over !== this.showering) { this.showering = over; if (over) this._emit('action', { name: 'bath', phase: 'start' }); }
       if (!over) { if (awake) this._lookAtWorld(T, d.x, d.y); return; }
       this.wet = Math.min(1, this.wet + dt * 0.45);
-      this.stats.cleanliness = Math.min(100, this.stats.cleanliness + dt * 18);
+      this.stats.cleanliness = Math.min(100, this.stats.cleanliness + dt * (this.soaped ? 8 : 3));
       this.fx.foam -= dt;
-      if (this.fx.foam <= 0) { this.fx.foam = 0.07; this._addFoam(l.x); }
-      if (Math.random() < dt * 8) this._spawnL('drop', clamp(l.x + rand(-40, 40), 120, 280), this._headLocal().y - 70, { vx: rand(-90, 90), vy: rand(-140, -60), g: 500, life: 0.6, s: 0.7 });
-      if (awake) {
-        const dog = this.species === 'dog';
-        T.eyeOpen = 0; T.closedCurve = dog ? 0.7 : 0.1; T.squint = 1;
-        T.smile = dog ? 0.7 : -0.3; T.brow = dog ? 0.1 : -0.4; T.mouthOpen = dog ? 0.3 : 0.12; T.tongue = dog ? 0.3 : 0;
-        T.earLift = -1; T.tailBase = dog ? 5 : 30; T.wagAmp = dog ? 14 : 2; T.wagFreq = dog ? 2.5 : 0.5;
-        T.headY += 4; T.lookY = -0.6; T.blush = dog ? 0.3 : 0;
-        // elleriyle köpükleri ovalar: biri kafada, biri karnında (ara ara yer değiştirir)
-        const ph = Math.floor(this.t / 1.3) % 2, c = Math.cos(this.t * 13), s2 = Math.sin(this.t * 13);
-        const head = [170 + c * 12, 92 + s2 * 8 + this.P.headY], belly = [215 + c * 14, 318 + s2 * 10];
-        const head2 = [230 + c * 12, 92 + s2 * 8 + this.P.headY], belly2 = [185 + c * 14, 318 + s2 * 10];
-        if (ph === 0) { T.h0x = head[0]; T.h0y = head[1]; T.h1x = belly[0]; T.h1y = belly[1]; }
-        else { T.h0x = belly2[0]; T.h0y = belly2[1]; T.h1x = head2[0]; T.h1y = head2[1]; }
+      if (this.fx.foam <= 0 && this.foam.length) { // su değen köpükler patlar
+        this.fx.foam = 0.05;
+        const near = this.foam.filter((b) => Math.abs(b.x + (b.part === 'head' ? this.P.headX : 0) - l.x) < 70);
+        if (near.length) this._popFoamBubble(near[Math.floor(Math.random() * near.length)]);
       }
+      if (Math.random() < dt * 8) this._spawnL('drop', clamp(l.x + rand(-40, 40), 120, 280), this._headLocal().y - 70, { vx: rand(-90, 90), vy: rand(-140, -60), g: 500, life: 0.6, s: 0.7 });
+      if (awake) this._bathPose(T);
+    }
+    _bathPose(T) {
+      const dog = this.species === 'dog';
+      T.eyeOpen = 0; T.closedCurve = dog ? 0.7 : 0.1; T.squint = 1;
+      T.smile = dog ? 0.7 : -0.3; T.brow = dog ? 0.1 : -0.4; T.mouthOpen = dog ? 0.3 : 0.12; T.tongue = dog ? 0.3 : 0;
+      T.earLift = -1; T.tailBase = dog ? 5 : 30; T.wagAmp = dog ? 14 : 2; T.wagFreq = dog ? 2.5 : 0.5;
+      T.headY += 4; T.lookY = -0.6; T.blush = dog ? 0.3 : 0;
+      // elleriyle köpükleri ovalar: biri kafada, biri karnında (ara ara yer değiştirir)
+      const ph = Math.floor(this.t / 1.3) % 2, c = Math.cos(this.t * 13), s2 = Math.sin(this.t * 13);
+      const head = [170 + c * 12, 92 + s2 * 8 + this.P.headY], belly = [215 + c * 14, 318 + s2 * 10];
+      const head2 = [230 + c * 12, 92 + s2 * 8 + this.P.headY], belly2 = [185 + c * 14, 318 + s2 * 10];
+      if (ph === 0) { T.h0x = head[0]; T.h0y = head[1]; T.h1x = belly[0]; T.h1y = belly[1]; }
+      else { T.h0x = belly2[0]; T.h0y = belly2[1]; T.h1x = head2[0]; T.h1y = head2[1]; }
     }
 
     _renderHeld() {
@@ -1308,10 +1819,11 @@
       const sl = this.slots.shower;
       let hx = sl.x + 29, hy = sl.y - 33;
       if (d && d.type === 'shower') { hx = d.x + 58; hy = d.y - 58; }
+      r.hose.setAttribute('display', d && d.type === 'shower' ? 'inline' : 'none');
       const ax = this.Wv + 10, ay = this.Hv - 20;
       r.hose.setAttribute('d', 'M' + f(ax) + ' ' + f(ay) + ' C' + f(ax - 30) + ' ' + f(ay - 90) + ' ' + f(hx + 90) + ' ' + f(hy + 20) + ' ' + f(hx) + ' ' + f(hy));
       if (!d) return;
-      const k = { food: 'heldFood', water: 'heldWater', shower: 'heldShower' }[d.type];
+      const k = { food: 'heldFood', water: 'heldWater', shower: 'heldShower', sponge: 'heldSponge' }[d.type];
       r[k].setAttribute('display', 'inline');
       const wob = d.type === 'shower' ? Math.sin(this.t * 30) * 1.5 : 0;
       r[k].setAttribute('transform', 'translate(' + f(d.x) + ' ' + f(d.y) + ') rotate(' + f(wob) + ')');
@@ -1319,6 +1831,29 @@
       if (d.type === 'shower') r.iconShower.setAttribute('display', 'none');
     }
 
+    // süngerin değdiği noktaya köpük (yerel koordinat)
+    _addFoamAt(lx, ly) {
+      if (this.foam.length > 56) return;
+      const P = this.P, up = this._upY(), part = this._hit(lx + rand(-14, 14), ly);
+      if (!part) return;
+      let x = lx + rand(-18, 18), y = ly + rand(-14, 14), layer;
+      if (part === 'head') { x -= P.headX; y -= P.headY + up; layer = this.r.foamHead; }
+      else { y -= up; layer = this.r.foamBody; }
+      const g = document.createElementNS(SVGNS, 'g');
+      g.innerHTML = '<circle r="1" fill="#fff" stroke="' + PALETTES_PROPS.foamEdge + '" stroke-width="0.12"/>' +
+        '<circle cx="-0.35" cy="-0.35" r="0.22" fill="#fff"/><path d="M0.25 0.55 A0.6 0.6 0 0 0 0.6 0.2" stroke="' + PALETTES_PROPS.foamEdge + '" stroke-width="0.1" fill="none"/>';
+      layer.appendChild(g);
+      this.foam.push({ el: g, x, y, r: 0, rt: rand(6, 14), part, ph: rand(0, 6) });
+    }
+    _popFoamBubble(b) {
+      const i = this.foam.indexOf(b); if (i < 0) return;
+      this.foam.splice(i, 1);
+      let lx = b.x, ly = b.y + this._upY();
+      if (b.part === 'head') { lx += this.P.headX; ly += this.P.headY; }
+      this._spawnL('bubble', lx, ly, { vx: rand(-60, 60), vy: rand(-120, -50), life: 0.9, s: b.r / 10 });
+      this.sfx.play('pop');
+      b.el.remove();
+    }
     _addFoam(lx) {
       if (this.foam.length > 46) return;
       const P = this.P, hd = this._headLocal(), up = this._upY();
@@ -1355,6 +1890,7 @@
         let lx = b.x, ly = b.y + this._upY();
         if (b.part === 'head') { lx += this.P.headX; ly += this.P.headY; }
         this._spawnL('bubble', lx, ly, { vx: rand(-60, 60), vy: rand(-120, -50), life: 0.9, s: b.r / 10 });
+        this.sfx.play('pop');
         b.el.remove();
       }
     }
@@ -1367,12 +1903,17 @@
       this._enqueue(ACTIONS.eatBowl(this));
       return true;
     }
-    feedTreat() {
-      if (!this.showTools || this.drag || this.sleeping) return this.feed();
+    feedTreat() { return this.feedFood('treat'); }
+    // seçilen mamayı otomatik olarak ağzına götürür (uygulama butonları için)
+    feedFood(id) {
+      if (!FOODS[id]) id = 'treat';
+      if (!this.showTools || this.drag) return false;
+      const wasAsleep = this.sleeping, delay = wasAsleep ? 2.9 : 0;
+      if (wasAsleep || this.lightsOff) this.setLights(true);
       const sl = this.slots.food;
-      this._startDrag('food', sl.x, sl.y, -1);
-      this.auto = { t: 0, dur: 1.6, path: (t) => {
-        const m = this._mouthWorld(), k = smooth01(t / 1.3);
+      this._startDrag('food', sl.x, sl.y, -1, { food: id });
+      this.auto = { t: 0, dur: 1.6 + delay, path: (t) => {
+        const m = this._mouthWorld(), k = smooth01(Math.max(0, t - delay) / 1.3);
         return [lerp(sl.x, m.x, k), lerp(sl.y, m.y + 55, k) - Math.sin(k * Math.PI) * 80];
       } };
       return true;
@@ -1384,33 +1925,48 @@
       this._enqueue(ACTIONS.drink(this));
       return true;
     }
+    // otomatik banyo: önce süngerle köpürtür, sonra duşla durular
     bathe() {
       if (!this.showTools || this.drag) return false;
-      if (this.sleeping) this.wake();
-      const sl = this.slots.shower;
-      this._startDrag('shower', sl.x, sl.y, -1);
-      this.auto = { t: 0, dur: 4.6, path: (t) => {
-        const hd = this._toWorld(200, this._headLocal().y - 150);
-        const k = smooth01(t / 0.8);
-        return [lerp(sl.x, hd.x + 36 + Math.sin(t * 2.6) * 70 * this.s, k), lerp(sl.y, hd.y - 36, k)];
-      } };
+      if (this.sleeping || this.lightsOff) this.setLights(true);
+      const sl = this.slots.bath;
+      const run = () => {
+        this._startDrag('sponge', sl.x, sl.y, -1);
+        this.auto = { t: 0, dur: 3.4, path: (t) => {
+          const k = smooth01(t / 0.6), a = t * 3.2;
+          const p = this._toWorld(200 + Math.sin(a) * 70, (Math.floor(t / 1.1) % 2 ? 300 : 120) + Math.cos(a * 1.3) * 30 + this._upY());
+          return [lerp(sl.x, p.x, k), lerp(sl.y, p.y + 34, k)];
+        }, onEnd: () => {
+          this._startDrag('shower', sl.x, sl.y, -1);
+          this.auto = { t: 0, dur: 4.2, path: (t) => {
+            const hd = this._toWorld(200, this._headLocal().y - 150), k = smooth01(t / 0.6);
+            return [lerp(sl.x, hd.x + 36 + Math.sin(t * 2.4) * 80 * this.s, k), lerp(sl.y, hd.y - 36, k)];
+          }, onEnd: () => { if (this.foam.length) { this.foam.slice().forEach((b) => this._popFoamBubble(b)); if (this.wet > 0.15) this._startAction(ACTIONS.shakeDry(this)); } } };
+        } };
+      };
+      if (this.drag && this.drag.returning) this.drag = null;
+      run();
       return true;
     }
     sleep() {
       if (this.sleeping) return false;
+      this.lightsOff = true;
+      if (this.game) this.stopGame();
       this._clearActions();
       this._enqueue(ACTIONS.yawn(this));
       this._enqueue(ACTIONS.fallAsleep(this));
       return true;
     }
     wake() {
-      if (!this.sleeping) return false;
+      this.lightsOff = false;
+      if (!this.sleeping) { this._clearSleepQueue(); return false; }
       this._clearActions();
       this._enqueue(ACTIONS.wake(this));
       return true;
     }
     yawn() { if (!this.sleeping && !this.action) this._startAction(ACTIONS.yawn(this)); }
-    celebrate() { if (!this.sleeping) { this._clearActions(); this._startAction(ACTIONS.celebrate(this)); } }
+    celebrate() { if (!this.sleeping) { this._clearActions(); this._startAction(ACTIONS.celebrate(this)); this.sfx.play('chime'); } }
+    setSound(on) { this.sfx.setOn(on); this._emit('sound', { on: !!on }); }
     play(name) { if (ACTIONS[name] && name !== 'swat' && name !== 'kick') { this._clearActions(); this._startAction(ACTIONS[name](this)); } }
 
     _clearActions() {
@@ -1429,16 +1985,17 @@
     getState() {
       const r1 = (v) => Math.round(v * 10) / 10, s = this.stats;
       return {
-        species: this.species, breed: this.breed, eyes: this.eyes,
+        species: this.species, breed: this.breed, eyes: this.eyes, name: this.name, lightsOn: !this.lightsOff,
         stats: { fullness: r1(s.fullness), hydration: r1(s.hydration), energy: r1(s.energy), happiness: r1(s.happiness), cleanliness: r1(s.cleanliness) },
         sleeping: this.sleeping, mood: this.mood, lastUpdate: Date.now()
       };
     }
     setState(s) {
       if (!s) return;
+      if (typeof s.name === 'string') { this.name = s.name.slice(0, 24); if (this.svg) this._renderName(); }
       if (s.stats) Object.keys(this.stats).forEach((k) => { if (typeof s.stats[k] === 'number') this.stats[k] = clamp(s.stats[k], 0, 100); });
       if (typeof s.sleeping === 'boolean') {
-        this.sleeping = s.sleeping;
+        this.sleeping = s.sleeping; this.lightsOff = s.sleeping;
         this.P.sit = s.sleeping ? 1 : 0; this.P.eyeOpen = s.sleeping ? 0 : 1;
       }
       let rebuild = false;
@@ -1561,6 +2118,8 @@
       }
       this._updateDrag(dt, T);
       this._updateBall(dt, T);
+      this._updateGame(dt, T);
+      this._updateNight(dt);
       this._applyPet(dt, T);
       this._smoothPose(dt, T);
       this._render(dt, T);
@@ -1604,6 +2163,7 @@
         this.fx.z -= dt;
         if (this.fx.z <= 0) {
           this.fx.z = 1.3;
+          if (Math.random() < 0.35) this.sfx.play('snore');
           const hd = this._headLocal();
           this._spawnL('z', this.species === 'cat' ? 300 : 286, hd.y - 66, { vx: 18, vy: -28, life: 2.6, s: rand(0.8, 1.2), wobble: 6 });
         }
@@ -1907,6 +2467,7 @@
             if (u > 0.38 && u < 0.45 && !this._bit) {
               this._bit = true;
               pet.item.amount = Math.max(0, pet.item.amount - 1 / 3);
+              pet.sfx.play('crunch');
               for (let i = 0; i < 4; i++) pet._spawnL('crumb', 200 + rand(-30, 30), 250 + pet._upY(), { vx: rand(-60, 60), vy: rand(-110, -60), g: 320, life: 0.8 });
             }
             if (u > 0.5) this._bit = false;
@@ -1927,10 +2488,15 @@
     },
 
     // elle verilen mamayı patileriyle tutup yer, ağzını siler
-    nom(pet) {
+    nom(pet, foodId) {
+      const food = FOODS[foodId] || FOODS.treat;
       return {
         name: 'eat', dur: 4.4, busy: true,
-        start() { this.bite = -1; },
+        start() {
+          this.bite = -1;
+          pet.r.itemTreatS.innerHTML = foodIcon(foodId || 'treat', pet.species, PALETTES_PROPS, pet.C.line);
+          pet._emit('feed', { food: foodId, phase: 'start' });
+        },
         update(T, dt, p, t) {
           T.wagFreq = 3.2; T.wagAmp = 22; T.tailBase = -12; T.earLift = 0.3; T.brow = -0.1; T.blush = 0.5; T.lookY = 0.3; T.lookX = 0;
           const m = pet._mouthUpper();
@@ -1942,7 +2508,9 @@
             T.itemScale = 1 - Math.min(1, bites / 4);
             if (bites !== this.bite) {
               this.bite = bites;
-              for (let i = 0; i < 3; i++) pet._spawnL('crumb', m.x + rand(-14, 14), m.y + 20 + pet._upY(), { vx: rand(-70, 70), vy: rand(-90, -30), g: 420, life: 0.8 });
+              pet.sfx.play(food.drink ? 'lap' : 'crunch');
+              if (!food.drink) for (let i = 0; i < 3; i++) pet._spawnL('crumb', m.x + rand(-14, 14), m.y + 20 + pet._upY(), { vx: rand(-70, 70), vy: rand(-90, -30), g: 420, life: 0.8 });
+              else pet._spawnL('drop', m.x + rand(-8, 8), m.y + 18 + pet._upY(), { vy: 30, g: 300, life: 0.8, s: 0.7 });
             }
             const c = Math.max(0, Math.sin(t * 13));
             T.mouthOpen = 0.08 + 0.3 * c; T.eyeOpen = 0; T.closedCurve = 1; T.smile = 1;
@@ -1954,9 +2522,12 @@
           patBelly(T, t, 1); T.smile = 1; T.squint = 0.5; T.eyeOpen = 0.6; T.mouthOpen = 0.12; T.tongue = 0.6; T.tongueX = Math.sin(t * 10);
         },
         end() {
-          pet.stats.fullness = Math.min(100, pet.stats.fullness + 15);
-          pet.stats.happiness = Math.min(100, pet.stats.happiness + 2);
-          pet._spawnL('heart', 245, 70, { vy: -50, s: 1 });
+          const s = pet.stats;
+          Object.keys(food.fx).forEach((k) => { s[k] = clamp(s[k] + food.fx[k], 0, 100); });
+          pet._spawnL('heart', 245, 70, { vy: -50, s: food.fx.happiness >= 10 ? 1.4 : 1 });
+          if (food.fx.happiness >= 10) pet._spawnL('sparkle', 150, 90, { vy: -40, vr: 120, s: 1.1 });
+          pet.sfx.play('gulp');
+          pet._emit('feed', { food: foodId, phase: 'end' });
           pet._emit('stats', pet.getState());
         }
       };
@@ -1993,7 +2564,7 @@
             T.mouthOpen = 0.35; T.tongue = 0.6 + 0.6 * Math.max(0, lap); T.smile = 0.5;
             pet.item.amount = Math.max(0.1, 1 - (t - 0.7) / 3.3 * 0.9);
             this.rip -= dt;
-            if (this.rip <= 0) { this.rip = 0.25; pet._spawnL('drop', m.x + rand(-25, 25), m.y + 40 + pet._upY(), { vx: rand(-50, 50), vy: rand(-120, -80), g: 380, life: 0.7, s: 0.7 }); }
+            if (this.rip <= 0) { this.rip = 0.25; pet.sfx.play('lap'); pet._spawnL('drop', m.x + rand(-25, 25), m.y + 40 + pet._upY(), { vx: rand(-50, 50), vy: rand(-120, -80), g: 380, life: 0.7, s: 0.7 }); }
             return;
           }
           T.itemShow = 0;
@@ -2013,7 +2584,7 @@
     shakeDry(pet) {
       return {
         name: 'shakeDry', dur: 3, busy: true,
-        start() { this.pop = 0; this.burst = 0; },
+        start() { this.pop = 0; this.burst = 0; pet.sfx.play('shake'); },
         update(T, dt, p, t) {
           T.sit = 0;
           if (t < 1.9) {
@@ -2048,7 +2619,8 @@
         },
         end() {
           pet.wet = 0; if (pet.foam.length) pet._popFoam(pet.foam.length);
-          pet.stats.cleanliness = 100;
+          pet.stats.cleanliness = pet.soaped ? 100 : Math.min(100, pet.stats.cleanliness + 15);
+          pet.soaped = false;
           pet.stats.happiness = Math.min(100, pet.stats.happiness + (pet.species === 'dog' ? 6 : 2));
           pet._emit('stats', pet.getState());
         },
@@ -2088,7 +2660,7 @@
     wake(pet) {
       return {
         name: 'wake', dur: 3, busy: true,
-        start() { pet.sleeping = false; pet._emit('wake', {}); },
+        start() { pet.sleeping = false; pet.lightsOff = false; pet._emit('wake', {}); },
         update(T, dt, p, t) {
           if (t < 0.8) { Object.assign(T, MOOD_POSES.sleeping); T.earLift = lerp(-0.7, 0.4, t / 0.8); return; }
           if (t < 1.4) { // gözünü ovuşturur
@@ -2266,21 +2838,20 @@
     },
 
     // ---- top oyunu
-    swat(pet, side) {
+    // tgt: { pos() → [x, y] (dünya), hit() } — top, lazer noktası, baloncuk, kelebek
+    swat(pet, side, tgt) {
+      tgt = tgt || { pos: () => [pet.ball.x, pet.ball.y], hit: () => { const dir = Math.sign(pet.ball.x - pet.petX) || (side ? 1 : -1); pet._hitBall(dir * rand(380, 620), -rand(600, 850)); } };
       return {
         name: 'swat', dur: 0.6, busy: true, silent: true,
         update(T, dt, p, t) {
-          const B = pet.ball, u = pet._toUpper(B.x, B.y);
+          const [x, y] = tgt.pos(), u = pet._toUpper(x, y);
           T.smile = 1; T.mouthOpen = 0.4; T.eyeOpen = 0.9; T.pupil = 1; T.wagFreq = 3.5; T.wagAmp = 22; T.earLift = 0.5;
-          pet._lookAtWorld(T, B.x, B.y);
+          pet._lookAtWorld(T, x, y);
           if (t < 0.16) {
             T['h' + side + 'x'] = u.x; T['h' + side + 'y'] = u.y;
             pet.P['h' + side + 'x'] = lerp(pet.P['h' + side + 'x'], u.x, 0.5); pet.P['h' + side + 'y'] = lerp(pet.P['h' + side + 'y'], u.y, 0.5);
-          } else if (!this.hit) {
-            this.hit = true;
-            const dir = Math.sign(B.x - pet.petX) || (side ? 1 : -1);
-            pet._hitBall(dir * rand(380, 620), -rand(600, 850));
-          } else { T.eyeOpen = 0; T.closedCurve = 1; }
+          } else if (!this.hit) { this.hit = true; tgt.hit(); }
+          else { T.eyeOpen = 0; T.closedCurve = 1; }
         }
       };
     },
@@ -2309,6 +2880,28 @@
     }
   };
 
+  // Cins seçimi için kafa resmi (SVG metni). Sonuçlar önbelleğe alınır.
+  const THUMBS = {};
+  PetEngine.headThumb = function (breed, eyes) {
+    const key = breed + '|' + (eyes || '');
+    if (THUMBS[key]) return THUMBS[key];
+    if (typeof document === 'undefined' || !BREEDS[breed]) return '';
+    const div = document.createElement('div');
+    div.style.cssText = 'position:absolute;left:-10000px;top:0;width:400px;height:420px;';
+    document.body.appendChild(div);
+    const e = new PetEngine(div, { breed, eyes, tools: false, background: false, sound: false });
+    cancelAnimationFrame(e._raf);
+    e.blink.t = -1; e.earTwitch.t = -1;
+    const rs = e.geo ? e.geo.rest : REST;
+    const T = Object.assign({}, POSE_DEFAULT, { h0x: rs[0][0], h0y: rs[0][1], h1x: rs[1][0], h1y: rs[1][1] }, MOOD_POSES.happy, { lookX: 0, lookY: 0, faceX: 0 });
+    e._smoothPose(10, T); e._render(0, T);
+    const svg = '<svg xmlns="' + SVGNS + '" viewBox="52 20 296 204" width="100%" height="100%" preserveAspectRatio="xMidYMid meet"><defs>' +
+      e.svg.querySelector('defs').innerHTML + '</defs>' + e.r.head.outerHTML + '</svg>';
+    e.destroy(); div.remove();
+    THUMBS[key] = svg;
+    return svg;
+  };
+  PetEngine.FOODS = FOODS;
   PetEngine.ACTIONS = Object.keys(ACTIONS).filter((n) => ['fallAsleep', 'swat', 'kick', 'header'].indexOf(n) < 0);
   PetEngine.BREEDS = BREEDS;
   PetEngine.EYES = EYES;
@@ -2339,16 +2932,34 @@
   pet.on('play', function () { log('topa vurdu!'); });
   renderStats(pet.getState());
 
-  var CMDS = { treat: 'feedTreat', bath: 'bathe', ball: 'throwBall', feed: 'feed', water: 'giveWater', pet: 'petOnce', sleep: 'sleep', wake: 'wake', celebrate: 'celebrate' };
-  document.querySelectorAll('[data-cmd]').forEach(function (b) { b.onclick = function () { pet[CMDS[b.dataset.cmd]](); }; });
+  var CMDS = { treat: 'feedTreat', bath: 'bathe', ball: 'throwBall', feed: 'feed', water: 'giveWater', pet: 'petOnce', light: 'toggleLights', celebrate: 'celebrate' };
+  var soundOn = true;
+  document.querySelectorAll('[data-cmd]').forEach(function (b) {
+    b.onclick = function () {
+      var c = b.dataset.cmd;
+      if (c === 'laser' || c === 'bubbles' || c === 'butterfly') pet.startGame(c);
+      else if (c === 'sound') { soundOn = !soundOn; pet.setSound(soundOn); b.textContent = soundOn ? '🔊 Ses açık' : '🔇 Ses kapalı'; }
+      else pet[CMDS[c]]();
+    };
+  });
+  // isim
+  var nameIn = document.getElementById('petName');
+  try { nameIn.value = localStorage.getItem('petName') || ''; } catch (e) {}
+  pet.setName(nameIn.value);
+  document.getElementById('saveName').onclick = function () {
+    pet.setName(nameIn.value); try { localStorage.setItem('petName', nameIn.value); } catch (e) {}
+    if (nameIn.value) pet.celebrate();
+  };
+  pet.on('feed', function (e) { if (e.phase === 'end') log('yedi: ' + e.food); });
+  pet.on('game', function (e) { log('oyun ' + e.name + ' ' + e.phase); });
 
   // ---- özelleştirme
   var curSp = 'dog';
   function renderBreeds() {
     var el = document.getElementById('breeds');
     el.innerHTML = pet.getBreeds(curSp).map(function (b) {
-      return '<button class="chip' + (b.id === pet.breed ? ' on' : '') + '" data-breed="' + b.id + '"><span class="sw">' +
-        b.swatch.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</span>' + b.name + '</button>';
+      return '<button class="chip' + (b.id === pet.breed ? ' on' : '') + '" data-breed="' + b.id + '"><span class="thumb">' +
+        PetEngine.headThumb(b.id) + '</span>' + b.name + '</button>';
     }).join('');
     el.querySelectorAll('[data-breed]').forEach(function (b) {
       b.onclick = function () { pet.setBreed(b.dataset.breed); renderBreeds(); renderEyes(); };

@@ -28,8 +28,9 @@
   .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; }
   .chip { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 6px; font-size: 12px; text-align: center; line-height: 1.2; border: 2px solid transparent; }
   .chip.on { border-color: var(--accent); }
-  .sw { display: flex; border-radius: 99px; overflow: hidden; width: 54px; height: 18px; box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.12); }
-  .sw i { flex: 1; }
+  .thumb { display: block; width: 76px; height: 54px; }
+  .name { display: flex; gap: 8px; margin: 12px 0; }
+  .name input { flex: 1; font: inherit; font-size: 15px; padding: 10px 14px; border-radius: 14px; border: 2px solid #F3CFD9; background: #fff; color: var(--text); }
   .eyes { display: flex; flex-wrap: wrap; gap: 8px; }
   .eye { display: flex; align-items: center; gap: 6px; padding: 8px 10px; font-size: 12px; border: 2px solid transparent; }
   .eye.on { border-color: var(--accent); }
@@ -46,23 +47,29 @@
 
   <div class="stats" id="stats"></div>
 
+  <div class="name"><input id="petName" maxlength="24" placeholder="Hayvanına bir isim ver…"><button class="primary" id="saveName">Kaydet</button></div>
+
   <div class="btns">
     <button class="primary" data-cmd="treat">🦴 Elle besle</button>
-    <button class="primary" data-cmd="bath">🚿 Yıkat</button>
-    <button class="primary" data-cmd="ball">⚽ Top at</button>
+    <button class="primary" data-cmd="bath">🧽 Yıkat</button>
+    <button class="primary" data-cmd="light">💡 Işık</button>
     <button data-cmd="feed">🍖 Mama kabı</button>
     <button data-cmd="water">💧 Su ver</button>
     <button data-cmd="pet">🤚 Sev</button>
-    <button data-cmd="sleep">😴 Uyut</button>
-    <button data-cmd="wake">☀️ Uyandır</button>
+    <button data-cmd="ball">⚽ Top</button>
+    <button data-cmd="laser">🔴 Lazer</button>
+    <button data-cmd="bubbles">🫧 Baloncuk</button>
+    <button data-cmd="butterfly">🦋 Kelebek</button>
     <button data-cmd="celebrate">🎉 Kutla</button>
+    <button data-cmd="sound" id="soundBtn">🔊 Ses açık</button>
   </div>
 
   <div class="hint">
-    <b>Mama:</b> sol alttaki mamayı hayvanın ağzına sürükle. Elleriyle uzanır, ağzını açar. Bırakınca patileriyle tutup yer, sonra ağzını siler.<br>
-    <b>Su:</b> su kabını hayvana sürükle. Kabı iki eliyle tutup içer.<br>
-    <b>Top:</b> topu tut ve hayvana doğru fırlat. Patisiyle vurur, kafa atar ya da tekme atar.<br>
-    <b>Duş:</b> duş başlığını hayvanın üstüne götür. Elleriyle köpükleri ovalar. Yerine bırakınca silkelenip kurulanır.<br>
+    <b>Mama:</b> Mama tuşuna bas, açılan menüden bir mama seç ve hayvanın ağzına sürükle. Her mamanın etkisi farklı; kartlarda 🍖 tokluk, 😊 mutluluk, 💧 su ve ⚡ enerji etkisi yazar.<br>
+    <b>Su:</b> Su kabını hayvana sürükle, kabı iki eliyle tutup içer.<br>
+    <b>Banyo:</b> Banyo tuşundan önce süngeri seç ve hayvanı köpürt. Sonra duş başlığıyla köpükleri durula. Köpük bitince duşu bırak, hayvan silkelenir.<br>
+    <b>Oyun:</b> Oyun tuşundan top, lazer, baloncuk ya da kelebek seç.<br>
+    <b>Işık:</b> Ampule basınca ışık kapanır, perde çekilir ve hayvan uyur. Tekrar basınca uyanır.<br>
     <b>Sevme:</b> parmağını hayvanın üstünde gezdir. Kafasına ya da karnına dokunmayı da dene.
   </div>
 
@@ -116,16 +123,34 @@
   pet.on('play', function () { log('topa vurdu!'); });
   renderStats(pet.getState());
 
-  var CMDS = { treat: 'feedTreat', bath: 'bathe', ball: 'throwBall', feed: 'feed', water: 'giveWater', pet: 'petOnce', sleep: 'sleep', wake: 'wake', celebrate: 'celebrate' };
-  document.querySelectorAll('[data-cmd]').forEach(function (b) { b.onclick = function () { pet[CMDS[b.dataset.cmd]](); }; });
+  var CMDS = { treat: 'feedTreat', bath: 'bathe', ball: 'throwBall', feed: 'feed', water: 'giveWater', pet: 'petOnce', light: 'toggleLights', celebrate: 'celebrate' };
+  var soundOn = true;
+  document.querySelectorAll('[data-cmd]').forEach(function (b) {
+    b.onclick = function () {
+      var c = b.dataset.cmd;
+      if (c === 'laser' || c === 'bubbles' || c === 'butterfly') pet.startGame(c);
+      else if (c === 'sound') { soundOn = !soundOn; pet.setSound(soundOn); b.textContent = soundOn ? '🔊 Ses açık' : '🔇 Ses kapalı'; }
+      else pet[CMDS[c]]();
+    };
+  });
+  // isim
+  var nameIn = document.getElementById('petName');
+  try { nameIn.value = localStorage.getItem('petName') || ''; } catch (e) {}
+  pet.setName(nameIn.value);
+  document.getElementById('saveName').onclick = function () {
+    pet.setName(nameIn.value); try { localStorage.setItem('petName', nameIn.value); } catch (e) {}
+    if (nameIn.value) pet.celebrate();
+  };
+  pet.on('feed', function (e) { if (e.phase === 'end') log('yedi: ' + e.food); });
+  pet.on('game', function (e) { log('oyun ' + e.name + ' ' + e.phase); });
 
   // ---- özelleştirme
   var curSp = 'dog';
   function renderBreeds() {
     var el = document.getElementById('breeds');
     el.innerHTML = pet.getBreeds(curSp).map(function (b) {
-      return '<button class="chip' + (b.id === pet.breed ? ' on' : '') + '" data-breed="' + b.id + '"><span class="sw">' +
-        b.swatch.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</span>' + b.name + '</button>';
+      return '<button class="chip' + (b.id === pet.breed ? ' on' : '') + '" data-breed="' + b.id + '"><span class="thumb">' +
+        PetEngine.headThumb(b.id) + '</span>' + b.name + '</button>';
     }).join('');
     el.querySelectorAll('[data-breed]').forEach(function (b) {
       b.onclick = function () { pet.setBreed(b.dataset.breed); renderBreeds(); renderEyes(); };

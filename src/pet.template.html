@@ -24,7 +24,10 @@
  *   {type:'setState', state:{stats:{...}, sleeping:false, lastUpdate:1700000000000}}
  *   {type:'getState'}  {type:'setTimeScale', value:1}  {type:'setColors', colors:{...}}
  *   {type:'pause'} {type:'resume'} {type:'play', name:'growl'}
- * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'sleep'|'wake'|'breed'|'breeds'|'state', data:{...}}
+ *   {type:'feedFood', food:'kibble'|'meat'|'treat'|'veggie'|'milk'|'cake'}  {type:'getFoods'}
+ *   {type:'lights', on:true|false}  {type:'toggleLights'}  {type:'game', name:'ball'|'laser'|'bubbles'|'butterfly'}  {type:'stopGame'}
+ *   {type:'setName', name:'Pamuk'}  {type:'sound', on:true|false}  {type:'headThumb', breed:'kangal'}
+ * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -34,6 +37,7 @@
     species: q.get('species') || 'dog',
     breed: q.get('breed') || undefined,
     eyes: q.get('eyes') || undefined,
+    name: q.get('name') || '',
     timeScale: parseFloat(q.get('timeScale') || '1')
   });
   window.pet = pet;
@@ -58,6 +62,15 @@
       case 'treat': pet.feedTreat(); break;
       case 'bath': pet.bathe(); break;
       case 'ball': pet.throwBall(); break;
+      case 'feedFood': pet.feedFood(cmd.food); break;
+      case 'getFoods': send('foods', pet.getFoods()); return;
+      case 'lights': pet.setLights(!!cmd.on); break;
+      case 'toggleLights': pet.toggleLights(); break;
+      case 'game': pet.startGame(cmd.name); break;
+      case 'stopGame': pet.stopGame(); break;
+      case 'setName': pet.setName(cmd.name); break;
+      case 'sound': pet.setSound(!!cmd.on); break;
+      case 'headThumb': send('headThumb', { breed: cmd.breed, svg: PetEngine.headThumb(cmd.breed, cmd.eyes) }); return;
       case 'setBreed': pet.setBreed(cmd.breed); break;
       case 'setEyes': pet.setEyes(cmd.eyes); break;
       case 'getBreeds': send('breeds', pet.getBreeds(cmd.species)); return;
