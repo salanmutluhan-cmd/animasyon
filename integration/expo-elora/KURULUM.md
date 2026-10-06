@@ -37,3 +37,9 @@ Hazır paketi kullanıyorsan bu adımları yapmana gerek yok; zip içindeki proj
 - Sağ üstteki **Konuş** butonuyla istediğin zaman konuşma başlatılabilir.
 
 Hayvanın verileri (seviye, para, kıyafetler, görevler) telefonda `pet-state` anahtarıyla ayrı saklanır; regl verilerine karışmaz.
+
+## Google Play: kod küçültme ve karartma (R8)
+
+`plugins/withAndroidMinify.js` eklentisi Android release derlemelerinde R8'i (kod küçültme + karartma) ve kaynak küçültmeyi açar.
+`app.json` içindeki `plugins` listesine `"./plugins/withAndroidMinify"` eklenmelidir. Kütüphanelerin bozulmaması için koruma kuralları `proguard-rules.pro` dosyasına otomatik yazılır.
+Yayına göndermeden önce `preview` profiliyle bir APK alıp telefonda denemen önerilir (reklamlar, pati dostu, takvim, bildirimler).
