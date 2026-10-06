@@ -8,7 +8,57 @@
  
  // Reklam SDK'sı native bir modül gerektirir; Expo Go içinde bulunmaz. Burada
  // güvenli (try/catch) şekilde yüklüyoruz ki Expo Go ile test ederken uygulama
-@@ -49,7 +50,8 @@
+@@ -31,6 +32,8 @@
+ const BannerAdSize = AdMobModule?.BannerAdSize;
+ const InterstitialAd = AdMobModule?.InterstitialAd;
+ const AdEventType = AdMobModule?.AdEventType;
++const RewardedAd = AdMobModule?.RewardedAd;
++const RewardedAdEventType = AdMobModule?.RewardedAdEventType;
+ 
+ // Gerçek reklamlar Google'da yeni bir hesap/uygulama için ilk günlerde hiç
+ // görünmeyebilir ("no fill") — bu normaldir, kod hatası değildir. Kodun
+@@ -44,12 +47,49 @@
+ const USE_TEST_ADS = process.env.EXPO_PUBLIC_USE_TEST_ADS === "true";
+ const BANNER_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.BANNER : "ca-app-pub-8745931553835647/2996282662";
+ const INTERSTITIAL_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.INTERSTITIAL : "ca-app-pub-8745931553835647/5415396599";
++// Pati dostu: reklam izleyerek pati parası kazanma (ödüllü reklam)
++const REWARDED_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.REWARDED : "ca-app-pub-8745931553835647/9451314687";
++// Pati dostu: hayvanı ya da ismini değiştirince gösterilen geçiş reklamı
++const PET_INTERSTITIAL_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.INTERSTITIAL : "ca-app-pub-8745931553835647/5415396599";
++
++// Ödüllü reklamı yükleyip gösterir. Kullanıcı sonuna kadar izlerse true döner.
++// Reklamlar kapalıyken (Expo Go testi) geliştirme modunda ödül doğrudan verilir ki para sistemi denenebilsin.
++function showRewardedAd() {
++  return new Promise((resolve) => {
++    if (!ADS_ENABLED || !RewardedAd || !RewardedAdEventType || !AdEventType) { resolve(typeof __DEV__ !== "undefined" && __DEV__); return; }
++    let earned = false, done = false, loaded = false;
++    let ad;
++    try { ad = RewardedAd.createForAdRequest(REWARDED_AD_UNIT_ID); } catch (e) { resolve(false); return; }
++    const subs = [];
++    const finish = (v) => { if (done) return; done = true; subs.forEach((u) => { try { u && u(); } catch (e) { /* yoksay */ } }); resolve(v); };
++    subs.push(ad.addAdEventListener(RewardedAdEventType.LOADED, () => { loaded = true; try { ad.show(); } catch (e) { finish(false); } }));
++    subs.push(ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => { earned = true; }));
++    subs.push(ad.addAdEventListener(AdEventType.CLOSED, () => finish(earned)));
++    subs.push(ad.addAdEventListener(AdEventType.ERROR, () => finish(false)));
++    ad.load();
++    setTimeout(() => { if (!loaded) finish(false); }, 15000); // reklam gelmezse vazgeç
++  });
++}
++// Hayvan / isim değişince geçiş reklamı (her seferinde taze yüklenir)
++function showPetInterstitial() {
++  if (!ADS_ENABLED || !InterstitialAd || !AdEventType) return;
++  try {
++    const ad = InterstitialAd.createForAdRequest(PET_INTERSTITIAL_AD_UNIT_ID);
++    const subs = [];
++    const clean = () => subs.forEach((u) => { try { u && u(); } catch (e) { /* yoksay */ } });
++    subs.push(ad.addAdEventListener(AdEventType.LOADED, () => { try { ad.show(); } catch (e) { clean(); } }));
++    subs.push(ad.addAdEventListener(AdEventType.CLOSED, clean));
++    subs.push(ad.addAdEventListener(AdEventType.ERROR, clean));
++    ad.load();
++  } catch (e) { /* reklam gösterilemezse sessizce geç */ }
++}
+ // Kaç regl girişinde bir geçiş reklamı gösterilsin (varsayılan 10). Bu sayıyı
+ // değiştirmek istersen bana söylemen yeterli, tek satır kod değişikliği.
  const AD_PERIOD_INTERVAL = 10;
  
  // Reklam ana anahtarı — false yapılırsa tüm reklamlar kapanır.
@@ -18,7 +68,7 @@
  
  Notifications.setNotificationHandler({
    handleNotification: async () => ({
-@@ -246,8 +248,35 @@
+@@ -246,8 +286,35 @@
    painLevels: {},
    flowLevels: {},
    medications: {},
@@ -54,7 +104,7 @@
  const ANIMALS = ["cat", "dog", "rabbit", "bird", "fish", "turtle", "bug", "paw"];
  
  // Play Store paket adı (app.json > android.package ile aynı) — "Bizi
-@@ -513,6 +542,7 @@
+@@ -513,6 +580,7 @@
      bannerNoData: "Takvim sekmesinden \"Regl gir\" tuşuna basıp bir güne dokunarak regl başlangıcını işaretle.",
      thisCycle: "Bu döngü",
      todaysLog: "Bugünün kaydı",
@@ -62,7 +112,7 @@
      painLevelLabel: (v) => `Ağrı düzeyi: ${v}/10`,
      whatToWatch: "Regl döneminde nelere dikkat etmeli?",
      careTips: ["Sıcak su torbası kramp ağrısını hafifletebilir.", "Bol su içmek şişkinliği azaltmaya yardımcı olur.", "Hafif yürüyüş ya da esneme hareketleri ağrıyı rahatlatabilir.", "Tuz ve kafein tüketimini azaltmak şişkinliği azaltabilir."],
-@@ -648,6 +678,7 @@
+@@ -648,6 +716,7 @@
      bannerNoData: "Tap \"Log period\" on the Calendar tab and tap a day to mark the start of your period.",
      thisCycle: "This cycle",
      todaysLog: "Today's log",
@@ -70,7 +120,7 @@
      painLevelLabel: (v) => `Pain level: ${v}/10`,
      whatToWatch: "What to watch for during your period?",
      careTips: ["A hot water bottle can ease cramp pain.", "Drinking plenty of water can help reduce bloating.", "Light walking or stretching can ease pain.", "Cutting back on salt and caffeine can reduce bloating."],
-@@ -954,7 +985,7 @@
+@@ -954,7 +1023,7 @@
  
  /* ---------------------------------- Takvim ---------------------------------- */
  
@@ -79,7 +129,7 @@
    const year = monthDate.getFullYear();
    const month = monthDate.getMonth();
    const firstOfMonth = new Date(year, month, 1);
-@@ -1002,7 +1033,7 @@
+@@ -1002,7 +1071,7 @@
            const dateObj = new Date(year, month, d, 12, 0, 0);
            const iso = toISO(dateObj);
            const c = classifyDay(dateObj, iso, ctx);
@@ -88,7 +138,7 @@
  
            let bg = theme.bg, color = theme.ink, fontWeight = "400", borderW = 0, borderStyle = "solid", borderColor = "transparent";
            if (c.isPeriod) {
-@@ -1091,7 +1122,7 @@
+@@ -1091,7 +1160,7 @@
    );
  }
  
@@ -97,7 +147,7 @@
    const [text, setText] = useState("");
    const [medText, setMedText] = useState("");
    const [pain, setPain] = useState(painLevel || 5);
-@@ -1114,6 +1145,13 @@
+@@ -1114,6 +1183,13 @@
            </TouchableOpacity>
          </View>
  
@@ -111,7 +161,7 @@
          {isPeriodDay && (
            <View style={{ marginBottom: 18 }}>
              <Text style={{ fontSize: 12.5, fontWeight: "700", color: theme.muted, marginBottom: 8 }}>{s.flowTitle}</Text>
-@@ -1359,6 +1397,7 @@
+@@ -1359,6 +1435,7 @@
    const [painLevels, setPainLevels] = useState({});
    const [flowLevels, setFlowLevels] = useState({});
    const [medications, setMedications] = useState({});
@@ -119,7 +169,7 @@
    const [monthDate, setMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
    const [notifOpen, setNotifOpen] = useState(false);
    const [pregDateInput, setPregDateInput] = useState(todayISO);
-@@ -1366,6 +1405,7 @@
+@@ -1366,6 +1443,7 @@
    const [logMode, setLogMode] = useState(false);
    const [dayModalDate, setDayModalDate] = useState(null);
    const [flowModalDate, setFlowModalDate] = useState(null);
@@ -127,7 +177,7 @@
  
    const theme = themeOf(settings.darkMode);
    const lang = settings.language || "tr";
-@@ -1385,6 +1425,7 @@
+@@ -1385,6 +1463,7 @@
            setPainLevels(parsed.painLevels || {});
            setFlowLevels(parsed.flowLevels || {});
            setMedications(parsed.medications || {});
@@ -135,7 +185,7 @@
          }
        } catch (e) { /* ilk kullanım */ } finally { setLoading(false); }
      })();
-@@ -1392,8 +1433,8 @@
+@@ -1392,8 +1471,8 @@
  
    useEffect(() => {
      if (loading) return;
@@ -146,7 +196,7 @@
  
    const info = useCycleInfo(periodDays, settings);
    const periodDaysSet = useMemo(() => new Set(periodDays), [periodDays]);
-@@ -1505,6 +1546,7 @@
+@@ -1505,6 +1584,7 @@
      setNotes((prev) => { const arr = [...(prev[iso] || [])]; arr.splice(idx, 1); const next = { ...prev }; if (arr.length) next[iso] = arr; else delete next[iso]; return next; });
    }
    function savePain(iso, v) { setPainLevels((prev) => ({ ...prev, [iso]: v })); }
@@ -154,7 +204,7 @@
    function saveFlow(iso, l) { setFlowLevels((prev) => ({ ...prev, [iso]: l })); }
    function createPreset(text) { setSettings((st) => { const list = st.presetNotes || []; if (list.includes(text)) return st; return { ...st, presetNotes: [...list, text], presetNotesCustomized: true }; }); }
    function removePreset(text) { setSettings((st) => ({ ...st, presetNotes: (st.presetNotes || []).filter((p) => p !== text), presetNotesCustomized: true })); }
-@@ -1517,6 +1559,29 @@
+@@ -1517,6 +1597,29 @@
      setMedications((prev) => { const arr = [...(prev[iso] || [])]; arr.splice(idx, 1); const next = { ...prev }; if (arr.length) next[iso] = arr; else delete next[iso]; return next; });
    }
  
@@ -184,7 +234,7 @@
    useEffect(() => {
      (async () => {
        try {
-@@ -1631,11 +1696,11 @@
+@@ -1631,11 +1734,11 @@
    function renderTabContent(tabId) {
      switch (tabId) {
        case "anasayfa":
@@ -198,7 +248,7 @@
              logMode={logMode} setLogMode={setLogMode}
              autoPeriod={settings.autoPeriod !== false} onAutoPeriodChange={setAutoPeriodEnabled} autoRun={meta.autoRun} nowISO={nowISO}
              avgPeriodLength={settings.avgPeriodLength} />
-@@ -1650,7 +1715,7 @@
+@@ -1650,7 +1753,7 @@
          return (
            <ProfilTab theme={theme} lang={lang} s={s} settings={settings} setSettings={setSettings} setPeriodDays={setPeriodDays}
              setPregnancy={setPregnancy} setMeta={setMeta} setNotes={setNotes} setPainLevels={setPainLevels} setFlowLevels={setFlowLevels}
@@ -207,7 +257,7 @@
              pregnancy={pregnancy} info={info} painLevels={painLevels} notes={notes} medications={medications}
              pregDateInput={pregDateInput} setPregDateInput={setPregDateInput}
              showPregPicker={showPregPicker} setShowPregPicker={setShowPregPicker} pickPhoto={pickPhoto}
-@@ -1674,6 +1739,7 @@
+@@ -1674,6 +1777,7 @@
          notes={notes[dayModalDate] || []} presetNotes={settings.presetNotes || DEFAULT_PRESET_NOTES[lang]}
          painLevel={painLevels[dayModalDate]} isPeriodDay={dayModalDate ? periodDaysSet.has(dayModalDate) : false}
          flowLevel={flowLevels[dayModalDate]} medications={medications[dayModalDate] || []} presetMedications={settings.presetMedications || []}
@@ -215,18 +265,20 @@
          onAddNote={(t) => addNote(dayModalDate, t)} onDeleteNote={(i) => deleteNote(dayModalDate, i)}
          onSavePain={(v) => savePain(dayModalDate, v)} onSaveFlow={(l) => saveFlow(dayModalDate, l)}
          onCreatePreset={createPreset} onRemovePreset={removePreset}
-@@ -1681,6 +1747,10 @@
+@@ -1681,6 +1785,12 @@
          onCreateMedPreset={createMedPreset} onRemoveMedPreset={removeMedPreset}
          onClose={() => setDayModalDate(null)} />
  
 +      <PetScreen visible={petOpen} onClose={() => setPetOpen(false)} title={lang === "en" ? "My pet" : "Pati dostum"}
 +        cycle={petCycle} symptoms={settings.presetNotes || DEFAULT_PRESET_NOTES[lang]} medications={settings.presetMedications || []}
-+        today={petToday} onLog={handlePetLog} />
++        today={petToday} onLog={handlePetLog}
++        onRewardedAd={showRewardedAd} onInterstitial={showPetInterstitial}
++        banner={ADS_ENABLED && BannerAd ? <BannerAd unitId={BANNER_AD_UNIT_ID} size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER} /> : null} />
 +
        <Modal visible={notifOpen} transparent animationType="fade" onRequestClose={() => setNotifOpen(false)}>
          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setNotifOpen(false)}>
            <View style={{ position: "absolute", top: 70, right: 16, width: 270, backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, padding: 12 }}>
-@@ -1707,6 +1777,9 @@
+@@ -1707,6 +1817,9 @@
              <Text style={{ fontSize: 12, color: theme.muted }}>{formatDate(today, lang)}</Text>
            </View>
          </View>
@@ -236,7 +288,7 @@
          <TouchableOpacity onPress={() => setNotifOpen(true)} style={{ width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center" }}>
            <Icon name="bell-outline" size={18} color={theme.ink} />
            {notifications.length > 0 && <View style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: theme.accent, borderWidth: 2, borderColor: theme.bg }} />}
-@@ -1746,8 +1819,9 @@
+@@ -1746,8 +1859,9 @@
  
  /* ---------------------------------- Anasayfa ---------------------------------- */
  
@@ -247,7 +299,7 @@
    const todayPain = painLevels[todayISO];
    const todayMeds = medications[todayISO] || [];
    const phase = info.hasData ? PHASE_INFO[getPhase(info)] : null;
-@@ -1765,6 +1839,22 @@
+@@ -1765,6 +1879,22 @@
          <CardTitle theme={theme}>{s.thisCycle}</CardTitle>
          <CycleWheel theme={theme} info={info} s={s} />
        </Card>
@@ -270,7 +322,7 @@
        {phase && (
          <Card theme={theme}>
            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-@@ -1776,9 +1866,15 @@
+@@ -1776,9 +1906,15 @@
            <Text style={{ fontSize: 13, color: theme.ink, lineHeight: 19 }}>{phase.desc[lang]}</Text>
          </Card>
        )}
@@ -287,7 +339,7 @@
            {todayPain != null && <Text style={{ fontSize: 13, color: theme.ink, marginBottom: 8 }}>{s.painLevelLabel(todayPain)}</Text>}
            {todayNotes.map((n, i) => (
              <View key={i} style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}>
-@@ -1926,7 +2022,7 @@
+@@ -1926,7 +2062,7 @@
    }, [seedKey]);
  }
  
@@ -296,7 +348,7 @@
    const autoDone = autoRun ? Math.min(autoRun.length, Math.max(0, diffDays(fromISO(nowISO), fromISO(autoRun.start)) + 1)) : 0;
    const [yearView, setYearView] = useState(false);
    const [yearViewYear, setYearViewYear] = useState(monthDate.getFullYear());
-@@ -1945,7 +2041,7 @@
+@@ -1945,7 +2081,7 @@
        ) : (
          <>
            <MonthCalendar theme={theme} lang={lang} monthDate={monthDate} setMonthDate={setMonthDate} periodDaysSet={periodDaysSet} info={info}
@@ -305,7 +357,7 @@
            <TouchableOpacity onPress={() => setLogMode((v) => !v)}
              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 13, borderRadius: 12, borderWidth: 1.5,
                borderColor: logMode ? theme.rose : theme.border, backgroundColor: logMode ? theme.rose : theme.surface, marginBottom: 14 }}>
-@@ -2281,7 +2377,7 @@
+@@ -2281,7 +2417,7 @@
  
  /* ---------------------------------- Profil ---------------------------------- */
  
@@ -314,7 +366,7 @@
    const [confirmReset, setConfirmReset] = useState(false);
    const [exporting, setExporting] = useState(false);
    const [presetInput, setPresetInput] = useState("");
-@@ -2509,7 +2605,7 @@
+@@ -2509,7 +2645,7 @@
              <View style={{ flexDirection: "row", gap: 8 }}>
                <Btn theme={theme} title={s.resetYes} onPress={() => {
                  setPeriodDays([]); setSettings(DEFAULTS.settings); setPregnancy(DEFAULTS.pregnancy);

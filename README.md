@@ -85,6 +85,29 @@ GitHub'da dosyaya tıklamak sayfayı çalıştırmaz, sadece kodunu gösterir. D
 Butonların üstündeki kırmızı nokta: alınacak ödül var / hayvan hasta / bugün henüz konuşulmadı.
 Uygulamada hiçbir yerde emoji yok; bütün simgeler SVG olarak çizilir.
 
+## İlk giriş: hayvanını seç
+
+İlk açılışta **Hayvanını seç** penceresi çıkar: Köpek / Kedi, cins (kafa resimleriyle), göz rengi ve isim. İsim verilmeden kaydedilmez.
+Daha sonra sağ üstteki **Hayvanım** tuşundan değiştirilebilir. Seçim yapıldıktan sonra yapılan her değişiklikte (cins, göz, isim) uygulamaya `interstitial` olayı gelir; uygulama geçiş reklamı gösterir.
+
+## Mama stoku
+
+Mamalar artık sınırsız değil. Başlangıçta **8 kuru mama** var. Mama menüsünde her mamanın üstünde kaç tane kaldığı yazar, altında paket satın alma düğmesi vardır:
+
+| Mama | Paket | Fiyat |
+|---|---|---|
+| Kuru mama | 5 adet | 8 pati parası |
+| Tavuk but / Ton balığı | 3 adet | 12 |
+| Kemik bisküvi / Balık ödülü | 3 adet | 9 |
+| Havuç / Kedi otu | 3 adet | 6 |
+| Süt | 3 adet | 8 |
+| Pati kurabiyesi | 2 adet | 14 |
+
+## Reklam izleyerek pati parası
+
+Mağazada ve mama menüsünde "Reklam izle, 15 pati parası kazan" düğmesi var (günde en fazla 5 kez).
+Düğmeye basılınca uygulamaya `adRequest` olayı gelir; uygulama ödüllü reklamı gösterir, kullanıcı sonuna kadar izlerse `{type:'adReward'}`, izlemezse `{type:'adFailed'}` gönderir.
+
 ## Pati parası zor kazanılır
 
 Her bakımın **günlük bir sınırı** var. Sınır dolunca bakım yine yapılır, hayvan yine sevinir ama para ve deneyim vermez.
@@ -343,6 +366,8 @@ Cins, göz rengi, istatistikler, sağlık, seviye, pati parası, kıyafetler, g�
 | `hud` | `tools` ile aynı | sol üstte seviye / para, sağ üstte görev, mağaza, dolap, ruh hali, veteriner butonları |
 | `clock` | `true` | pencere telefonun saatine göre sabah / akşam / gece olur |
 | `waterReminder` | `120` | su hatırlatma aralığı (dakika). `0` → kapalı |
+| `setup` | `true` | ilk açılışta hayvan seçme penceresi |
+| `waitState` | `false` | `true` ise uygulama `setState` gönderene kadar (en fazla 4 sn) `stats` gönderilmez; kayıt üzerine boş durum yazılmaz (pet.html'de açık) |
 | `ask` | `false` | uygulama `logOptions` göndermese de hayvan günde bir kez kendiliğinden sorsun |
 | `labels` | `{food:'Mama', water:'Su', game:'Oyun', light:'Işık', bath:'Banyo', home:'Oda', sponge:'Sünger', shower:'Duş', brush:'Tarak', tooth:'Diş'}` | tuş yazıları |
 

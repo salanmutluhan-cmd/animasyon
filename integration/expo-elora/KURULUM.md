@@ -20,6 +20,8 @@ Hazır paketi kullanıyorsan bu adımları yapmana gerek yok; zip içindeki proj
    - Ana sayfada çevrim çarkının altına bir **"Pati dostun"** kartı eklenir.
    - Takvimde güne dokununca açılan pencereye ve ana sayfadaki "Bugünün kaydı" kartına **ruh hali** eklenir (6 yüz simgesi).
    - Reklamlar Expo Go ile test için geçici olarak kapalı (`ADS_ENABLED = false`). Play Store'a yüklemeden önce `true` yap.
+   - Pati dostu penceresinin altında banner reklam, mağaza/mama menüsünde **ödüllü reklam** (ca-app-pub-8745931553835647/9451314687), hayvan ya da ismi değişince **geçiş reklamı** (ca-app-pub-8745931553835647/5415396599). Reklamlar kapalıyken (Expo Go) ödüllü reklam düğmesi test için parayı doğrudan verir.
+   - Hayvanın kaydı (para, seviye, mama, kıyafet) her açılışta telefondan yeniden okunur.
    - Hayvanla konuşurken verilen cevaplar `handlePetLog` ile **o günün kaydına** yazılır:
      - **Ruh hali** → `saveMood`
      - **Şikayet** → `addNote` (kullanıcı kendisi yazdıysa hazır şikayetlere de eklenir)

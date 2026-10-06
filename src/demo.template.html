@@ -182,6 +182,9 @@
   });
   // uygulamadaki hazır şikayet ve ilaç listeleri (demo için örnek)
   pet.setLogOptions({ symptoms: PetEngine.DEFAULT_SYMPTOMS, medications: ['Parol', 'Majezik', 'Apranax'] });
+  // demoda gerçek reklam yok: ödüllü reklam isteği hemen ödül sayılır
+  pet.on('adRequest', function () { log('ödüllü reklam isteği (demo: hemen ödül)'); setTimeout(function () { pet.adRewarded(); }, 600); });
+  pet.on('interstitial', function (e) { log('geçiş reklamı gösterilecek: ' + e.reason); });
   pet.on('log', function (e) { log('takvime kayıt → ' + e.kind + ': ' + e.value + ' (' + e.date + ')'); });
   document.getElementById('talkBtn').onclick = function () { pet.startTalk('checkin'); };
   document.getElementById('forecastBtn').onclick = function () { pet.setCycle({ phase: 'pms', daysUntilNext: 1 }); pet.startTalk('forecast'); };

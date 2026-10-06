@@ -35,6 +35,8 @@
  *                   {type:'remindWater'} {type:'waterReminder', minutes:120} {type:'userDrankWater'}
  *   İlerleme: {type:'reward', xp:10, coins:5} {type:'getProgress'} {type:'getShop'} {type:'buy', id:'crown'} {type:'wear', id:'crown'} {type:'unwear', slot:'head'}
  *             {type:'claimQuest', id:'feed'} {type:'panel', name:'quests'|'shop'|'wardrobe'|'mood'|'vet'}
+ *   Reklam: {type:'adReward'} (kullanıcı ödüllü reklamı izledi) {type:'adFailed'}  Hayvanım: {type:'profile'}  Mama: {type:'buyFood', id:'meat'}
+ *   Giden: 'adRequest' (ödüllü reklam göster), 'interstitial' (hayvan/isim değişti, geçiş reklamı göster), 'profile', 'buyFood'
  *   Diğer: {type:'say', text:'Merhaba!', duration:3} {type:'setHour', hour:21} (test için; null → telefon saati)
  * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state'|
  *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult'|
@@ -49,6 +51,8 @@
     breed: q.get('breed') || undefined,
     eyes: q.get('eyes') || undefined,
     name: q.get('name') || '',
+    setup: q.get('setup') !== '0',
+    waitState: q.get('wait') !== '0', // uygulama setState gönderene kadar (en fazla 4 sn) durum gönderilmez
     waterReminder: q.get('waterReminder') != null ? parseFloat(q.get('waterReminder')) : undefined,
     timeScale: parseFloat(q.get('timeScale') || '1')
   });
@@ -84,6 +88,10 @@
       case 'medicine': pet.giveMedicine(cmd.id); break;
       case 'cycle': pet.setCycle(cmd.phase || cmd.daysUntilNext != null ? { phase: cmd.phase, day: cmd.day, daysUntilNext: cmd.daysUntilNext } : null); break;
       case 'logOptions': pet.setLogOptions(cmd); break;
+      case 'adReward': pet.adRewarded(); break;
+      case 'adFailed': pet.adFailed(); break;
+      case 'profile': pet.openProfile(false); break;
+      case 'buyFood': send('buyFoodResult', Object.assign({ id: cmd.id }, pet.buyFood(cmd.id))); break;
       case 'talk': pet.startTalk(cmd.kind || 'checkin'); break;
       case 'endTalk': pet.endTalk(true); break;
       case 'userMood': pet.setUserMood(cmd.mood); break;

@@ -595,7 +595,7 @@
         const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
         if (!AC) return null;
         try { this.ctx = new AC(); } catch (e) { return null; }
-        this.out = this.ctx.createGain(); this.out.gain.value = 0.6; this.out.connect(this.ctx.destination);
+        this.out = this.ctx.createGain(); this.out.gain.value = 0.9; this.out.connect(this.ctx.destination);
         const len = this.ctx.sampleRate, buf = this.ctx.createBuffer(1, len, len), d = buf.getChannelData(0);
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
         this.noiseBuf = buf;
@@ -603,7 +603,14 @@
       if (this.ctx.state === 'suspended') { try { this.ctx.resume(); } catch (e) { /* yoksay */ } }
       return this.ctx;
     }
-    unlock() { this._c(); }
+    // Tarayıcılar sesi ancak gerçek bir dokunuştan sonra açar (dokunmatikte: parmak kalkınca).
+    unlock() {
+      const c = this._c(); if (!c) return;
+      if (c.state !== 'running') { try { const p = c.resume(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* yoksay */ } }
+      if (!this._primed) { // iOS / Android WebView için sessiz bir ses çalarak kilidi aç
+        try { const b = c.createBuffer(1, 1, 22050), s = c.createBufferSource(); s.buffer = b; s.connect(c.destination); s.start(0); this._primed = true; } catch (e) { /* yoksay */ }
+      }
+    }
     _env(g, t, a, peak, dur) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); }
     tone(freq, dur, o) {
       const c = this._c(); if (!c) return; o = o || {};
@@ -1293,6 +1300,9 @@
     medLog:    { xp: 3, coins: 1, cap: 1 },
     forecast:  { xp: 2, coins: 1, cap: 1 }
   };
+  // mama paketleri: n adet, price pati parası. Başlangıçta 8 kuru mama verilir.
+  const FOOD_PACKS = { kibble: { n: 5, price: 8 }, meat: { n: 3, price: 12 }, treat: { n: 3, price: 9 }, veggie: { n: 3, price: 6 }, milk: { n: 3, price: 8 }, cake: { n: 2, price: 14 } };
+  REWARDS.ad = { xp: 0, coins: 15, cap: 5 }; // ödüllü reklam: günde en fazla 5
   const QUEST_REWARD = { xp: 10, coins: 5 }, QUEST_BONUS = 10, LEVEL_BONUS = 5;
 
   // ================================================================ Günlük görev havuzu (her gün 4 görev: 1 kişisel + 3 bakım)
@@ -1478,7 +1488,9 @@
       this.listeners = {};
       this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80, health: 100 }, options.stats || {});
       // ilerleme: seviye, pati parası, kıyafetler, günlük görevler
-      this.progress = { level: 1, xp: 0, coins: 0, owned: [], wear: { head: null, eyes: null, neck: null, body: null }, quests: { date: '', list: [], bonus: false }, daily: null };
+      this.progress = { level: 1, xp: 0, coins: 0, food: { kibble: 8 }, adopted: false, owned: [], wear: { head: null, eyes: null, neck: null, body: null }, quests: { date: '', list: [], bonus: false }, daily: null };
+      this.setupEnabled = options.setup !== false; this.prof = null;
+      this._holdStats = !!options.waitState; // uygulama kaydı geri yükleyene kadar 'stats' gönderme
       this.talk = null; this.logOpts = null; this.connected = false; this.askAlways = !!options.ask; this._talkT = 8;
       this.showHud = options.hud !== undefined ? !!options.hud : options.tools !== false;
       this.useClock = options.clock !== false; this.hourOverride = null; this._clockT = 0; this._clockInfo = null;
@@ -1657,12 +1669,16 @@
     _layout() {
       const rect = this.container.getBoundingClientRect();
       const w = rect.width || 400, h = rect.height || 420;
-      const Wv = Math.max(680, 600 * w / h), Hv = Wv * h / w;
+      const tall = h / w > 1.45; // uzun telefon ekranı
+      const Wv = Math.max(tall ? 540 : 680, 600 * w / h), Hv = Wv * h / w;
       this.Wv = Wv; this.Hv = Hv;
       this.svg.setAttribute('viewBox', '0 0 ' + f(Wv) + ' ' + f(Hv));
       this.trayH = this.showTools ? 112 : 0;
-      this.groundY = Hv - this.trayH - (this.showTools ? 44 : 30);
-      this.s = this.scaleOpt || clamp(Math.min((this.groundY - 40) / 440, Wv * 0.6 / 330), 0.6, 1.25);
+      // ekran çok uzunsa hayvan ve alt tuşlar yukarı (ortaya) taşınır, üst kısım boş kalmaz
+      const extra = this.showTools ? Math.max(0, Hv - Wv * 1.42) : 0;
+      this.trayTop = Hv - this.trayH - extra * 0.45;
+      this.groundY = this.trayTop - (this.showTools ? 44 : 30) - extra * 0.4;
+      this.s = this.scaleOpt || clamp(Math.min((this.groundY - 40) / 440, Wv * (tall ? 0.7 : 0.6) / 330), 0.6, 1.25);
       this.petX = Wv / 2;
       const fy = this.groundY - 74;
       if (this.r.room) {
@@ -1678,7 +1694,7 @@
       if (this.menu) this._closeMenu();
       this.floorY = this.groundY + 22; // topun durduğu zemin
       if (this.showTools) {
-        const ty = Hv - this.trayH / 2 - 4;
+        const ty = this.trayTop + this.trayH / 2 - 4;
         this.slots = { food: { x: 54, y: ty }, water: { x: 148, y: ty }, game: { x: 242, y: ty }, light: { x: 336, y: ty }, bath: { x: Wv - 54, y: ty },
           home: { x: 54, y: ty }, brush: { x: 148, y: ty }, tooth: { x: 242, y: ty }, sponge: { x: Wv - 148, y: ty }, shower: { x: Wv - 54, y: ty } };
         const place = (el, sl) => el.setAttribute('transform', 'translate(' + f(sl.x) + ' ' + f(sl.y) + ')');
@@ -1689,7 +1705,8 @@
       }
       const B = this.ball;
       if (B.active) { B.x = clamp(B.x, B.r, Wv - B.r); B.y = Math.min(B.y, this.floorY - B.r); }
-      if (this.r) { this._renderScene(); this._layoutHud(); if (this.panel) this._closePanel(); }
+      // ekran boyu değişince (ör. klavye açılınca) açık pencereler kapanmaz, yeni boyuta göre yeniden çizilir
+      if (this.r) { this._renderScene(); this._layoutHud(); if (this.panel) this._openPanel(this.panel.kind); if (this.talk) this._renderTalk(); }
     }
 
     // ---------------------------------------------------------------- özelleştirme
@@ -1829,6 +1846,8 @@
           this.pointer = null;
         }
       };
+      this._ph.unlock = () => this.sfx.unlock();
+      ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => svg.addEventListener(ev, this._ph.unlock));
       svg.addEventListener('pointerdown', this._ph.down);
       svg.addEventListener('pointermove', this._ph.move);
       svg.addEventListener('pointerup', this._ph.up);
@@ -1836,6 +1855,7 @@
     }
     _unbindPointer() {
       if (!this.svg || !this._ph) return;
+      ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => this.svg.removeEventListener(ev, this._ph.unlock));
       this.svg.removeEventListener('pointerdown', this._ph.down);
       this.svg.removeEventListener('pointermove', this._ph.move);
       this.svg.removeEventListener('pointerup', this._ph.up);
@@ -1886,7 +1906,7 @@
     // ---------------------------------------------------------------- tepsi menüleri
     _menuItems(kind) {
       const sp = this.species;
-      if (kind === 'food') return Object.keys(FOODS).map((id) => ({ id, kind, label: foodName(id, sp), sub: FOODS[id].desc, fx: FOODS[id].fx, icon: foodIcon(id, sp, PALETTES_PROPS, this.C.line) }));
+      if (kind === 'food') return Object.keys(FOODS).map((id) => ({ id, kind, label: foodName(id, sp), sub: FOODS[id].desc, fx: FOODS[id].fx, icon: foodIcon(id, sp, PALETTES_PROPS, this.C.line), count: this.foodCount(id), pack: FOOD_PACKS[id] }));
       return [
         { id: 'ball', kind, label: 'Top', sub: 'Fırlat', icon: '<g transform="scale(0.85)">' + ballMarkup(this.C.line) + '</g>' },
         { id: 'laser', kind, label: 'Lazer', sub: 'Parmağını gezdir', icon: '<circle r="16" fill="#FF3B5C" opacity="0.25"/><circle r="8" fill="#FF3B5C"/><circle cx="-2" cy="-2" r="2.5" fill="#fff"/>' },
@@ -1897,12 +1917,13 @@
     _openMenu(kind) {
       this._closeMenu();
       const items = this._menuItems(kind), SC = SCENE;
-      const cw = 104, ch = kind === 'food' ? 132 : 112, gap = 8, pad = 10;
+      const cw = 104, ch = kind === 'food' ? 160 : 112, gap = 8, pad = 10;
       const cols = Math.min(items.length, Math.max(2, Math.floor((this.Wv - 20 - pad * 2 + gap) / (cw + gap))), kind === 'food' ? 3 : 4);
       const rows = Math.ceil(items.length / cols);
-      const W = cols * cw + (cols - 1) * gap + pad * 2, H = rows * ch + (rows - 1) * gap + pad * 2;
+      const adRow = kind === 'food' ? 52 : 0;
+      const W = cols * cw + (cols - 1) * gap + pad * 2, H = rows * ch + (rows - 1) * gap + pad * 2 + adRow;
       const sl = this.slots[kind];
-      const x0 = clamp(sl.x - W / 2, 8, this.Wv - W - 8), y0 = this.Hv - this.trayH - 10 - H;
+      const x0 = clamp(sl.x - W / 2, 8, this.Wv - W - 8), y0 = this.trayTop - 10 - H;
       const cells = [];
       let m = '<rect x="' + f(x0) + '" y="' + f(y0) + '" width="' + f(W) + '" height="' + f(H) + '" rx="24" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
         '<path d="M' + f(sl.x - 12) + ' ' + f(y0 + H - 1.5) + ' L' + f(sl.x) + ' ' + f(y0 + H + 11) + ' L' + f(sl.x + 12) + ' ' + f(y0 + H - 1.5) + ' Z" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
@@ -1926,14 +1947,36 @@
             px += pw[j];
           });
         }
+        if (it.pack) { // stok rozeti + paket satın alma
+          const empty = it.count <= 0;
+          m += '<rect x="' + (cw - 40) + '" y="6" width="34" height="22" rx="11" fill="' + (empty ? '#E05A5A' : '#5CC9A7') + '"/>' +
+            '<text x="' + (cw - 23) + '" y="21.5" text-anchor="middle" font-family="' + FONT + '" font-size="12.5" font-weight="900" fill="#fff">' + it.count + '</text>' +
+            '<rect x="6" y="130" width="' + (cw - 12) + '" height="24" rx="12" fill="' + (this.progress.coins >= it.pack.price ? '#FFE3EC' : '#F3EEEC') + '" stroke="#F3B6C9" stroke-width="1.5"/>' +
+            '<text x="12" y="146.5" font-family="' + FONT + '" font-size="11.5" font-weight="900" fill="' + SC.text + '">+' + it.pack.n + '</text>' +
+            icon('coin', cw - 46, 142, 15) + '<text x="' + (cw - 36) + '" y="146.5" font-family="' + FONT + '" font-size="11.5" font-weight="900" fill="#B07A12">' + it.pack.price + '</text>';
+          if (empty) m += '<rect x="2" y="2" width="' + (cw - 4) + '" height="' + (ch - 36) + '" rx="16" fill="#fff" opacity="0.45"/>';
+        }
         m += '</g>';
       });
+      if (adRow) { // reklam izleyerek pati parası
+        const ay = y0 + H - pad - 42, left = this.adsLeft();
+        m += '<rect x="' + f(x0 + pad) + '" y="' + f(ay) + '" width="' + f(W - pad * 2) + '" height="42" rx="21" fill="' + (left ? '#FFF1D6' : '#F3EEEC') + '" stroke="' + (left ? '#F4C26B' : '#E6DCD8') + '" stroke-width="2"/>' +
+          icon('gift', x0 + pad + 24, ay + 21, 22) + '<text x="' + f(x0 + pad + 42) + '" y="' + f(ay + 26) + '" font-family="' + FONT + '" font-size="13" font-weight="800" fill="' + (left ? '#B07A12' : '#B9A6A0') + '">' +
+          (left ? 'Reklam izle, ' + REWARDS.ad.coins + ' pati parası kazan' : 'Bugünlük reklam hakkın bitti') + '</text>';
+        cells.push({ x: x0 + pad, y: ay, w: W - pad * 2, h: 42, item: { kind: 'ad' } });
+      }
       this.r.menu.innerHTML = m;
       this.menu = { kind, cells };
     }
     _closeMenu() { if (this.r.menu) this.r.menu.innerHTML = ''; this.menu = null; }
     _menuPick(cell, w, pid) {
       const it = cell.item, from = { x: cell.x + cell.w / 2, y: cell.y + 36 };
+      if (it.kind === 'ad') { this.requestAdReward(w); return; }
+      if (it.kind === 'food' && (w.y > cell.y + 126 || this.foodCount(it.id) <= 0)) { // paket al
+        const res = this.buyFood(it.id, w);
+        if (res.ok || this.menu) this._openMenu('food');
+        return;
+      }
       this._closeMenu();
       if (it.kind === 'food') this._startDrag('food', w.x, w.y, pid, { food: it.id, from });
       else if (it.id === 'ball') this._grabBall(w, pid);
@@ -2030,7 +2073,7 @@
     }
     _gamePointerDown(w, pid) {
       const g = this.game;
-      if (w.y > this.Hv - this.trayH - 6) return false;
+      if (w.y > this.trayTop - 6) return false;
       if (g.kind === 'hide') return this._hideTap(w);
       if (g.kind === 'laser') { g.pid = pid; g.dot.on = true; g.dot.x = w.x; g.dot.y = Math.min(w.y, this.floorY); return true; }
       if (g.kind === 'bubbles') {
@@ -2154,7 +2197,7 @@
         const a = h[0], z = h[h.length - 1], dt = Math.max(0.016, (z.t - a.t) / 1000);
         B.vx = clamp((z.x - a.x) / dt, -1600, 1600); B.vy = clamp((z.y - a.y) / dt, -1800, 1600);
       } else { B.vx = 0; B.vy = 0; }
-      if (this.showTools && B.y > this.Hv - this.trayH - 10 && Math.hypot(B.vx, B.vy) < 300) B.active = false; // tepsiye geri bırakıldı
+      if (this.showTools && B.y > this.trayTop - 10 && Math.hypot(B.vx, B.vy) < 300) B.active = false; // tepsiye geri bırakıldı
       this._emit('drag', { tool: 'ball', phase: 'end', used: B.active });
     }
     throwBall() { // programatik: top köşeden hayvana doğru atılır
@@ -2272,6 +2315,7 @@
         if (Math.hypot(d.x - m.x, d.y - m.y) < 90 * this.s + 24 && this._canInteract()) {
           if (MEDS[d.food]) { used = true; this._medTake(d.food); }
           else if (this.stats.fullness >= 96 && !FOODS[d.food].drink) this._startAction(ACTIONS.refuse(this));
+          else if (!this._useFood(d.food)) this.say('Bu mama bitti, menüden alabilirsin', 2.8, { icon: 'food' });
           else { used = true; this._clearActions(); this._startAction(ACTIONS.nom(this, d.food)); }
         }
       } else if (d.type === 'water') {
@@ -2489,27 +2533,27 @@
 
     // ================================================================ üst bilgi çubuğu (seviye, pati parası, butonlar)
     _hudButtons() {
-      return [['quests', 'list', 'Görevler'], ['shop', 'bag', 'Mağaza'], ['wardrobe', 'hanger', 'Dolap'], ['talk', 'chat', 'Konuş'], ['vet', 'vet', 'Veteriner']];
+      return [['pet', 'paw', 'Hayvanım'], ['quests', 'list', 'Görevler'], ['shop', 'bag', 'Mağaza'], ['wardrobe', 'hanger', 'Dolap'], ['talk', 'chat', 'Konuş'], ['vet', 'vet', 'Veteriner']];
     }
     _layoutHud() {
       const r = this.r; if (!r.hudBtns) return;
-      const SC = SCENE, x = this.Wv - 40;
+      const SC = SCENE, x = this.Wv - 44;
       this.hudHits = [];
       let m = '';
       this._hudButtons().forEach((b, i) => {
-        const y = 42 + i * 74;
+        const y = 46 + i * 82;
         this.hudHits.push({ id: b[0], x, y });
-        m += '<g transform="translate(' + f(x) + ' ' + y + ')"><circle r="26" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
-          icon(b[1], 0, 0, 30) +
-          '<text y="42" text-anchor="middle" font-family="' + FONT + '" font-size="11" font-weight="800" fill="' + SC.text + '" stroke="#fff" stroke-width="3" paint-order="stroke">' + b[2] + '</text>' +
-          '<circle data-b="' + b[0] + '" cx="19" cy="-19" r="8" fill="#FF5E86" stroke="#fff" stroke-width="2.5" display="none"/></g>';
+        m += '<g transform="translate(' + f(x) + ' ' + y + ')"><circle r="31" fill="rgba(255,255,255,0.95)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
+          icon(b[1], 0, 0, 38) +
+          '<text y="47" text-anchor="middle" font-family="' + FONT + '" font-size="12.5" font-weight="800" fill="' + SC.text + '" stroke="#fff" stroke-width="3.5" paint-order="stroke">' + b[2] + '</text>' +
+          '<circle data-b="' + b[0] + '" cx="23" cy="-23" r="9" fill="#FF5E86" stroke="#fff" stroke-width="2.5" display="none"/></g>';
       });
       r.hudBtns.innerHTML = m;
       this._renderHud();
     }
     _hudAt(w) {
       if (!this.hudHits || this.scene !== 'room') return null;
-      const h = this.hudHits.find((b) => Math.hypot(w.x - b.x, w.y - b.y) < 30);
+      const h = this.hudHits.find((b) => Math.hypot(w.x - b.x, w.y - b.y) < 36);
       return h ? h.id : null;
     }
     _renderHud() {
@@ -2750,13 +2794,15 @@
     // ================================================================ paneller (görevler, mağaza, dolap, veteriner)
     _openPanel(kind) {
       if (kind === 'mood' || kind === 'talk') { this.startTalk(kind === 'mood' ? 'mood' : 'checkin'); return; }
+      if (kind === 'pet') { this.openProfile(false); return; }
+      if (kind === 'profile' && !this.prof) return;
       this._closeMenu();
       const r = this.r; if (!r.panel) return;
       const SC = SCENE, pr = this.progress, L = this.C.line;
       this._checkQuests();
       const W = Math.min(this.Wv - 28, 620), hits = [];
       const tx = (x, y, s, size, weight, color, anchor) => '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="' + (anchor || 'start') + '" font-family="' + FONT + '" font-size="' + size + '" font-weight="' + (weight || 700) + '" fill="' + (color || SC.text) + '">' + esc(s) + '</text>';
-      const ttl = { quests: ['list', 'Günlük görevler'], shop: ['bag', 'Mağaza'], wardrobe: ['hanger', 'Dolap'], vet: ['vet', 'Veteriner'] }[kind];
+      const ttl = { quests: ['list', 'Günlük görevler'], shop: ['bag', 'Mağaza'], wardrobe: ['hanger', 'Dolap'], vet: ['vet', 'Veteriner'], profile: ['paw', this.prof && this.prof.first ? 'Hayvanını seç' : 'Hayvanım'] }[kind];
       if (!ttl) return;
       let m = '', H = 70;
       const grid = (ids, cellFn) => {
@@ -2822,12 +2868,21 @@
             hits.push({ x, y, w: cw, h: ch, fn: (w) => this._clothTap(kind, id, w) });
             return s;
           });
+          if (kind === 'shop') {
+            const left = this.adsLeft(), yy = H;
+            m += '<rect x="16" y="' + H + '" width="' + (W - 32) + '" height="46" rx="23" fill="' + (left ? '#FFF1D6' : '#F3EEEC') + '" stroke="' + (left ? '#F4C26B' : '#E6DCD8') + '" stroke-width="2"/>' +
+              icon('gift', 42, H + 23, 24) + tx(62, H + 29, left ? 'Reklam izle, ' + REWARDS.ad.coins + ' pati parası kazan (bugün ' + left + ' hak)' : 'Bugünlük reklam hakkın bitti', 14, 800, left ? '#B07A12' : '#B9A6A0');
+            hits.push({ x: 16, y: yy, w: W - 32, h: 46, fn: (w) => this.requestAdReward(w) });
+            H += 56;
+          }
           if (kind === 'wardrobe' && CLOTH_SLOTS.some((k) => pr.wear[k])) {
             m += '<rect x="' + (W / 2 - 80) + '" y="' + H + '" width="160" height="40" rx="20" fill="#F6DCE3"/>' + tx(W / 2, H + 26, 'Hepsini çıkar', 14, 800, SC.text, 'middle');
             const yy = H; hits.push({ x: W / 2 - 80, y: yy, w: 160, h: 40, fn: () => { this.unwear(); this._openPanel('wardrobe'); } });
             H += 52;
           }
         }
+      } else if (kind === 'profile') {
+        const o = this._profileBody(W, tx, hits); m += o.m; H = o.H;
       } else if (kind === 'vet') {
         const hp = Math.round(this.stats.health), sick = hp < 40;
         m += tx(24, 74, 'Sağlık', 14, 800) + '<rect x="84" y="62" width="' + (W - 170) + '" height="14" rx="7" fill="#F6DCE3"/>' +
@@ -2846,13 +2901,13 @@
         });
         H += ch + 16;
       }
-      const x0 = (this.Wv - W) / 2, y0 = Math.max(14, (this.Hv - this.trayH - H) / 2);
-      const card = '<rect x="0" y="0" width="' + this.Wv + '" height="' + this.Hv + '" fill="#2B2140" opacity="0.28"/>' +
+      const x0 = (this.Wv - W) / 2, y0 = kind === 'profile' ? Math.max(14, this.Hv - H - 10) : Math.max(14, (this.trayTop - H) / 2);
+      const card = '<rect x="0" y="0" width="' + this.Wv + '" height="' + this.Hv + '" fill="#2B2140" opacity="' + (kind === 'profile' ? 0.12 : 0.28) + '"/>' +
         '<g transform="translate(' + f(x0) + ' ' + f(y0) + ')"><rect width="' + W + '" height="' + H + '" rx="26" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
         icon(ttl[0], 38, 35, 28) + tx(58, 42, ttl[1], 20, 900) +
-        '<circle cx="' + (W - 30) + '" cy="32" r="18" fill="#F6DCE3"/><path d="M' + (W - 37) + ' 25 l14 14 M' + (W - 23) + ' 25 l-14 14" stroke="' + SC.text + '" stroke-width="3.5" stroke-linecap="round"/>' +
+        (kind === 'profile' && this.prof.first ? '' : '<circle cx="' + (W - 30) + '" cy="32" r="18" fill="#F6DCE3"/><path d="M' + (W - 37) + ' 25 l14 14 M' + (W - 23) + ' 25 l-14 14" stroke="' + SC.text + '" stroke-width="3.5" stroke-linecap="round"/>') +
         m + '</g>';
-      hits.push({ x: W - 50, y: 12, w: 40, h: 40, fn: () => this._closePanel() });
+      if (!(kind === 'profile' && this.prof.first)) hits.push({ x: W - 50, y: 12, w: 40, h: 40, fn: () => (kind === 'profile' ? this._profileCancel() : this._closePanel()) });
       r.panel.innerHTML = card;
       this.panel = { kind, x0, y0, W, H, hits: hits.map((h) => ({ x: h.x + x0, y: h.y + y0, w: h.w, h: h.h, fn: h.fn })) };
       this._emit('panel', { name: kind, phase: 'open' });
@@ -2868,6 +2923,7 @@
       const P = this.panel;
       const h = P.hits.find((b) => w.x > b.x && w.x < b.x + b.w && w.y > b.y && w.y < b.y + b.h);
       if (h) { h.fn(w, pid); return; }
+      if (P.kind === 'profile') return; // hayvan seçme penceresi dışarı dokununca kapanmaz
       if (w.x < P.x0 || w.x > P.x0 + P.W || w.y < P.y0 || w.y > P.y0 + P.H) this._closePanel();
     }
     _clothTap(kind, id, w) {
@@ -3296,7 +3352,7 @@
         y += 58;
       }
       m += tx(24, y + 4, t.steps.length > 1 ? (t.i + 1) + ' / ' + t.steps.length : '', 11, 700, '#C9A79E');
-      const H = y + 14, y0 = Math.max(150, this.Hv - this.trayH - 12 - H);
+      const H = y + 14, y0 = Math.max(150, this.trayTop - 12 - H);
       const tailX = clamp(this.petX - x0, 60, W - 60);
       const card = '<g transform="translate(' + f(x0) + ' ' + f(y0) + ')"><path d="M' + f(tailX - 16) + ' 2 L' + f(tailX) + ' -18 L' + f(tailX + 16) + ' 2 Z" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
         '<rect width="' + W + '" height="' + H + '" rx="26" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/><rect x="' + f(tailX - 14) + '" y="0" width="28" height="5" fill="#FFF8FA"/>' +
@@ -3396,6 +3452,7 @@
       if (!this.showTools || this.talk || this.panel || this.game || this.drag || this.sleeping || this.hidden || this.scene !== 'room' || this._sceneMoving()) return;
       if (this.action && this.action.busy) return;
       if (!this.connected && !this.askAlways) return;
+      if (this.setupEnabled && !this.progress.adopted) return;
       this._checkQuests();
       const d = this.progress.daily, c = this.cycle, T = this._logOpts().today;
       if (c && c.daysUntilNext != null && c.daysUntilNext >= 0 && c.daysUntilNext <= 2 && c.phase !== 'period' && !d.asked.forecast) { this.startTalk('forecast'); return; }
@@ -3403,12 +3460,12 @@
       if (c && c.phase === 'period' && !T.medications.length && d.medRetryAt && Date.now() > d.medRetryAt) { d.medRetryAt = null; this.startTalk('meds'); }
     }
     // serbest yazı için küçük bir HTML kutusu (SVG içinde yazı girilemez)
-    _askText(placeholder, cb) {
+    _askText(placeholder, cb, initial) {
       const c = this.container; if (typeof document === 'undefined' || !c) return;
       try { if (getComputedStyle(c).position === 'static') c.style.position = 'relative'; } catch (e) { /* yoksay */ }
       let box = this._inputBox;
       const btn = 'font:800 15px -apple-system,Roboto,sans-serif;border:0;border-radius:14px;padding:0 14px;';
-      if (!box) {
+      if (!box || !box.isConnected) {
         box = document.createElement('div');
         box.style.cssText = 'position:absolute;left:4%;right:4%;display:none;gap:8px;z-index:5;background:#fff;padding:8px;border-radius:18px;box-shadow:0 6px 20px rgba(120,60,70,.25);';
         box.innerHTML = '<input type="text" maxlength="40" style="flex:1;min-width:0;font:600 16px -apple-system,Roboto,sans-serif;padding:11px 12px;border-radius:12px;border:2px solid #F3CFD9;background:#fff;color:#4A2C22;outline:none">' +
@@ -3417,14 +3474,9 @@
         c.appendChild(box); this._inputBox = box;
       }
       const inp = box.querySelector('input'), ok = box.querySelector('[data-a="ok"]'), no = box.querySelector('[data-a="no"]');
-      let top = 12;
-      try {
-        const t = this.talk, pt = this.svg.createSVGPoint(); pt.x = 0; pt.y = t && t.ui ? t.ui.y0 - 10 : this.Hv * 0.4;
-        const sp = pt.matrixTransform(this.svg.getScreenCTM()), cr = c.getBoundingClientRect();
-        top = Math.max(8, sp.y - cr.top - 66);
-      } catch (e) { /* yoksay */ }
-      box.style.top = top + 'px'; box.style.display = 'flex';
-      inp.value = ''; inp.placeholder = placeholder;
+      // klavye aşağıdan açılır; kutu ekranın en üstünde durur ki yazılan görünsün
+      box.style.top = '8px'; box.style.display = 'flex';
+      inp.value = initial || ''; inp.placeholder = placeholder;
       const done = (v) => { this._hideText(); if (v) cb(v); };
       ok.onclick = () => done(inp.value.trim()); no.onclick = () => done('');
       inp.onkeydown = (e) => { if (e.key === 'Enter') done(inp.value.trim()); };
@@ -3432,9 +3484,160 @@
     }
     _hideText() { if (this._inputBox) { this._inputBox.style.display = 'none'; try { this._inputBox.querySelector('input').blur(); } catch (e) { /* yoksay */ } } }
 
+    // ================================================================ mama stoku: mamalar pati parasıyla paket paket alınır
+    foodCount(id) { return (this.progress.food && this.progress.food[id]) | 0; }
+    buyFood(id, at) {
+      const pk = FOOD_PACKS[id], pr = this.progress;
+      if (!pk) return { ok: false, reason: 'unknown' };
+      if (pr.coins < pk.price) {
+        if (at) this._iconToast(at.x, at.y, [['coin', (pk.price - pr.coins) + ' pati parası eksik']], { color: '#E05A5A', size: 14, vy: -30, life: 1.6 });
+        return { ok: false, reason: 'coins' };
+      }
+      pr.coins -= pk.price;
+      pr.food[id] = this.foodCount(id) + pk.n;
+      if (at) this._iconToast(at.x, at.y, [['check', '+' + pk.n + ' ' + foodName(id, this.species)]], { color: '#3FAE8C', size: 14, vy: -30, life: 1.4 });
+      this.sfx.play('coin');
+      this._renderHud();
+      this._emit('buyFood', { id, n: pk.n, price: pk.price, left: pr.food[id] });
+      return { ok: true };
+    }
+    _useFood(id) {
+      const pr = this.progress;
+      if (!FOODS[id]) return true;
+      if (this.foodCount(id) <= 0) return false;
+      pr.food[id] = this.foodCount(id) - 1;
+      if (pr.food[id] === 0) setTimeout(() => this.say(foodName(id, this.species) + ' bitti. Mama menüsünden alabilirsin.', 3.4, { icon: 'food' }), 4800);
+      return true;
+    }
+
+    // ================================================================ reklam izleyerek pati parası (uygulama ödüllü reklamı gösterir)
+    adsLeft() { this._checkQuests(); return Math.max(0, REWARDS.ad.cap - (this.progress.daily.c.ad || 0)); }
+    requestAdReward(at) {
+      this._adAt = at || { x: this.Wv / 2, y: this.Hv * 0.4 };
+      if (this.adsLeft() <= 0) { this._iconToast(this._adAt.x, this._adAt.y, [['lock', 'Bugünlük reklam hakkın doldu']], { color: '#B9A6A0', size: 14, vy: -30, life: 1.8 }); return false; }
+      this._emit('adRequest', { kind: 'rewarded', coins: REWARDS.ad.coins, left: this.adsLeft() });
+      return true;
+    }
+    // uygulama, kullanıcı reklamı sonuna kadar izleyince çağırır
+    adRewarded() {
+      const at = this._adAt || this._rewardAt();
+      if (!this._earn('ad', at)) return false;
+      this.say('Teşekkürler! Pati paran arttı', 2.8, { icon: 'coin' });
+      if (this.panel) this._openPanel(this.panel.kind);
+      if (this.menu && this.menu.kind === 'food') this._openMenu('food');
+      return true;
+    }
+    adFailed() {
+      const at = this._adAt || this._rewardAt();
+      this._iconToast(at.x, at.y, [['lock', 'Şu an reklam yok, biraz sonra dene']], { color: '#B9A6A0', size: 14, vy: -30, life: 2 });
+    }
+
+    // ================================================================ hayvanım: tür, cins, göz rengi, isim (ilk girişte zorunlu)
+    openProfile(first) {
+      if (!this.showTools) return false;
+      this._closeMenu(); this._closePanel();
+      if (this.talk) this.endTalk();
+      if (this.game) this.stopGame();
+      if (this.scene !== 'room') this.goRoom();
+      this.prof = { first: !!first, tab: 'breed', species: this.species, orig: { breed: this.breed, eyes: this.eyes, name: this.name } };
+      this._openPanel('profile');
+      return true;
+    }
+    _profileThumb(breed, x, y, w, h) {
+      const t = PetEngine.headThumb(breed); if (!t) return '';
+      return '<g transform="translate(' + f(x) + ' ' + f(y) + ')">' + t.replace('width="100%" height="100%"', 'width="' + f(w) + '" height="' + f(h) + '"') + '</g>';
+    }
+    _profileBody(W, tx, hits) {
+      const P = this.prof, SC = SCENE;
+      let m = '', H = 56;
+      const tabs = [['breed', 'Tür ve cins'], ['eyes', 'Göz rengi'], ['name', 'İsim']];
+      const tw = (W - 32 - 2 * 8) / 3;
+      tabs.forEach((t, i) => {
+        const on = P.tab === t[0], x = 16 + i * (tw + 8);
+        m += '<rect x="' + f(x) + '" y="' + H + '" width="' + f(tw) + '" height="36" rx="18" fill="' + (on ? '#F06C8B' : '#fff') + '" stroke="' + (on ? '#F06C8B' : '#F6DCE3') + '" stroke-width="2"/>' + tx(x + tw / 2, H + 23, t[1], 14, 800, on ? '#fff' : SC.text, 'middle');
+        hits.push({ x, y: H, w: tw, h: 36, fn: () => { P.tab = t[0]; this._openPanel('profile'); } });
+      });
+      H += 48;
+      if (P.tab === 'breed') {
+        const sw = (W - 32 - 8) / 2;
+        [['dog', 'Köpek', 'golden'], ['cat', 'Kedi', 'tabby']].forEach((sp, i) => {
+          const on = P.species === sp[0], x = 16 + i * (sw + 8);
+          m += '<rect x="' + f(x) + '" y="' + H + '" width="' + f(sw) + '" height="40" rx="20" fill="' + (on ? '#FFE3EC' : '#fff') + '" stroke="' + (on ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (on ? 3 : 2) + '"/>' +
+            this._profileThumb(sp[2], x + 14, H + 4, 46, 32) + tx(x + 70, H + 26, sp[1], 15, 800);
+          hits.push({ x, y: H, w: sw, h: 40, fn: () => { P.species = sp[0]; if (this.species !== sp[0]) { this.setBreed(DEFAULT_BREED[sp[0]]); } this._openPanel('profile'); } });
+        });
+        H += 52;
+        const ids = Object.keys(BREEDS).filter((k) => BREEDS[k].species === P.species);
+        const cw = 104, ch = 92, gap = 8, cols = Math.max(3, Math.floor((W - 32 + gap) / (cw + gap)));
+        const cw2 = (W - 32 - gap * (cols - 1)) / cols;
+        ids.forEach((id, i) => {
+          const x = 16 + (i % cols) * (cw2 + gap), y = H + Math.floor(i / cols) * (ch + gap), on = id === this.breed;
+          const nm = BREEDS[id].name.replace(/ \(.*\)/, '');
+          m += '<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(cw2) + '" height="' + ch + '" rx="16" fill="#fff" stroke="' + (on ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (on ? 3.5 : 2) + '"/>' +
+            this._profileThumb(id, x + (cw2 - 84) / 2, y + 6, 84, 58) + tx(x + cw2 / 2, y + 80, nm.length > 15 ? nm.slice(0, 14) + '…' : nm, 11.5, 800, SC.text, 'middle');
+          hits.push({ x, y, w: cw2, h: ch, fn: () => { this.setBreed(id); this._openPanel('profile'); } });
+        });
+        H += Math.ceil(ids.length / cols) * (ch + gap) + 4;
+      } else if (P.tab === 'eyes') {
+        const ids = [null].concat(Object.keys(EYES)), cols = 3, gap = 8, cw = (W - 32 - gap * 2) / cols, ch = 44;
+        ids.forEach((id, i) => {
+          const x = 16 + (i % cols) * (cw + gap), y = H + Math.floor(i / cols) * (ch + gap), on = id === this.eyes;
+          const e = id ? EYES[id] : null;
+          let dot = '';
+          if (!e) dot = icon('paw', x + 22, y + ch / 2, 20);
+          else if (e.c) dot = '<circle cx="' + f(x + 22) + '" cy="' + f(y + ch / 2) + '" r="11" fill="' + e.c + '" stroke="#fff" stroke-width="2"/>';
+          else dot = '<path d="M' + f(x + 22) + ' ' + f(y + ch / 2 - 11) + ' A11 11 0 0 0 ' + f(x + 22) + ' ' + f(y + ch / 2 + 11) + ' Z" fill="' + e.l + '"/><path d="M' + f(x + 22) + ' ' + f(y + ch / 2 - 11) + ' A11 11 0 0 1 ' + f(x + 22) + ' ' + f(y + ch / 2 + 11) + ' Z" fill="' + e.r + '"/>';
+          m += '<rect x="' + f(x) + '" y="' + f(y) + '" width="' + f(cw) + '" height="' + ch + '" rx="22" fill="#fff" stroke="' + (on ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (on ? 3 : 2) + '"/>' + dot +
+            tx(x + 40, y + ch / 2 + 5, e ? e.name : 'Cinse göre', 12.5, 800);
+          hits.push({ x, y, w: cw, h: ch, fn: () => { this.setEyes(id); this._openPanel('profile'); } });
+        });
+        H += Math.ceil(ids.length / cols) * (ch + gap) + 4;
+      } else {
+        m += tx(W / 2, H + 30, this.name || 'Henüz bir ismi yok', 24, 900, this.name ? SC.text : '#C9A79E', 'middle');
+        m += '<rect x="' + f(W / 2 - 110) + '" y="' + (H + 50) + '" width="220" height="46" rx="23" fill="#fff" stroke="#F06C8B" stroke-width="2.5"/>' + icon('chat', W / 2 - 80, H + 73, 22) + tx(W / 2 - 62, H + 79, this.name ? 'İsmini değiştir' : 'İsim ver', 15, 800);
+        const yy = H + 50; hits.push({ x: W / 2 - 110, y: yy, w: 220, h: 46, fn: () => this._askName() });
+        H += 112;
+      }
+      // alt butonlar
+      const bw = P.first ? W - 32 : (W - 32 - 10) / 2;
+      if (!P.first) {
+        m += '<rect x="16" y="' + H + '" width="' + f(bw) + '" height="46" rx="23" fill="#F6DCE3"/>' + tx(16 + bw / 2, H + 29, 'Vazgeç', 16, 800, SC.text, 'middle');
+        const yy = H; hits.push({ x: 16, y: yy, w: bw, h: 46, fn: () => this._profileCancel() });
+      }
+      const sx = P.first ? 16 : 16 + bw + 10;
+      m += '<rect x="' + f(sx) + '" y="' + H + '" width="' + f(bw) + '" height="46" rx="23" fill="#F06C8B"/>' + tx(sx + bw / 2, H + 29, P.first && !this.name ? 'Devam' : 'Kaydet', 16, 800, '#fff', 'middle');
+      const yy = H; hits.push({ x: sx, y: yy, w: bw, h: 46, fn: () => this._profileSave() });
+      H += 60;
+      return { m, H };
+    }
+    _askName() {
+      this._askText('Hayvanının ismini yaz', (v) => { this.setName(v.slice(0, 20)); if (this.prof) this._openPanel('profile'); }, this.name);
+    }
+    _profileSave() {
+      const P = this.prof; if (!P) return;
+      if (!this.name) { P.tab = 'name'; this._openPanel('profile'); this._askName(); return; }
+      const changed = P.orig.breed !== this.breed || P.orig.eyes !== this.eyes || P.orig.name !== this.name;
+      this.prof = null; this._closePanel();
+      this.progress.adopted = true;
+      this._emit('profile', { breed: this.breed, species: this.species, eyes: this.eyes, name: this.name, first: P.first, changed });
+      if (!P.first && changed) this._emit('interstitial', { reason: 'profile' }); // uygulama geçiş reklamı gösterir
+      this._startAction(ACTIONS.celebrate(this));
+      this.say(P.first ? 'Merhaba! Benim adım ' + this.name + '. Bana iyi bak!' : 'Yeni halimi beğendin mi?', 3.6, { icon: 'heart' });
+      this._talkT = 6;
+      this._emit('stats', this.getState());
+    }
+    _profileCancel() {
+      const P = this.prof; if (!P) return;
+      this.prof = null; this._closePanel();
+      if (this.breed !== P.orig.breed) this.setBreed(P.orig.breed);
+      if (this.eyes !== P.orig.eyes) this.setEyes(P.orig.eyes);
+      if (this.name !== P.orig.name) this.setName(P.orig.name);
+    }
+
     // ---------------------------------------------------------------- genel API
     feed() {
       if (this.scene === 'bath' || (this.action && this.action.name === 'eat')) return false;
+      if (!this._useFood('kibble')) { this.say('Kuru mama bitti, mama menüsünden alabilirsin', 3, { icon: 'food' }); return false; }
       this._clearActions();
       if (this.sleeping) this._enqueue(ACTIONS.wake(this));
       this._enqueue(ACTIONS.eatBowl(this));
@@ -3445,6 +3648,7 @@
     feedFood(id) {
       if (!FOODS[id]) id = 'treat';
       if (!this.showTools || this.drag || this.scene === 'bath') return false;
+      if (this.foodCount(id) <= 0) { this.say(foodName(id, this.species) + ' kalmadı, mama menüsünden alabilirsin', 3, { icon: 'food' }); return false; }
       const wasAsleep = this.sleeping, delay = wasAsleep ? 2.9 : 0;
       if (wasAsleep || this.lightsOff) this.setLights(true);
       const sl = this.slots.food;
@@ -3604,12 +3808,16 @@
       };
     }
     setState(s) {
+      this._holdStats = false;
       if (!s) return;
       if (typeof s.name === 'string') { this.name = s.name.slice(0, 24); if (this.svg) this._renderName(); }
       if (s.progress && typeof s.progress === 'object') {
         const pr = this.progress, sp = s.progress;
         if (sp.level > 0) pr.level = sp.level | 0;
         if (sp.xp >= 0) pr.xp = +sp.xp; if (sp.coins >= 0) pr.coins = +sp.coins;
+        if (sp.food && typeof sp.food === 'object') { pr.food = {}; Object.keys(FOODS).forEach((k) => { if (sp.food[k] > 0) pr.food[k] = sp.food[k] | 0; }); }
+        if (typeof sp.adopted === 'boolean') pr.adopted = sp.adopted;
+        if (pr.adopted && this.prof && this.prof.first) { this.prof = null; this._closePanel(); } // kayıt geç geldiyse seçim ekranını kapat
         if (Array.isArray(sp.owned)) pr.owned = sp.owned.filter((id) => CLOTHES[id]);
         if (sp.wear) CLOTH_SLOTS.forEach((k) => { pr.wear[k] = CLOTHES[sp.wear[k]] && pr.owned.indexOf(sp.wear[k]) >= 0 ? sp.wear[k] : null; });
         if (sp.daily && typeof sp.daily === 'object' && sp.daily.c) pr.daily = { date: sp.daily.date, c: Object.assign({}, sp.daily.c), done: Object.assign({}, sp.daily.done), asked: Object.assign({}, sp.daily.asked), lastTeeth: sp.daily.lastTeeth || null, medRetryAt: sp.daily.medRetryAt || null };
@@ -3755,6 +3963,7 @@
       this._updateNight(dt);
       this._updateScene(dt);
       this._updateSpeech(dt);
+      if (this.showTools && this.setupEnabled && !this.progress.adopted && !this.prof && !this.panel && this.t > 1.2 && !this._holdStats) this.openProfile(true);
       this._talkT -= dt;
       if (this._talkT <= 0) { this._talkT = 15; this._autoTalk(); }
       if (this.talk && !this.action && !this.sleeping) { // dinliyor: başı hafif yana eğik, elleri önünde
@@ -3773,7 +3982,8 @@
       this._updateParticles(dt);
 
       this._statsEmit -= dt;
-      if (this._statsEmit <= 0) { this._statsEmit = 1; this._emit('stats', this.getState()); }
+      if (this._holdStats && this.t > 4) this._holdStats = false;
+      if (this._statsEmit <= 0) { this._statsEmit = 1; if (!this._holdStats) this._emit('stats', this.getState()); }
     }
 
     _idle(dt, T, mood) {
@@ -4691,6 +4901,7 @@
     return svg;
   };
   PetEngine.FOODS = FOODS;
+  PetEngine.FOOD_PACKS = FOOD_PACKS;
   PetEngine.DEFAULT_SYMPTOMS = DEFAULT_SYMPTOMS;
   PetEngine.REWARDS = REWARDS;
   PetEngine.icon = icon;
@@ -4769,6 +4980,9 @@
   });
   // uygulamadaki hazır şikayet ve ilaç listeleri (demo için örnek)
   pet.setLogOptions({ symptoms: PetEngine.DEFAULT_SYMPTOMS, medications: ['Parol', 'Majezik', 'Apranax'] });
+  // demoda gerçek reklam yok: ödüllü reklam isteği hemen ödül sayılır
+  pet.on('adRequest', function () { log('ödüllü reklam isteği (demo: hemen ödül)'); setTimeout(function () { pet.adRewarded(); }, 600); });
+  pet.on('interstitial', function (e) { log('geçiş reklamı gösterilecek: ' + e.reason); });
   pet.on('log', function (e) { log('takvime kayıt → ' + e.kind + ': ' + e.value + ' (' + e.date + ')'); });
   document.getElementById('talkBtn').onclick = function () { pet.startTalk('checkin'); };
   document.getElementById('forecastBtn').onclick = function () { pet.setCycle({ phase: 'pms', daysUntilNext: 1 }); pet.startTalk('forecast'); };
