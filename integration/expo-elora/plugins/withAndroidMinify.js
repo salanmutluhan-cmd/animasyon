@@ -6,10 +6,13 @@
 // silinmemesi / adının değişmemesi gereken kısımları için koruma kuralları yazılır.
 const fs = require("fs");
 const path = require("path");
-const { withGradleProperties, withDangerousMod } = require("@expo/config-plugins");
+const { withGradleProperties, withDangerousMod, withAppBuildGradle } = require("@expo/config-plugins");
 
+// Expo sürümüne göre ayarın adı farklı: eski şablon "enableProguard...", yeni şablon "enableMinify..." okur.
+// İkisini de yazıyoruz. Kaynak küçültme (shrinkResources) yalnızca kod küçültme açıkken çalışır.
 const PROPS = {
   "android.enableProguardInReleaseBuilds": "true",
+  "android.enableMinifyInReleaseBuilds": "true",
   "android.enableShrinkResourcesInReleaseBuilds": "true",
 };
 
@@ -66,6 +69,21 @@ function withKeepRules(config) {
   ]);
 }
 
+// Güvenlik: app/build.gradle içindeki "minifyEnabled ..." satırını doğrudan "true" yapar.
+// Böyle bir satır bulunamazsa kaynak küçültmeyi kapatır ki derleme hata vermesin.
+function withMinifyGradle(config) {
+  return withAppBuildGradle(config, (config) => {
+    let g = config.modResults.contents;
+    if (/minifyEnabled\s+[^\n]+/.test(g)) {
+      g = g.replace(/minifyEnabled\s+[^\n]+/g, "minifyEnabled true");
+    } else {
+      g = g.replace(/shrinkResources\s+[^\n]+/g, "shrinkResources false");
+    }
+    config.modResults.contents = g;
+    return config;
+  });
+}
+
 module.exports = function withAndroidMinify(config) {
-  return withKeepRules(withMinifyProps(config));
+  return withKeepRules(withMinifyGradle(withMinifyProps(config)));
 };
