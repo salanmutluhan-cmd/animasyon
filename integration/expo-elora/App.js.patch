@@ -17,7 +17,7 @@
  
  // Gerçek reklamlar Google'da yeni bir hesap/uygulama için ilk günlerde hiç
  // görünmeyebilir ("no fill") — bu normaldir, kod hatası değildir. Kodun
-@@ -44,12 +47,49 @@
+@@ -44,11 +47,48 @@
  const USE_TEST_ADS = process.env.EXPO_PUBLIC_USE_TEST_ADS === "true";
  const BANNER_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.BANNER : "ca-app-pub-8745931553835647/2996282662";
  const INTERSTITIAL_AD_UNIT_ID = USE_TEST_ADS ? AdMobModule?.TestIds?.INTERSTITIAL : "ca-app-pub-8745931553835647/5415396599";
@@ -62,12 +62,10 @@
  const AD_PERIOD_INTERVAL = 10;
  
  // Reklam ana anahtarı — false yapılırsa tüm reklamlar kapanır.
--const ADS_ENABLED = true;
-+// GEÇİCİ: Expo Go ile test ederken reklamlar kapalı. Play Store için AAB almadan önce tekrar true yap.
-+const ADS_ENABLED = false;
++// Expo Go ile test ederken false yapılabilir (Expo Go'da reklam görünmez).
+ const ADS_ENABLED = true;
  
  Notifications.setNotificationHandler({
-   handleNotification: async () => ({
 @@ -246,8 +286,35 @@
    painLevels: {},
    flowLevels: {},
