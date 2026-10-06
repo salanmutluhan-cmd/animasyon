@@ -881,27 +881,130 @@
 
   const FONT = '-apple-system, Roboto, Segoe UI, sans-serif';
   function esc(t) { return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // ================================================================ SVG ikonlar (emoji yerine; 24x24, merkez 0,0)
+  const IL = '#6B4B3E';
+  const isw = (w) => ' stroke="' + IL + '" stroke-width="' + (w || 2) + '" stroke-linejoin="round" stroke-linecap="round"';
+  function faceIcon(kind) {
+    const fill = kind === 'angry' ? '#FF9A7A' : kind === 'sick' ? '#CFE8A8' : '#FFD166';
+    const ln = ' fill="none"' + isw(1.8);
+    let s = '<circle r="11" fill="' + fill + '"' + isw(2) + '/>';
+    switch (kind) {
+      case 'happy': s += '<path d="M-6 -2 Q-4 -5 -2 -2 M2 -2 Q4 -5 6 -2"' + ln + '/><path d="M-5 3 Q0 8.5 5 3"' + ln + '/><circle cx="-7" cy="2.5" r="1.8" fill="#FF8FB1"/><circle cx="7" cy="2.5" r="1.8" fill="#FF8FB1"/>'; break;
+      case 'sad': s += '<circle cx="-4" cy="-2" r="1.5" fill="' + IL + '"/><circle cx="4" cy="-2" r="1.5" fill="' + IL + '"/><path d="M-4 6 Q0 2 4 6"' + ln + '/><path d="M6.5 0 q2.2 3 0 4.4 q-2.2 -1.4 0 -4.4 Z" fill="#4FA9D6"/>'; break;
+      case 'tired': s += '<path d="M-6.5 -2 H-2 M2 -2 H6.5"' + ln + '/><circle cx="0" cy="5" r="2" fill="' + IL + '"/>'; break;
+      case 'pain': s += '<path d="M-6.5 -4.5 L-3 -2 L-6.5 0.5 M6.5 -4.5 L3 -2 L6.5 0.5"' + ln + '/><path d="M-5 5 q1.25 -2 2.5 0 t2.5 0 t2.5 0 t2.5 0"' + ln + '/>'; break;
+      case 'angry': s += '<path d="M-7 -6.5 L-2 -4 M7 -6.5 L2 -4"' + ln + '/><circle cx="-4" cy="-1" r="1.5" fill="' + IL + '"/><circle cx="4" cy="-1" r="1.5" fill="' + IL + '"/><path d="M-4 6.5 Q0 3 4 6.5"' + ln + '/>'; break;
+      case 'anxious': s += '<circle cx="-4" cy="-2" r="2.8" fill="#fff"' + isw(1.4) + '/><circle cx="4" cy="-2" r="2.8" fill="#fff"' + isw(1.4) + '/><circle cx="-4" cy="-2" r="1.2" fill="' + IL + '"/><circle cx="4" cy="-2" r="1.2" fill="' + IL + '"/>' +
+        '<path d="M-5 5.5 q1.25 -1.6 2.5 0 t2.5 0 t2.5 0 t2.5 0"' + ln + '/><path d="M8.5 -9 q2 3 0 4 q-2 -1 0 -4 Z" fill="#7FC8F8"/>'; break;
+      case 'sick': s += '<path d="M-6.5 -2 H-2 M2 -2 H6.5"' + ln + '/><path d="M-4 5.5 q2 -2 4 0 t4 0"' + ln + '/>'; break;
+      default: s += '<circle cx="-4" cy="-2" r="1.5" fill="' + IL + '"/><circle cx="4" cy="-2" r="1.5" fill="' + IL + '"/><path d="M-4 5 H4"' + ln + '/>';
+    }
+    return s;
+  }
+  let ICONS = null;
+  function iconLib() {
+    if (ICONS) return ICONS;
+    const flowerPetals = () => { let p = ''; for (let k = 0; k < 5; k++) { const a = (k * 72 - 90) * Math.PI / 180; p += '<circle cx="' + f(Math.cos(a) * 5.5) + '" cy="' + f(Math.sin(a) * 5.5) + '" r="4.2"/>'; } return p; };
+    const care = (id, sc) => '<g transform="scale(' + (sc || 0.42) + ')">' + careIcon(id, IL) + '</g>';
+    ICONS = {
+      heart: '<path d="M0 9 C-14 0 -10 -13 0 -5 C10 -13 14 0 0 9 Z" fill="#FF6F91"' + isw(2) + '/><path d="M-6 -4 q-2 2 -1 5" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/>',
+      star: '<path d="M0 -11 L3.2 -3.6 L11 -3.4 L5 1.8 L7 9.6 L0 5.2 L-7 9.6 L-5 1.8 L-11 -3.4 L-3.2 -3.6 Z" fill="#FFD166"' + isw(2) + '/>',
+      coin: '<circle r="10.5" fill="#FFD166" stroke="#D68A00" stroke-width="2"/><g fill="#D68A00"><ellipse cx="0" cy="2.6" rx="3.6" ry="2.9"/><circle cx="-4.4" cy="-2" r="1.6"/><circle cx="-1.6" cy="-4.6" r="1.6"/><circle cx="1.6" cy="-4.6" r="1.6"/><circle cx="4.4" cy="-2" r="1.6"/></g>',
+      lock: '<path d="M-5 -3 V-6 A5 5 0 0 1 5 -6 V-3" fill="none"' + isw(2.4) + '/><rect x="-8" y="-3" width="16" height="13" rx="3" fill="#C9B8B0"' + isw(2) + '/><circle cx="0" cy="3" r="1.8" fill="' + IL + '"/>',
+      check: '<circle r="10.5" fill="#5CC9A7"/><path d="M-5 0 L-1.5 4 L5.5 -4" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>',
+      close: '<circle r="10.5" fill="#fff" fill-opacity="0.3"/><path d="M-4 -4 L4 4 M4 -4 L-4 4" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>',
+      paw: '<g fill="#C98A5B"><ellipse cx="0" cy="3.5" rx="6" ry="5"/><circle cx="-7" cy="-3" r="2.6"/><circle cx="-2.6" cy="-7.4" r="2.6"/><circle cx="2.6" cy="-7.4" r="2.6"/><circle cx="7" cy="-3" r="2.6"/></g>',
+      list: '<rect x="-8" y="-9" width="16" height="20" rx="3" fill="#fff"' + isw(2) + '/><rect x="-4" y="-12" width="8" height="5" rx="2" fill="#F06C8B"' + isw(1.6) + '/><path d="M-4 -2 H4 M-4 2.5 H4 M-4 7 H1" stroke="#C9A79E" stroke-width="2" stroke-linecap="round"/>',
+      bag: '<path d="M-4 -5 V-7 A4 4 0 0 1 4 -7 V-5" fill="none"' + isw(2) + '/><path d="M-9 -5 H9 L8 10 Q0 12 -8 10 Z" fill="#FF8FB1"' + isw(2) + '/><circle cx="-4" cy="-1" r="1.3" fill="' + IL + '"/><circle cx="4" cy="-1" r="1.3" fill="' + IL + '"/>',
+      hanger: '<path d="M0 -12 q3 0 3 3 q0 2 -3 3" fill="none"' + isw(1.8) + '/><path d="M-4 -6 L4 -6 L6 0 L10 11 L-10 11 L-6 0 Z" fill="#9B8DE8"' + isw(2) + '/><path d="M-6 0 H6" stroke="#fff" stroke-width="2" opacity="0.7"/>',
+      chat: '<path d="M-10 -8 Q-10 -11 -7 -11 H7 Q10 -11 10 -8 V3 Q10 6 7 6 H-1 L-6 10 L-5 6 H-7 Q-10 6 -10 3 Z" fill="#7FC8F8"' + isw(2) + '/><g fill="#fff"><circle cx="-4.5" cy="-2.5" r="1.6"/><circle cx="0" cy="-2.5" r="1.6"/><circle cx="4.5" cy="-2.5" r="1.6"/></g>',
+      vet: '<rect x="-10" y="-7" width="20" height="16" rx="4" fill="#fff"' + isw(2) + '/><path d="M-4 -7 V-10 H4 V-7" fill="none"' + isw(2) + '/><path d="M0 -3 V6 M-4.5 1.5 H4.5" stroke="#E05A5A" stroke-width="3" stroke-linecap="round"/>',
+      drop: '<path d="M0 -11 C5 -3 7 1 7 4 A7 7 0 0 1 -7 4 C-7 1 -5 -3 0 -11 Z" fill="#4FA9D6"' + isw(1.8) + '/><path d="M-3 3 q0 3 3 4" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round"/>',
+      food: '<g transform="rotate(-35)"><ellipse cx="0" cy="-3" rx="7" ry="8" fill="#D9793B"' + isw(2) + '/><rect x="-1.8" y="4" width="3.6" height="7" fill="#fff"' + isw(1.5) + '/><circle cx="-2" cy="11.5" r="2.4" fill="#fff"' + isw(1.5) + '/><circle cx="2" cy="11.5" r="2.4" fill="#fff"' + isw(1.5) + '/></g>',
+      bath: '<g fill="#BFE3F2"' + isw(1.4) + '><circle cx="-5" cy="-3" r="3"/><circle cx="0" cy="-5" r="3.6"/><circle cx="5" cy="-3" r="3"/></g><path d="M-11 0 H11 V3 Q11 9 5 9 H-5 Q-11 9 -11 3 Z" fill="#fff"' + isw(2) + '/><path d="M-7 9 v2 M7 9 v2"' + isw(2) + '/>',
+      sparkle: '<path d="M0 -11 Q1.6 -1.6 11 0 Q1.6 1.6 0 11 Q-1.6 1.6 -11 0 Q-1.6 -1.6 0 -11 Z" fill="#FFD166"' + isw(1.6) + '/>',
+      tooth: '<path d="M-8 -8 Q-8 -11 -4 -11 Q0 -9 4 -11 Q8 -11 8 -7 Q8 0 5 4 L4 10 Q3 11 2 10 L0 4 L-2 10 Q-3 11 -4 10 L-5 4 Q-8 0 -8 -8 Z" fill="#fff"' + isw(1.8) + '/>',
+      gamepad: '<g transform="scale(0.42)">' + gamepadMarkup(IL) + '</g>',
+      ball: '<g transform="scale(0.45)">' + ballMarkup(IL) + '</g>',
+      laser: '<circle r="9" fill="#FF3B5C" opacity="0.25"/><circle r="5" fill="#FF2244"/><circle cx="-1.5" cy="-1.5" r="1.4" fill="#fff"/>',
+      bubble: '<g transform="scale(0.62)">' + soapBubbleMarkup() + '</g>',
+      butterfly: '<g transform="scale(0.4)">' + butterflyMarkup(IL) + '</g>',
+      moon: '<path d="M4 -10 A10 10 0 1 0 9 6 A8 8 0 1 1 4 -10 Z" fill="#FFE08A"' + isw(1.8) + '/>',
+      sun: '<path d="M0 -11 V-8 M0 8 V11 M-11 0 H-8 M8 0 H11 M-7.8 -7.8 L-5.7 -5.7 M5.7 5.7 L7.8 7.8 M-7.8 7.8 L-5.7 5.7 M5.7 -5.7 L7.8 -7.8" stroke="#F4A259" stroke-width="2.2" stroke-linecap="round"/><circle r="5.6" fill="#FFD166"' + isw(1.6) + '/>',
+      flower: '<g fill="#FF8FB1"' + isw(1.3) + '>' + flowerPetals() + '</g><circle r="3.2" fill="#FFD166"' + isw(1.3) + '/>',
+      sprout: '<path d="M0 10 V-2" stroke="#5FA36A" stroke-width="2.4" stroke-linecap="round"/><path d="M0 -1 C-2 -8 -9 -9 -10 -4 C-8 0 -3 0 0 -1 Z M0 2 C2 -5 9 -6 10 -1 C8 3 3 3 0 2 Z" fill="#7CC48A"' + isw(1.4) + '/><path d="M-6 10 H6"' + isw(2) + '/>',
+      leaf: '<path d="M-8 8 C-10 -4 -2 -10 9 -9 C9 2 2 9 -8 8 Z" fill="#E59E6D"' + isw(1.6) + '/><path d="M-8 8 L4 -4"' + isw(1.4) + '/>',
+      choco: care('choco', 0.42), bottle: care('bottle', 0.4), glass: care('glass', 0.45), thermo: care('thermo', 0.36), pill: care('vitamin', 0.42), pouch: care('pouch', 0.42), syrup: care('syrup', 0.4),
+      party: '<path d="M-9 10 L-3 -4 L5 4 Z" fill="#9B8DE8"' + isw(1.8) + '/><g fill="#FF8FB1"><circle cx="4" cy="-8" r="1.8"/><circle cx="9" cy="-2" r="1.8"/></g><g fill="#FFD166"><circle cx="-1" cy="-10" r="1.6"/><circle cx="10" cy="-9" r="1.6"/></g><path d="M2 -3 q4 -5 8 -4" stroke="#7FC8F8" stroke-width="2" fill="none" stroke-linecap="round"/>',
+      search: '<circle cx="-2" cy="-2" r="6.5" fill="#E6F6FF"' + isw(2.2) + '/><path d="M3 3 L9 9" stroke="' + IL + '" stroke-width="3" stroke-linecap="round"/>',
+      gift: '<rect x="-9" y="-3" width="18" height="13" rx="2" fill="#FF8FB1"' + isw(1.8) + '/><rect x="-10" y="-7" width="20" height="5" rx="1.5" fill="#FFB7CC"' + isw(1.8) + '/><path d="M0 -7 V10" stroke="#FFD166" stroke-width="3"/><path d="M0 -7 C-6 -13 -9 -8 0 -7 C9 -8 6 -13 0 -7" fill="none"' + isw(1.6) + '/>',
+      bolt: '<path d="M2 -11 L-7 2 H-1 L-3 11 L7 -2 H1 Z" fill="#FFD166"' + isw(1.8) + '/>',
+      calendar: '<rect x="-10" y="-8" width="20" height="18" rx="3" fill="#fff"' + isw(2) + '/><path d="M-10 -2 V-5 Q-10 -8 -7 -8 H7 Q10 -8 10 -5 V-2 Z" fill="#F06C8B"/><path d="M-5 -11 V-6 M5 -11 V-6"' + isw(2) + '/><path d="M0 7.5 C-5 4 -4 0 0 2.5 C4 0 5 4 0 7.5 Z" fill="#FF6F91"/>',
+      wind: '<path d="M-10 -3 H4 A3 3 0 1 0 1 -6 M-10 2 H7 A3 3 0 1 1 4 5 M-8 7 H0" fill="none" stroke="#4FA9D6" stroke-width="2.4" stroke-linecap="round"/>',
+      note: '<path d="M-3 7 V-8 L7 -10 V4" fill="none"' + isw(2) + '/><ellipse cx="-6" cy="7" rx="3.6" ry="2.8" fill="#9B8DE8"' + isw(1.6) + '/><ellipse cx="4" cy="4" rx="3.6" ry="2.8" fill="#9B8DE8"' + isw(1.6) + '/>',
+      plus: '<circle r="10.5" fill="#F6DCE3"/><path d="M0 -5 V5 M-5 0 H5" stroke="' + IL + '" stroke-width="2.6" stroke-linecap="round"/>',
+      home: '<g transform="scale(0.42)">' + homeIconMarkup(IL) + '</g>',
+      rainbow: '<path d="M-11 6 A11 11 0 0 1 11 6" fill="none" stroke="#FF8FB1" stroke-width="3"/><path d="M-7.5 6 A7.5 7.5 0 0 1 7.5 6" fill="none" stroke="#FFD166" stroke-width="3"/><path d="M-4 6 A4 4 0 0 1 4 6" fill="none" stroke="#7FC8F8" stroke-width="3"/>'
+    };
+    return ICONS;
+  }
+  // bir ikonu (x, y) merkezine, size boyutunda çizer
+  function icon(name, x, y, size) {
+    const lib = iconLib();
+    const m = lib[name] || (name && name.indexOf('face-') === 0 ? faceIcon(name.slice(5)) : '');
+    return m ? '<g transform="translate(' + f(x) + ' ' + f(y) + ') scale(' + Math.round((size || 24) / 24 * 1000) / 1000 + ')">' + m + '</g>' : '';
+  }
+
   // ================================================================ Kıyafetler (hayvanın yerel koordinatlarında çizilir)
-  // slot: head (kafa), eyes (gözlük), neck (boyun), body (gövde)
+  // slot: head (kafa), eyes (gözlük), neck (boyun), body (gövde). Para zor kazanılır: fiyatlar bilerek yüksek.
   const CLOTHES = {
-    bow:     { slot: 'head', name: 'Fiyonk', price: 15, level: 1 },
-    party:   { slot: 'head', name: 'Parti şapkası', price: 25, level: 1 },
-    flower:  { slot: 'head', name: 'Çiçek taç', price: 40, level: 2 },
-    beret:   { slot: 'head', name: 'Bere', price: 35, level: 2 },
-    crown:   { slot: 'head', name: 'Taç', price: 80, level: 4 },
-    round:   { slot: 'eyes', name: 'Yuvarlak gözlük', price: 30, level: 1 },
-    heart:   { slot: 'eyes', name: 'Kalp gözlük', price: 45, level: 3 },
-    sun:     { slot: 'eyes', name: 'Güneş gözlüğü', price: 60, level: 4 },
-    collar:  { slot: 'neck', name: 'Tasma', price: 15, level: 1 },
-    bowtie:  { slot: 'neck', name: 'Papyon', price: 25, level: 2 },
-    scarf:   { slot: 'neck', name: 'Atkı', price: 35, level: 2 },
-    sweater: { slot: 'body', name: 'Kazak', price: 55, level: 3 },
-    cape:    { slot: 'body', name: 'Pelerin', price: 90, level: 5 }
+    bow:       { slot: 'head', name: 'Fiyonk', price: 40, level: 1 },
+    party:     { slot: 'head', name: 'Parti şapkası', price: 60, level: 1 },
+    cap:       { slot: 'head', name: 'Kep', price: 90, level: 2 },
+    beret:     { slot: 'head', name: 'Bere', price: 100, level: 2 },
+    flower:    { slot: 'head', name: 'Çiçek taç', price: 110, level: 2 },
+    bunny:     { slot: 'head', name: 'Tavşan kulakları', price: 120, level: 2 },
+    chef:      { slot: 'head', name: 'Aşçı şapkası', price: 130, level: 3 },
+    heartband: { slot: 'head', name: 'Kalpli taç bandı', price: 150, level: 4 },
+    santa:     { slot: 'head', name: 'Yılbaşı şapkası', price: 180, level: 4 },
+    witch:     { slot: 'head', name: 'Cadı şapkası', price: 200, level: 4 },
+    cowboy:    { slot: 'head', name: 'Kovboy şapkası', price: 240, level: 5 },
+    crown:     { slot: 'head', name: 'Taç', price: 350, level: 6 },
+    tiara:     { slot: 'head', name: 'Prenses tacı', price: 400, level: 7 },
+    round:     { slot: 'eyes', name: 'Yuvarlak gözlük', price: 70, level: 1 },
+    square:    { slot: 'eyes', name: 'Kare gözlük', price: 90, level: 2 },
+    heart:     { slot: 'eyes', name: 'Kalp gözlük', price: 140, level: 3 },
+    starg:     { slot: 'eyes', name: 'Yıldız gözlük', price: 170, level: 4 },
+    sun:       { slot: 'eyes', name: 'Güneş gözlüğü', price: 220, level: 5 },
+    collar:    { slot: 'neck', name: 'Tasma', price: 40, level: 1 },
+    bandana:   { slot: 'neck', name: 'Bandana', price: 60, level: 1 },
+    bowtie:    { slot: 'neck', name: 'Papyon', price: 80, level: 2 },
+    scarf:     { slot: 'neck', name: 'Atkı', price: 100, level: 2 },
+    tie:       { slot: 'neck', name: 'Kravat', price: 110, level: 3 },
+    bell:      { slot: 'neck', name: 'Çıngıraklı tasma', price: 120, level: 3 },
+    pearls:    { slot: 'neck', name: 'İnci kolye', price: 150, level: 3 },
+    lei:       { slot: 'neck', name: 'Çiçek kolye', price: 160, level: 4 },
+    sweater:   { slot: 'body', name: 'Kazak', price: 160, level: 3 },
+    hoodie:    { slot: 'body', name: 'Kapüşonlu', price: 180, level: 3 },
+    tutu:      { slot: 'body', name: 'Tütü etek', price: 200, level: 4 },
+    raincoat:  { slot: 'body', name: 'Yağmurluk', price: 220, level: 4 },
+    overalls:  { slot: 'body', name: 'Tulum', price: 260, level: 5 },
+    cape:      { slot: 'body', name: 'Pelerin', price: 450, level: 8 }
   };
   const CLOTH_SLOTS = ['head', 'eyes', 'neck', 'body'];
+  const CLOTH_TABS = { head: 'Kafa', eyes: 'Göz', neck: 'Boyun', body: 'Gövde' };
+  // gövde kıyafetleri: kollar da aynı renge boyanır [kol, manşet]
+  const SLEEVES = { sweater: ['#9FD8F5', '#6DBBE6'], hoodie: ['#FF9EBB', '#F27BA0'], raincoat: ['#FFD84D', '#E8B400'] };
+  function neckCurve(n, fn) { // boyun eğrisi boyunca n nokta
+    let s = '';
+    for (let i = 0; i < n; i++) { const t = i / (n - 1), u = 1 - t; s += fn(u * u * 148 + 2 * u * t * 200 + t * t * 252, u * u * 222 + 2 * u * t * 252 + t * t * 222, i); }
+    return s;
+  }
   function clothMarkup(id, sp, L) {
     const hy = sp === 'dog' ? 68 : 76, E = SPECIES[sp].eyes;
     const st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"';
+    const band = (col) => '<path d="M-70 10 Q0 -40 70 10" fill="none" stroke="' + L + '" stroke-width="9" stroke-linecap="round"/><path d="M-70 10 Q0 -40 70 10" fill="none" stroke="' + col + '" stroke-width="5" stroke-linecap="round"/>';
+    const bodyRect = (col) => '<rect x="100" y="196" width="200" height="240" fill="' + col + '"/>';
     switch (id) {
       case 'party': return '<g transform="translate(206 ' + (hy + 4) + ') rotate(10)"><path d="M-28 4 L0 -66 L28 4 Q0 13 -28 4 Z" fill="#9B8DE8"' + st + '/>' +
         '<circle cx="-8" cy="-14" r="5" fill="#FFD166"/><circle cx="10" cy="-30" r="4.5" fill="#FF8FB1"/><circle cx="-2" cy="-46" r="3.5" fill="#7FE0C2"/><circle cx="12" cy="-6" r="4" fill="#7FE0C2"/>' +
@@ -928,17 +1031,46 @@
       case 'bow': return '<g transform="translate(150 ' + (hy + 18) + ') rotate(-22)"><path d="M0 0 C-14 -20 -36 -16 -32 2 C-30 16 -12 12 0 0 Z M0 0 C14 -20 36 -16 32 2 C30 16 12 12 0 0 Z" fill="#FF6F91"' + st + '/>' +
         '<circle cx="-20" cy="-2" r="2.5" fill="#fff"/><circle cx="20" cy="-2" r="2.5" fill="#fff"/><circle cx="-12" cy="-8" r="2" fill="#fff"/><circle cx="12" cy="-8" r="2" fill="#fff"/>' +
         '<ellipse cx="0" cy="0" rx="7" ry="8" fill="#E2456A"' + st + '/></g>';
-      case 'round': {
+      case 'cap': return '<g transform="translate(200 ' + (hy + 10) + ')"><path d="M-46 4 C-46 -40 46 -40 46 4 Z" fill="#4FA9D6"' + st + '/><path d="M8 2 C40 -2 70 2 78 10 C60 14 30 12 8 10 Z" fill="#2F7FAE"' + st + '/>' +
+        '<path d="M0 -30 V2 M-24 -22 Q-20 -6 -20 2 M24 -22 Q20 -6 20 2" stroke="#2F7FAE" stroke-width="2" fill="none"/><circle cx="0" cy="-32" r="4.5" fill="#2F7FAE"/>' +
+        '<path d="M-30 -20 Q-20 -30 -6 -32" stroke="#fff" stroke-width="3.5" opacity="0.4" fill="none" stroke-linecap="round"/></g>';
+      case 'bunny': {
+        const ear = (x, r) => '<g transform="translate(' + x + ' -16) rotate(' + r + ')"><ellipse cx="0" cy="-40" rx="13" ry="40" fill="#fff"' + st + '/><ellipse cx="0" cy="-38" rx="6" ry="30" fill="#FFB7CC"/></g>';
+        return '<g transform="translate(200 ' + (hy + 14) + ')">' + band('#FFB7CC') + ear(-24, -12) + ear(24, 14) + '</g>';
+      }
+      case 'chef': return '<g transform="translate(200 ' + (hy + 2) + ')"><path d="M-32 -14 C-52 -20 -46 -56 -22 -50 C-18 -72 18 -72 22 -50 C46 -56 52 -20 32 -14 Z" fill="#fff"' + st + '/>' +
+        '<rect x="-32" y="-16" width="64" height="20" rx="4" fill="#fff"' + st + '/><path d="M-12 -18 V-36 M12 -18 V-36" stroke="#E6D8D0" stroke-width="2.5"/></g>';
+      case 'heartband': {
+        const h = (x) => '<path transform="translate(' + x + ' -58) scale(1.25)" d="M0 7 C-14 -3 -9 -16 0 -8 C9 -16 14 -3 0 7 Z" fill="#FF6F91"' + st + '/>';
+        return '<g transform="translate(200 ' + (hy + 14) + ')">' + band('#9B8DE8') + '<path d="M-22 -16 Q-28 -36 -34 -50 M22 -16 Q28 -36 34 -50" stroke="' + L + '" stroke-width="3" fill="none"/>' + h(-34) + h(34) + '</g>';
+      }
+      case 'santa': return '<g transform="translate(206 ' + (hy + 6) + ') rotate(12)"><path d="M-34 0 C-30 -40 10 -62 40 -40 C26 -40 18 -30 22 -4 Z" fill="#E2456A"' + st + '/>' +
+        '<circle cx="42" cy="-40" r="10" fill="#fff"' + st + '/><rect x="-40" y="-10" width="68" height="18" rx="9" fill="#fff"' + st + '/></g>';
+      case 'witch': return '<g transform="translate(204 ' + (hy + 4) + ') rotate(-8)"><ellipse cx="0" cy="0" rx="64" ry="13" fill="#6C4FB8"' + st + '/>' +
+        '<path d="M-30 -2 L-6 -70 Q4 -82 16 -74 L10 -66 L30 -2 Z" fill="#7E62C9"' + st + '/><path d="M-28 -12 Q0 -4 28 -12 L30 -2 Q0 6 -30 -2 Z" fill="#FFD166"/>' +
+        '<rect x="-6" y="-13" width="12" height="10" rx="2" fill="none" stroke="#B07A12" stroke-width="2.5"/></g>';
+      case 'cowboy': return '<g transform="translate(200 ' + (hy + 2) + ') rotate(-6)"><path d="M-34 -4 C-36 -38 -20 -50 0 -40 C20 -50 36 -38 34 -4 Q0 6 -34 -4 Z" fill="#C98A5B"' + st + '/>' +
+        '<path d="M-34 -10 Q0 0 34 -10" stroke="#7B4A2E" stroke-width="6" fill="none"/><path d="M-74 4 Q-70 -14 -50 -6 Q0 8 50 -6 Q70 -14 74 4 Q0 26 -74 4 Z" fill="#B87A4B"' + st + '/></g>';
+      case 'tiara': return '<g transform="translate(200 ' + (hy - 2) + ')"><path d="M-40 8 Q0 -2 40 8" fill="none" stroke="#C9D6DF" stroke-width="6" stroke-linecap="round"/>' +
+        '<path d="M-30 4 L-24 -10 L-14 0 L0 -22 L14 0 L24 -10 L30 4" fill="#E6EEF2" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round"/><circle cx="0" cy="-8" r="5.5" fill="#FF5E86" stroke="' + L + '" stroke-width="2"/>' +
+        '<circle cx="-24" cy="-6" r="3" fill="#7FC8F8"/><circle cx="24" cy="-6" r="3" fill="#7FC8F8"/><circle cx="0" cy="-22" r="2.5" fill="#fff" stroke="' + L + '" stroke-width="1.5"/></g>';
+      case 'round': case 'square': {
         let s = '';
-        E.forEach((e) => { s += '<circle cx="' + e.cx + '" cy="' + e.cy + '" r="' + (e.rx + 9) + '" fill="#E6F6FF" fill-opacity="0.18" stroke="#5B4636" stroke-width="5"/>'; });
-        return s + '<path d="M' + (E[0].cx + E[0].rx + 9) + ' ' + (E[0].cy - 2) + ' Q200 ' + (E[0].cy - 12) + ' ' + (E[1].cx - E[1].rx - 9) + ' ' + (E[1].cy - 2) + '" stroke="#5B4636" stroke-width="5" fill="none"/>' +
-          '<path d="M' + (E[0].cx - E[0].rx - 9) + ' ' + E[0].cy + ' L' + (E[0].cx - E[0].rx - 30) + ' ' + (E[0].cy - 6) + ' M' + (E[1].cx + E[1].rx + 9) + ' ' + E[1].cy + ' L' + (E[1].cx + E[1].rx + 30) + ' ' + (E[1].cy - 6) + '" stroke="#5B4636" stroke-width="5" stroke-linecap="round"/>' +
+        const col = id === 'round' ? '#5B4636' : '#2F2A3A';
+        E.forEach((e) => {
+          s += id === 'round' ? '<circle cx="' + e.cx + '" cy="' + e.cy + '" r="' + (e.rx + 9) + '" fill="#E6F6FF" fill-opacity="0.18" stroke="' + col + '" stroke-width="5"/>'
+            : '<rect x="' + (e.cx - e.rx - 9) + '" y="' + (e.cy - e.ry - 6) + '" width="' + (e.rx * 2 + 18) + '" height="' + (e.ry * 2 + 12) + '" rx="7" fill="#E6F6FF" fill-opacity="0.18" stroke="' + col + '" stroke-width="5"/>';
+        });
+        return s + '<path d="M' + (E[0].cx + E[0].rx + 9) + ' ' + (E[0].cy - 2) + ' Q200 ' + (E[0].cy - 12) + ' ' + (E[1].cx - E[1].rx - 9) + ' ' + (E[1].cy - 2) + '" stroke="' + col + '" stroke-width="5" fill="none"/>' +
+          '<path d="M' + (E[0].cx - E[0].rx - 9) + ' ' + E[0].cy + ' L' + (E[0].cx - E[0].rx - 30) + ' ' + (E[0].cy - 6) + ' M' + (E[1].cx + E[1].rx + 9) + ' ' + E[1].cy + ' L' + (E[1].cx + E[1].rx + 30) + ' ' + (E[1].cy - 6) + '" stroke="' + col + '" stroke-width="5" stroke-linecap="round"/>' +
           '<path d="M' + (E[0].cx - 12) + ' ' + (E[0].cy - 16) + ' q6 -5 12 -4 M' + (E[1].cx - 12) + ' ' + (E[1].cy - 16) + ' q6 -5 12 -4" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>';
       }
-      case 'heart': {
+      case 'heart': case 'starg': {
         let s = '';
-        E.forEach((e) => { s += '<path transform="translate(' + e.cx + ' ' + (e.cy + 2) + ') scale(2.3)" d="M0 10 C-18 -2 -13 -19 0 -9 C13 -19 18 -2 0 10 Z" fill="#FF8FB1" fill-opacity="0.35" stroke="#FF3E7F" stroke-width="2"/>'; });
-        return s + '<path d="M' + (E[0].cx + 26) + ' ' + (E[0].cy - 6) + ' Q200 ' + (E[0].cy - 14) + ' ' + (E[1].cx - 26) + ' ' + (E[1].cy - 6) + '" stroke="#FF3E7F" stroke-width="4.5" fill="none"/>';
+        const shape = id === 'heart' ? 'M0 10 C-18 -2 -13 -19 0 -9 C13 -19 18 -2 0 10 Z' : 'M0 -13 L4 -4.5 L13 -4 L6 2 L8.5 11 L0 6 L-8.5 11 L-6 2 L-13 -4 L-4 -4.5 Z';
+        const fl = id === 'heart' ? '#FF8FB1' : '#FFD166', sk = id === 'heart' ? '#FF3E7F' : '#F4A259';
+        E.forEach((e) => { s += '<path transform="translate(' + e.cx + ' ' + (e.cy + 2) + ') scale(' + (id === 'heart' ? 2.3 : 2.2) + ')" d="' + shape + '" fill="' + fl + '" fill-opacity="0.35" stroke="' + sk + '" stroke-width="2" stroke-linejoin="round"/>'; });
+        return s + '<path d="M' + (E[0].cx + 26) + ' ' + (E[0].cy - 6) + ' Q200 ' + (E[0].cy - 14) + ' ' + (E[1].cx - 26) + ' ' + (E[1].cy - 6) + '" stroke="' + sk + '" stroke-width="4.5" fill="none"/>';
       }
       case 'sun': {
         let s = '';
@@ -946,10 +1078,26 @@
           '<path d="M' + (e.cx - e.rx) + ' ' + (e.cy - 6) + ' L' + (e.cx - e.rx + 12) + ' ' + (e.cy - e.ry + 4) + '" stroke="#fff" stroke-width="4" opacity="0.6" stroke-linecap="round"/>'; });
         return s + '<path d="M' + (E[0].cx + E[0].rx + 11) + ' ' + (E[0].cy - 6) + ' L' + (E[1].cx - E[1].rx - 11) + ' ' + (E[1].cy - 6) + '" stroke="#111" stroke-width="5"/>';
       }
-      case 'collar': return '<path d="M146 220 Q200 250 254 220" stroke="' + L + '" stroke-width="16" fill="none" stroke-linecap="round"/><path d="M146 220 Q200 250 254 220" stroke="#F06C8B" stroke-width="10" fill="none" stroke-linecap="round"/>' +
-        '<g fill="#fff"><circle cx="170" cy="230" r="2"/><circle cx="230" cy="230" r="2"/></g><circle cx="200" cy="246" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/><path d="M196 244 h8" stroke="#E0A229" stroke-width="2"/>';
+      case 'collar': case 'bell': {
+        const col = id === 'collar' ? '#F06C8B' : '#4FA9D6';
+        let s = '<path d="M146 220 Q200 250 254 220" stroke="' + L + '" stroke-width="16" fill="none" stroke-linecap="round"/><path d="M146 220 Q200 250 254 220" stroke="' + col + '" stroke-width="10" fill="none" stroke-linecap="round"/>' +
+          '<g fill="#fff"><circle cx="170" cy="230" r="2"/><circle cx="230" cy="230" r="2"/></g>';
+        if (id === 'collar') s += '<circle cx="200" cy="246" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/><path d="M196 244 h8" stroke="#E0A229" stroke-width="2"/>';
+        else s += '<circle cx="200" cy="250" r="11" fill="#FFD166" stroke="' + L + '" stroke-width="3"/><path d="M190 250 H210" stroke="' + L + '" stroke-width="2"/><circle cx="200" cy="255" r="2.5" fill="' + L + '"/><path d="M195 244 q3 -3 6 -1" stroke="#fff" stroke-width="2" fill="none"/>';
+        return s;
+      }
+      case 'bandana': return '<path d="M144 218 Q200 248 256 218 L244 236 Q200 296 156 236 Z" fill="#E2456A"' + st + '/>' +
+        '<g fill="#fff"><circle cx="186" cy="246" r="3"/><circle cx="212" cy="250" r="3"/><circle cx="198" cy="266" r="3"/><circle cx="170" cy="236" r="2.5"/><circle cx="230" cy="238" r="2.5"/></g>';
       case 'bowtie': return '<g transform="translate(200 238)"><path d="M0 0 L-28 -14 Q-32 0 -28 14 Z M0 0 L28 -14 Q32 0 28 14 Z" fill="#E2456A"' + st + '/>' +
         '<g fill="#fff"><circle cx="-18" cy="-4" r="2.4"/><circle cx="-14" cy="6" r="2.4"/><circle cx="18" cy="-4" r="2.4"/><circle cx="14" cy="6" r="2.4"/></g><rect x="-7" y="-8" width="14" height="16" rx="5" fill="#B23A55"' + st + '/></g>';
+      case 'tie': return '<path d="M196 244 L204 244 L212 300 L200 316 L188 300 Z" fill="#5B7FE0"' + st + '/><path d="M191 268 L209 263 M189 288 L211 283" stroke="#FFD166" stroke-width="4"/>' +
+        '<path d="M190 232 L210 232 L205 246 L195 246 Z" fill="#4E6FC9"' + st + '/>';
+      case 'pearls': return neckCurve(13, (x, y) => '<circle cx="' + f(x) + '" cy="' + f(y + 4) + '" r="6" fill="#fff" stroke="#CDBFB6" stroke-width="1.8"/><circle cx="' + f(x - 2) + '" cy="' + f(y + 2) + '" r="1.6" fill="#fff"/>');
+      case 'lei': {
+        const cols = ['#FF8FB1', '#FFD166', '#9B8DE8', '#7FC8F8', '#FFFFFF'];
+        return neckCurve(9, (x, y, i) => { let p = ''; for (let k = 0; k < 5; k++) { const b = k * 72 * Math.PI / 180; p += '<circle cx="' + f(x + Math.cos(b) * 6) + '" cy="' + f(y + 6 + Math.sin(b) * 6) + '" r="5"/>'; }
+          return '<g fill="' + cols[i % cols.length] + '" stroke="' + L + '" stroke-width="1.6">' + p + '</g><circle cx="' + f(x) + '" cy="' + f(y + 6) + '" r="3.2" fill="#FFB347"/>'; });
+      }
       case 'scarf': return '<path d="M144 218 Q200 254 256 218" stroke="' + L + '" stroke-width="24" fill="none" stroke-linecap="round"/><path d="M144 218 Q200 254 256 218" stroke="#7FC8F8" stroke-width="18" fill="none" stroke-linecap="round"/>' +
         '<path d="M170 232 l4 -12 M196 240 l4 -14 M222 236 l4 -12" stroke="#fff" stroke-width="5" stroke-linecap="round"/>' +
         '<path d="M222 236 L232 300 L254 296 L244 228 Z" fill="#7FC8F8"' + st + '/><path d="M228 258 L248 255 M230 276 L250 273" stroke="#fff" stroke-width="5"/>' +
@@ -958,6 +1106,19 @@
         '<path d="M100 258 H300 M100 282 H300" stroke="#fff" stroke-width="7" opacity="0.8"/><path d="M100 270 H300" stroke="#FF8FB1" stroke-width="5"/>' +
         '<rect x="100" y="326" width="200" height="14" fill="#6DBBE6"/><path d="M110 326 v14 M124 326 v14 M138 326 v14 M152 326 v14 M166 326 v14 M180 326 v14 M194 326 v14 M208 326 v14 M222 326 v14 M236 326 v14 M250 326 v14 M264 326 v14 M278 326 v14 M292 326 v14" stroke="#4E9FCC" stroke-width="2"/>' +
         '<path d="M100 340 H300" stroke="' + L + '" stroke-width="3.5"/><path d="M150 216 Q200 244 250 216" stroke="#6DBBE6" stroke-width="12" fill="none"/>';
+      case 'hoodie': return '<rect x="100" y="196" width="200" height="150" fill="#FF9EBB"/><path d="M150 216 Q200 246 250 216" stroke="#F27BA0" stroke-width="12" fill="none"/>' +
+        '<path d="M186 236 L182 276 M214 236 L218 276" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="182" cy="279" r="3" fill="#fff"/><circle cx="218" cy="279" r="3" fill="#fff"/>' +
+        '<path d="M164 296 H236 L246 330 H154 Z" fill="#F27BA0" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round"/><rect x="100" y="334" width="200" height="12" fill="#F27BA0"/><path d="M100 346 H300" stroke="' + L + '" stroke-width="3.5"/>';
+      case 'raincoat': return bodyRect('#FFD84D') + '<path d="M200 236 V436" stroke="#E8B400" stroke-width="4"/><g fill="#fff" stroke="' + L + '" stroke-width="2"><circle cx="212" cy="262" r="5"/><circle cx="212" cy="298" r="5"/><circle cx="212" cy="334" r="5"/><circle cx="212" cy="370" r="5"/></g>' +
+        '<path d="M146 214 L176 250 L200 236 L224 250 L254 214" fill="#E8B400" stroke="' + L + '" stroke-width="2.5" stroke-linejoin="round"/><path d="M130 300 h28 M242 300 h28" stroke="#E8B400" stroke-width="5" stroke-linecap="round"/>';
+      case 'overalls': return '<rect x="100" y="320" width="200" height="120" fill="#5B8FD6"/><rect x="162" y="262" width="76" height="70" rx="6" fill="#5B8FD6" stroke="' + L + '" stroke-width="2.5"/>' +
+        '<path d="M148 222 L168 268 M252 222 L232 268" stroke="#4A7BC0" stroke-width="10" stroke-linecap="round"/><circle cx="168" cy="270" r="5" fill="#FFD166" stroke="' + L + '" stroke-width="2"/><circle cx="232" cy="270" r="5" fill="#FFD166" stroke="' + L + '" stroke-width="2"/>' +
+        '<rect x="186" y="284" width="28" height="22" rx="4" fill="#4A7BC0"/><path d="M100 322 H300" stroke="' + L + '" stroke-width="3"/><path d="M200 330 V440" stroke="#4A7BC0" stroke-width="3" stroke-dasharray="6 5"/>';
+      case 'tutu': { // gövdenin üstüne (kırpılmadan) bele çizilir
+        let s = '<path d="M122 352 Q200 372 278 352 L290 372 Q200 394 110 372 Z" fill="#FFB7CC"' + st + '/>';
+        for (let i = 0; i < 9; i++) { const x = 110 + i * 22.5; s += '<ellipse cx="' + f(x) + '" cy="' + f(384 + Math.sin(i * 1.3) * 2) + '" rx="15" ry="11" fill="' + (i % 2 ? '#FF9EBB' : '#FFC9D9') + '" stroke="' + L + '" stroke-width="2.5"/>'; }
+        return s + '<path d="M124 356 Q200 376 276 356" stroke="#F27BA0" stroke-width="6" fill="none"/><circle cx="200" cy="368" r="6" fill="#F27BA0" stroke="' + L + '" stroke-width="2"/>';
+      }
       case 'cape': return '<path d="M138 224 C100 300 88 380 94 430 Q200 446 306 430 C312 380 300 300 262 224 Z" fill="#D64561"' + st + '/>' +
         '<path d="M98 420 Q200 436 302 420" stroke="#FFD166" stroke-width="5" fill="none"/><path d="M118 300 Q110 360 112 410" stroke="#fff" stroke-width="5" opacity="0.25" fill="none" stroke-linecap="round"/>';
     }
@@ -965,12 +1126,12 @@
   }
   // mağaza / dolap önizlemesi için: kıyafeti kendi merkezine taşı
   function clothPreview(id, sp, L) {
-    const c = { head: [200, sp === 'dog' ? 52 : 60, 0.9], eyes: [200, 134, 0.62], neck: [200, 236, 0.85], body: [200, 300, 0.42] }[CLOTHES[id].slot];
-    if (id === 'flower') c[1] = 86;
-    if (id === 'bow') c[0] = 150, c[1] = 84, c[2] = 1.1;
-    if (id === 'scarf') c[1] = 252, c[2] = 0.62;
-    if (id === 'cape') c[1] = 330, c[2] = 0.3;
-    return '<g transform="scale(' + c[2] + ') translate(' + (-c[0]) + ' ' + (-c[1]) + ')">' + clothMarkup(id, sp, L) + '</g>';
+    const c = { head: [200, sp === 'dog' ? 52 : 60, 0.85], eyes: [200, 134, 0.62], neck: [200, 238, 0.85], body: [200, 300, 0.36] }[CLOTHES[id].slot];
+    const o = { flower: [200, 86, 0.85], bow: [150, 84, 1.1], scarf: [200, 254, 0.62], tie: [200, 272, 0.75], cape: [200, 330, 0.3], tutu: [200, 376, 0.42],
+      bunny: [200, 30, 0.6], heartband: [200, 50, 0.6], witch: [200, 40, 0.65], cowboy: [200, 64, 0.62], chef: [200, 44, 0.8], santa: [210, 54, 0.75], cap: [214, 62, 0.75],
+      pearls: [200, 242, 0.62], lei: [200, 244, 0.6], bandana: [200, 244, 0.75], overalls: [200, 330, 0.36] }[id];
+    const k = o || c;
+    return '<g transform="scale(' + k[2] + ') translate(' + (-k[0]) + ' ' + (-k[1]) + ')">' + clothMarkup(id, sp, L) + '</g>';
   }
 
   // ================================================================ Bakım ve hediye eşyaları
@@ -996,6 +1157,9 @@
         '<path d="M-8 -16 v32 M6 -16 v32 M-22 0 h28" stroke="#5A3420" stroke-width="2.5"/><path d="M6 -18 H24 V18 H6 Z" fill="#E2456A"' + st + '/><path d="M10 -6 h10 M10 2 h10" stroke="#FFD166" stroke-width="2.5"/></g>';
       case 'glass': return '<g><path d="M-16 -24 L16 -24 L12 24 Q0 28 -12 24 Z" fill="#E6F6FF" fill-opacity="0.7"' + st + '/><path d="M-14 -8 L14 -8 L12 22 Q0 26 -12 22 Z" fill="#9EDCFA"/>' +
         '<path d="M-10 -20 L-8 16" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.8"/><circle cx="4" cy="4" r="2.5" fill="#fff"/><circle cx="-3" cy="12" r="2" fill="#fff"/></g>';
+      case 'pouch': return '<g><path d="M-24 -14 Q-26 22 -18 24 H18 Q26 22 24 -14 Z" fill="#FF8FB1"' + st + '/><path d="M-24 -14 H24" stroke="' + L + '" stroke-width="3"/>' +
+        '<path d="M-22 -14 Q0 -24 22 -14" fill="#FFB7CC"' + st + '/><path d="M14 -18 l6 -10" stroke="#C9D6DF" stroke-width="4" stroke-linecap="round"/><circle cx="21" cy="-30" r="3" fill="#C9D6DF" stroke="' + L + '" stroke-width="1.5"/>' +
+        '<path d="M0 14 C-10 7 -7 -3 0 2 C7 -3 10 7 0 14 Z" fill="#fff"/></g>';
     }
     return '';
   }
@@ -1006,47 +1170,84 @@
     vitamin: { name: 'Vitamin', desc: 'Güç ve enerji', fx: { health: 15, energy: 8 } }
   };
 
-  // ================================================================ Günlük görevler
-  const QUESTS = {
-    feed:      { text: 'Mama ver', n: 2, icon: '🍖' },
-    water:     { text: 'Su ver', n: 1, icon: '💧' },
-    bath:      { text: 'Banyo yaptır', n: 1, icon: '🛁' },
-    brush:     { text: 'Tüylerini tara', n: 1, icon: '✨' },
-    teeth:     { text: 'Dişlerini fırçala', n: 1, icon: '🦷' },
-    play:      { text: 'Oyun oyna (5 vuruş)', n: 5, icon: '🎮' },
-    hide:      { text: 'Saklambaçta onu bul', n: 1, icon: '🙈' },
-    pet:       { text: 'Onu sev (10 kez okşa)', n: 10, icon: '🤚' },
-    userWater: { text: 'Sen de 2 bardak su iç', n: 2, icon: '🥤' },
-    mood:      { text: '"Bugün nasılsın?" sorusunu cevapla', n: 1, icon: '💬' }
+  // ================================================================ Ödüller: para zor kazanılır, her bakımın günlük sınırı var
+  // xp: deneyim, coins: pati parası, cap: bir günde kaç kez ödül verir (gece 12'de sıfırlanır)
+  const REWARDS = {
+    eat:       { xp: 2, coins: 1, cap: 3 },
+    drink:     { xp: 2, coins: 1, cap: 2 },
+    bath:      { xp: 5, coins: 2, cap: 1 },
+    brush:     { xp: 3, coins: 1, cap: 1 },
+    teeth:     { xp: 3, coins: 1, cap: 2 },
+    hide:      { xp: 3, coins: 1, cap: 2 },
+    play:      { xp: 1, coins: 0, cap: 8 },
+    pet:       { xp: 1, coins: 0, cap: 3 },
+    med:       { xp: 2, coins: 0, cap: 2 },
+    userWater: { xp: 2, coins: 1, cap: 4 },
+    mood:      { xp: 2, coins: 1, cap: 1 },
+    checkin:   { xp: 8, coins: 4, cap: 1 },
+    medLog:    { xp: 3, coins: 1, cap: 1 },
+    forecast:  { xp: 2, coins: 1, cap: 1 }
   };
-  const SELF_QUESTS = ['userWater', 'mood'];
+  const QUEST_REWARD = { xp: 10, coins: 5 }, QUEST_BONUS = 10, LEVEL_BONUS = 5;
+
+  // ================================================================ Günlük görev havuzu (her gün 4 görev: 1 kişisel + 3 bakım)
+  const QUESTS = {
+    feed:      { text: 'Mama ver', n: 2, icon: 'food' },
+    feed3:     { text: 'Gün içinde 3 kez mama ver', n: 3, icon: 'food' },
+    healthy:   { text: 'Sağlıklı bir şey yedir', n: 1, icon: 'sprout' },
+    treat:     { text: 'Ödül maması ver', n: 1, icon: 'gift' },
+    water:     { text: 'Su ver', n: 1, icon: 'drop' },
+    water2:    { text: 'İki kez su ver', n: 2, icon: 'drop' },
+    bath:      { text: 'Banyo yaptır', n: 1, icon: 'bath' },
+    brush:     { text: 'Tüylerini tara', n: 1, icon: 'sparkle' },
+    teeth:     { text: 'Dişlerini fırçala', n: 1, icon: 'tooth' },
+    teeth2:    { text: 'Dişlerini sabah ve akşam fırçala', n: 2, icon: 'tooth' },
+    play:      { text: 'Oyun oyna (5 vuruş)', n: 5, icon: 'gamepad' },
+    ball:      { text: 'Topa 3 kez vurdur', n: 3, icon: 'ball' },
+    laser:     { text: 'Lazeri 3 kez yakalat', n: 3, icon: 'laser' },
+    bubbles:   { text: '6 baloncuk patlat', n: 6, icon: 'bubble' },
+    butterfly: { text: 'Kelebekle oynat', n: 2, icon: 'butterfly' },
+    hide:      { text: 'Saklambaçta onu bul', n: 1, icon: 'search' },
+    pet:       { text: 'Onu sev (10 kez okşa)', n: 10, icon: 'heart' },
+    sleep:     { text: 'Işığı kapatıp onu uyut', n: 1, icon: 'moon' },
+    wear:      { text: 'Ona bir kıyafet giydir', n: 1, icon: 'hanger' },
+    vitamin:   { text: 'Vitamin ver', n: 1, icon: 'pill' },
+    userWater: { text: 'Sen de 2 bardak su iç', n: 2, icon: 'glass' },
+    userWater4:{ text: 'Sen de 4 bardak su iç', n: 4, icon: 'glass' },
+    mood:      { text: 'Ona bugün nasıl olduğunu anlat', n: 1, icon: 'chat' },
+    checkin:   { text: 'Bugünkü şikayetlerini ona söyle', n: 1, icon: 'calendar' }
+  };
+  const SELF_QUESTS = ['userWater', 'userWater4', 'mood', 'checkin'];
+  const QUEST_COUNT = 4;
 
   // ================================================================ Kullanıcının ruh hali ve regl döngüsü
   const USER_MOODS = {
-    happy:   { emoji: '😊', name: 'Mutlu' },
-    sad:     { emoji: '😢', name: 'Üzgün' },
-    tired:   { emoji: '😴', name: 'Yorgun' },
-    pain:    { emoji: '😣', name: 'Ağrılı' },
-    angry:   { emoji: '😠', name: 'Sinirli' },
-    anxious: { emoji: '😰', name: 'Kaygılı' }
+    happy:   { name: 'Mutlu' },
+    sad:     { name: 'Üzgün' },
+    tired:   { name: 'Yorgun' },
+    pain:    { name: 'Ağrılı' },
+    angry:   { name: 'Sinirli' },
+    anxious: { name: 'Kaygılı' }
   };
   const CYCLE = {
-    period:     { label: '🌸 Regl', tips: ['Kendine iyi bak 💕 Ben yanındayım', 'Karnın ağrıyorsa sıcak su torbası iyi gelir', 'Bugün dinlenmeyi hak ediyorsun 🌸', 'Bol su içmeyi unutma 💧', 'Hafif bir yürüyüş ağrıya iyi gelebilir', 'Sana sarılmaya geldim 🤗'] },
-    pms:        { label: '🍫 PMS', tips: ['Duyguların dalgalıysa bu çok normal 💗', 'Biraz bitter çikolata ister misin? 🍫', 'Bugün kendine biraz zaman ayır', 'Tuzu ve kafeini azaltmak iyi gelebilir'] },
-    follicular: { label: '🌱 Enerjik dönem', tips: ['Enerjin yükseliyor! 🌱', 'Yeni bir şeye başlamak için harika bir gün', 'Biraz dans edelim mi? 💃'] },
-    ovulation:  { label: '🌼 Yumurtlama', tips: ['Bugün ışıl ışılsın! 🌼', 'Enerjin çok yüksek, hadi oynayalım!', 'Su içmeyi unutma 💧'] },
-    luteal:     { label: '🍂 Sakin dönem', tips: ['Kendine nazik ol 🍂', 'Sıcak bir bitki çayı iyi gelebilir 🍵', 'Bu akşam erken uyumak iyi gelebilir 🌙'] }
+    period:     { label: 'Regl', icon: 'flower', tips: [['Kendine iyi bak, ben yanındayım', 'heart'], ['Karnın ağrıyorsa sıcak su torbası iyi gelir', 'bottle'], ['Bugün dinlenmeyi hak ediyorsun', 'flower'], ['Bol su içmeyi unutma', 'drop'], ['Hafif bir yürüyüş ağrıya iyi gelebilir', 'sprout'], ['Sana sarılmaya geldim', 'heart']] },
+    pms:        { label: 'PMS', icon: 'choco', tips: [['Duyguların dalgalıysa bu çok normal', 'heart'], ['Biraz bitter çikolata ister misin?', 'choco'], ['Bugün kendine biraz zaman ayır', 'flower'], ['Tuzu ve kafeini azaltmak iyi gelebilir', 'drop']] },
+    follicular: { label: 'Enerjik dönem', icon: 'sprout', tips: [['Enerjin yükseliyor!', 'sprout'], ['Yeni bir şeye başlamak için harika bir gün', 'sparkle'], ['Biraz dans edelim mi?', 'note']] },
+    ovulation:  { label: 'Yumurtlama', icon: 'sun', tips: [['Bugün ışıl ışılsın!', 'sun'], ['Enerjin çok yüksek, hadi oynayalım!', 'ball'], ['Su içmeyi unutma', 'drop']] },
+    luteal:     { label: 'Sakin dönem', icon: 'leaf', tips: [['Kendine nazik ol', 'leaf'], ['Sıcak bir bitki çayı iyi gelebilir', 'heart'], ['Bu akşam erken uyumak iyi gelebilir', 'moon']] }
   };
   const NEED_LINES = {
-    hungry: ['Karnım acıktı! 🍖', 'Mama zamanı geldi mi?'],
-    thirsty: ['Susadım 💧', 'Biraz su alabilir miyim?'],
-    tired: ['Uykum geldi… 😴', 'Işığı kapatır mısın?'],
-    dirty: ['Banyo yapmak istiyorum 🛁', 'Biraz kokuyor olabilirim…'],
-    sad: ['Sıkıldım, oynayalım mı? 🎾', 'Beni sever misin?'],
-    sick: ['Kendimi iyi hissetmiyorum 🤒', 'Veterinere gidelim mi? 🩺'],
-    happy: ['Seni çok seviyorum! 💕', 'Bugün harika bir gün!', 'Yaşasın! 🎉'],
-    neutral: ['Ne yapalım? 🐾', 'Hey! 👋']
+    hungry: [['Karnım acıktı!', 'food'], ['Mama zamanı geldi mi?', 'food']],
+    thirsty: [['Susadım', 'drop'], ['Biraz su alabilir miyim?', 'drop']],
+    tired: [['Uykum geldi…', 'moon'], ['Işığı kapatır mısın?', 'moon']],
+    dirty: [['Banyo yapmak istiyorum', 'bath'], ['Biraz kokuyor olabilirim…', 'bath']],
+    sad: [['Sıkıldım, oynayalım mı?', 'ball'], ['Beni sever misin?', 'heart']],
+    sick: [['Kendimi iyi hissetmiyorum', 'face-sick'], ['Veterinere gidelim mi?', 'vet']],
+    happy: [['Seni çok seviyorum!', 'heart'], ['Bugün harika bir gün!', 'sun'], ['Yaşasın!', 'party']],
+    neutral: [['Ne yapalım?', 'paw'], ['Merhaba!', 'paw']]
   };
+  // uygulamadan liste gelmezse kullanılacak hazır şikayetler (Elora uygulamasındakiyle aynı)
+  const DEFAULT_SYMPTOMS = ['Karın ağrısı', 'Bel ağrısı', 'Göğüs hassasiyeti', 'Baş ağrısı', 'Yorgunluk / halsizlik', 'Ruh hali değişimi', 'Şişkinlik', 'Bulantı', 'İshal', 'Kabızlık'];
 
   // saklambaç: saklandığı yerden kafasının üstü görünür
   function peekMarkup(b, C) {
@@ -1058,6 +1259,13 @@
     return ears + '<path d="M-48 40 C-50 -22 50 -22 48 40 Z" fill="' + C.fur + '"' + st + '/>' +
       '<g fill="#2A1A14"><ellipse cx="-17" cy="12" rx="7" ry="8"/><ellipse cx="17" cy="12" rx="7" ry="8"/></g>' +
       '<g fill="#fff"><circle cx="-15" cy="9" r="2.6"/><circle cx="19" cy="9" r="2.6"/></g>';
+  }
+  // saklambaçta sayarken: patileriyle gözlerini kapatmış yüz
+  function coverEyesMarkup(b, C) {
+    const L = C.line, st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"';
+    const paw = (x, r) => '<g transform="translate(' + x + ' 14) rotate(' + r + ')"><ellipse rx="20" ry="17" fill="' + C.paw + '"' + st + '/><path d="M-8 6 L-8 14 M0 8 L0 16 M8 6 L8 14" stroke="' + L + '" stroke-width="2.6" stroke-linecap="round"/></g>';
+    return peekMarkup(b, C) + '<path d="M-48 40 C-48 60 48 60 48 40 Z" fill="' + C.fur + '"' + st + '/>' + paw(-18, 12) + paw(18, -12) +
+      '<path d="M-8 40 Q0 46 8 40" fill="none" stroke="' + L + '" stroke-width="3" stroke-linecap="round"/>';
   }
   function boxMarkup(L, back) {
     const st = ' stroke="' + L + '" stroke-width="3.5" stroke-linejoin="round"';
@@ -1165,7 +1373,8 @@
       this.listeners = {};
       this.stats = Object.assign({ fullness: 80, hydration: 80, energy: 80, happiness: 80, cleanliness: 80, health: 100 }, options.stats || {});
       // ilerleme: seviye, pati parası, kıyafetler, günlük görevler
-      this.progress = { level: 1, xp: 0, coins: 30, owned: [], wear: { head: null, eyes: null, neck: null, body: null }, quests: { date: '', list: [], bonus: false } };
+      this.progress = { level: 1, xp: 0, coins: 0, owned: [], wear: { head: null, eyes: null, neck: null, body: null }, quests: { date: '', list: [], bonus: false }, daily: null };
+      this.talk = null; this.logOpts = null; this.connected = false; this.askAlways = !!options.ask; this._talkT = 8;
       this.showHud = options.hud !== undefined ? !!options.hud : options.tools !== false;
       this.useClock = options.clock !== false; this.hourOverride = null; this._clockT = 0; this._clockInfo = null;
       this.cycle = null; this._cycleNext = rand(30, 50); this._cycleFirst = false;
@@ -1200,12 +1409,22 @@
       // bakım yaptıkça ödül ve görev ilerlemesi
       this.on('action', (a) => {
         if (a.phase !== 'end') return;
-        if (a.name === 'eat') { this._quest('feed'); this.reward(5, 2, this._rewardAt()); }
-        else if (a.name === 'drink') { this._quest('water'); this.reward(4, 2, this._rewardAt()); }
-        else if (a.name === 'shakeDry') { this._quest('bath'); this.reward(10, 5, this._rewardAt()); }
-        else if (a.name === 'med') this.reward(4, 1, this._rewardAt());
+        const at = this._rewardAt();
+        if (a.name === 'eat') { this._quest('feed'); this._quest('feed3'); this._earn('eat', at); }
+        else if (a.name === 'drink') { this._quest('water'); this._quest('water2'); this._earn('drink', at); }
+        else if (a.name === 'shakeDry') { this._quest('bath'); this._earn('bath', at); }
+        else if (a.name === 'med') this._earn('med', at);
       });
-      this.on('play', (e) => { if (e && e.kind === 'hide') return; this._quest('play'); this.reward(1, 1); });
+      this.on('feed', (e) => { if (e.phase !== 'end') return; if (e.food === 'veggie') this._quest('healthy'); if (e.food === 'treat') this._quest('treat'); });
+      this.on('med', (e) => { if (e.phase === 'end' && e.id === 'vitamin') this._quest('vitamin'); });
+      this.on('sleep', () => this._quest('sleep'));
+      this.on('play', (e) => {
+        if (!e || e.kind === 'hide') return;
+        this._quest('play');
+        const k = { ball: 'ball', laser: 'laser', bubble: 'bubbles', butterfly: 'butterfly' }[e.kind];
+        if (k) this._quest(k);
+        this._earn('play');
+      });
       this._loop = this._loop.bind(this);
       this._last = null;
       this._raf = requestAnimationFrame(this._loop);
@@ -1249,7 +1468,7 @@
         '<g data-r="ball" display="none">' + ballMarkup(C.line) + '</g>' +
         '<rect data-r="night" x="0" y="0" width="10" height="10" fill="#141A3D" opacity="0" style="pointer-events:none"/>' +
         '<g data-r="nameTag" display="none"><rect data-r="nameBg" x="0" y="-19" height="38" rx="19" fill="rgba(255,255,255,0.92)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
-          '<text data-r="nameTxt" y="7" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="21" font-weight="800" fill="' + SC.text + '"></text></g>' +
+          '<g data-r="nameIcon"></g><text data-r="nameTxt" y="7" font-family="' + FONT + '" font-size="21" font-weight="800" fill="' + SC.text + '"></text></g>' +
         (this.showHud ? '<g data-r="hud" style="pointer-events:none">' +
           '<g transform="translate(14 14)"><rect width="184" height="48" rx="24" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
             '<path d="M24 4 L30 17 L44 18 L33 27 L37 41 L24 33 L11 41 L15 27 L4 18 L18 17 Z" fill="#FFD166" stroke="' + C.line + '" stroke-width="2.5" stroke-linejoin="round"/>' +
@@ -1260,13 +1479,13 @@
             '<circle cx="20" cy="20" r="13" fill="#FFD166" stroke="#D68A00" stroke-width="2.5"/><g fill="#D68A00"><ellipse cx="20" cy="23" rx="4.5" ry="3.6"/><circle cx="14.5" cy="17" r="2"/><circle cx="18" cy="14" r="2"/><circle cx="22" cy="14" r="2"/><circle cx="25.5" cy="17" r="2"/></g>' +
             '<text data-r="hudCoins" x="42" y="26" font-family="' + FONT + '" font-size="17" font-weight="900" fill="#8E5E55">0</text></g>' +
           '<g data-r="hudCycle" transform="translate(14 118)" display="none"><rect data-r="hudCycleBg" width="150" height="34" rx="17" fill="#FFE3EC" stroke="#F7A9BC" stroke-width="2.5"/>' +
-            '<text data-r="hudCycleTxt" x="12" y="22" font-family="' + FONT + '" font-size="13" font-weight="800" fill="#C2456A"></text></g>' +
+            '<g data-r="hudCycleIcon"></g><text data-r="hudCycleTxt" x="34" y="22" font-family="' + FONT + '" font-size="13" font-weight="800" fill="#C2456A"></text></g>' +
           '<g data-r="hudBtns"></g></g>' : '') +
-        '<g data-r="speech" display="none" style="pointer-events:none"><path data-r="speechBg" fill="#fff" stroke="#F3CFD9" stroke-width="3" stroke-linejoin="round"/>' +
+        '<g data-r="speech" display="none" style="pointer-events:none"><path data-r="speechBg" fill="#fff" stroke="#F3CFD9" stroke-width="3" stroke-linejoin="round"/><g data-r="speechIcon"></g>' +
           '<text data-r="speechTxt" text-anchor="middle" font-family="' + FONT + '" font-size="17" font-weight="800" fill="' + SC.text + '"></text>' +
           '<g data-r="speechBtn" display="none"><rect data-r="speechBtnBg" height="36" rx="18" fill="#4FA9D6"/><text data-r="speechBtnTxt" text-anchor="middle" font-family="' + FONT + '" font-size="15" font-weight="800" fill="#fff"></text></g></g>' +
         '<g data-r="banner" display="none"><rect data-r="bannerBg" x="0" y="-18" height="36" rx="18" fill="#9B8DE8"/>' +
-          '<text data-r="bannerTxt" y="6" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="16" font-weight="800" fill="#fff"></text></g>' +
+          '<g data-r="bannerIcon"></g><text data-r="bannerTxt" y="6" font-family="' + FONT + '" font-size="16" font-weight="800" fill="#fff"></text><g data-r="bannerX"></g></g>' +
         (this.showTools ? '<path data-r="hose" fill="none" stroke="' + P.hose + '" stroke-width="8" stroke-linecap="round"/>' +
           '<g data-r="tools">' +
             slot('Food', '<g transform="translate(0 2) scale(0.95)">' + foodIcon('kibble', this.species, P, C.line) + '</g>', this.labels.food) +
@@ -1283,7 +1502,7 @@
             slot('Shower', '<g transform="translate(-6 10) rotate(-20) scale(0.75)">' + showerMarkup(P, C.line) + '</g>', this.labels.shower) +
           '</g>' +
           '<g data-r="menu"></g>' +
-          '<g data-r="panel"></g>' +
+
           '<g data-r="held" style="pointer-events:none">' +
             '<g data-r="heldFood" display="none"></g>' +
             '<g data-r="heldWater" display="none"><g transform="scale(1.3)">' + waterIconMarkup(P, C.line) + '</g></g>' +
@@ -1293,6 +1512,8 @@
             '<g data-r="heldTooth" display="none"><g transform="scale(1.4)">' + careIcon('tooth', C.line) + '</g></g>' +
           '</g>' : '') +
         '<g data-r="fx" style="pointer-events:none"></g>' +
+        (this.showTools ? '<g data-r="panel"></g><g data-r="talk"></g>' : '') +
+        '<g data-r="fxTop" style="pointer-events:none"></g>' +
         '</svg>';
       this.svg = this.container.querySelector('svg');
       const r = this.r = {};
@@ -1439,9 +1660,10 @@
           try { svg.setPointerCapture(e.pointerId); } catch (_) { /* yoksay */ }
           e.preventDefault();
           this.sfx.unlock();
-          // konuşma balonundaki buton ("İçtim ✓")
+          // konuşma balonundaki buton ("İçtim")
           const sp = this.speech;
           if (sp && sp.hit && w.x > sp.hit.x && w.x < sp.hit.x + sp.hit.w && w.y > sp.hit.y && w.y < sp.hit.y + sp.hit.h) { const fn = sp.onTap; this.speech = null; this.r.speech.setAttribute('display', 'none'); if (fn) fn(); return; }
+          if (this.talk) { this._talkDown(w); return; }
           if (this.panel) { this._panelDown(w, e.pointerId); return; }
           // açık menü: bir seçeneğe dokunuldu mu?
           if (this.menu) {
@@ -1451,7 +1673,7 @@
             const sk = this._slotAt(w);
             if (sk && ({ food: 'food', game: 'game' })[sk] === kind) return; // aynı tuş: menüyü kapat
           }
-          // oyun şeridindeki ✕
+          // oyun şeridindeki kapatma düğmesi
           if (this.game && this.r.banner.getAttribute('display') !== 'none' && Math.abs(w.x - this.Wv / 2) < this._bannerW / 2 && Math.abs(w.y - 76) < 22) { this.stopGame(); return; }
           const B = this.ball;
           if (B.active && !B.held && Math.hypot(w.x - B.x, w.y - B.y) < B.r + 22) { this._grabBall(w, e.pointerId); return; }
@@ -1528,7 +1750,7 @@
       }
       this.stats.happiness = Math.min(100, this.stats.happiness + d * 0.012);
       this._petAcc += d;
-      if (this._petAcc > 260) { this._petAcc = 0; this._quest('pet'); this.reward(1, 0); }
+      if (this._petAcc > 260) { this._petAcc = 0; this._quest('pet'); this._earn('pet'); }
       if (wasLow) this._emit('pet', { phase: 'start' });
     }
     petOnce() {
@@ -1565,7 +1787,7 @@
         { id: 'laser', kind, label: 'Lazer', sub: 'Parmağını gezdir', icon: '<circle r="16" fill="#FF3B5C" opacity="0.25"/><circle r="8" fill="#FF3B5C"/><circle cx="-2" cy="-2" r="2.5" fill="#fff"/>' },
         { id: 'bubbles', kind, label: 'Baloncuk', sub: 'Patlat', icon: '<g transform="translate(-8 4) scale(0.8)">' + soapBubbleMarkup() + '</g><g transform="translate(12 -10) scale(0.5)">' + soapBubbleMarkup() + '</g>' },
         { id: 'butterfly', kind, label: 'Kelebek', sub: 'Yakala', icon: '<g transform="scale(0.75)">' + butterflyMarkup(this.C.line) + '</g>' },
-        { id: 'hide', kind, label: 'Saklambaç', sub: 'Onu bul', icon: '<text y="13" text-anchor="middle" font-size="38">🙈</text>' }];
+        { id: 'hide', kind, label: 'Saklambaç', sub: 'Onu bul', icon: '<g transform="translate(0 2) scale(0.5)">' + peekMarkup(BREEDS[this.breed], this.C) + '</g>' }];
     }
     _openMenu(kind) {
       this._closeMenu();
@@ -1588,11 +1810,16 @@
           '<g transform="translate(' + cw / 2 + ' 36)">' + it.icon + '</g>' +
           '<text x="' + cw / 2 + '" y="78" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="13.5" font-weight="800" fill="' + SC.text + '">' + it.label + '</text>' +
           '<text x="' + cw / 2 + '" y="95" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="10.5" font-weight="600" fill="#B08A82">' + it.sub + '</text>';
-        if (it.fx) { // etkiler: 🍖 tokluk, 😊 mutluluk, 💧 su, ⚡ enerji
-          const ic = { fullness: '🍖', happiness: '😊', hydration: '💧', energy: '⚡' };
-          const txt = ['fullness', 'happiness', 'hydration', 'energy'].filter((k) => it.fx[k]).map((k) => ic[k] + it.fx[k]).join(' ');
-          m += '<rect x="6" y="104" width="' + (cw - 12) + '" height="20" rx="10" fill="#FFF1F4"/>' +
-            '<text x="' + cw / 2 + '" y="118" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="11" font-weight="800" fill="' + SC.text + '">' + txt + '</text>';
+        if (it.fx) { // etkiler: tokluk, mutluluk, su, enerji (ikon + sayı)
+          const ic = { fullness: 'food', happiness: 'heart', hydration: 'drop', energy: 'bolt' };
+          const keys = ['fullness', 'happiness', 'hydration', 'energy'].filter((k) => it.fx[k]);
+          const pw = keys.map((k) => 15 + String(it.fx[k]).length * 6.4 + 4), tot = pw.reduce((a, b) => a + b, 0);
+          let px = (cw - tot) / 2;
+          m += '<rect x="6" y="104" width="' + (cw - 12) + '" height="20" rx="10" fill="#FFF1F4"/>';
+          keys.forEach((k, j) => {
+            m += icon(ic[k], px + 6, 114, 13) + '<text x="' + f(px + 14) + '" y="118" font-family="' + FONT + '" font-size="11" font-weight="800" fill="' + SC.text + '">' + it.fx[k] + '</text>';
+            px += pw[j];
+          });
         }
         m += '</g>';
       });
@@ -1617,9 +1844,12 @@
       const r = this.r; if (!r.nameTag) return;
       if (!this.name) { r.nameTag.setAttribute('display', 'none'); return; }
       r.nameTag.setAttribute('display', 'inline');
-      r.nameTxt.textContent = '🐾 ' + this.name;
-      let w = 60 + this.name.length * 12;
-      try { w = r.nameTxt.getComputedTextLength() + 40 || w; } catch (e) { /* yoksay */ }
+      r.nameTxt.textContent = this.name;
+      let tw = this.name.length * 12;
+      try { tw = r.nameTxt.getComputedTextLength() || tw; } catch (e) { /* yoksay */ }
+      const w = tw + 70;
+      r.nameIcon.innerHTML = icon('paw', -w / 2 + 28, 0, 22);
+      r.nameTxt.setAttribute('x', f(-w / 2 + 46));
       r.nameBg.setAttribute('x', f(-w / 2)); r.nameBg.setAttribute('width', f(w));
     }
 
@@ -1680,8 +1910,8 @@
         g.wings = g.el.querySelectorAll('[data-w]');
         layer.appendChild(g.el);
       } else if (kind === 'hide') { this._clearActions(); this._startHide(g); }
-      const label = { laser: '🔴 Lazer: parmağını sahnede gezdir', bubbles: '🫧 Baloncukları patlat', butterfly: '🦋 Kelebeğe dokun', hide: '🙈 Saklambaç' }[kind];
-      this._setBanner(label + '   ✕');
+      const label = { laser: ['Lazer: parmağını sahnede gezdir', 'laser'], bubbles: ['Baloncukları patlat', 'bubble'], butterfly: ['Kelebeğe dokun', 'butterfly'], hide: ['Saklambaç', 'search'] }[kind];
+      this._setBanner(label[0], label[1], true);
       this._emit('game', { name: kind, phase: 'start' });
     }
     stopGame(silent) {
@@ -1703,7 +1933,7 @@
         if (b) { this._popGameBubble(b, false); return true; }
       }
       if (g.kind === 'butterfly' && Math.hypot(g.bf.x - w.x, g.bf.y - w.y) < 50) { // kelebek burnuna konar
-        g.bf.land = 3; this.stats.happiness = Math.min(100, this.stats.happiness + 3); this.sfx.play('sparkle'); return true;
+        g.bf.land = 3; this.stats.happiness = Math.min(100, this.stats.happiness + 3); this.sfx.play('sparkle'); this._emit('play', { kind: 'butterfly' }); return true;
       }
       return false;
     }
@@ -1950,7 +2180,7 @@
         this.sfx.water(false);
         // köpük tamamen durulandıysa silkelenir; köpük kaldıysa beklemeye devam eder
         if (this.wet > 0.15 && this.foam.length === 0) { this._clearActions(); this._startAction(ACTIONS.shakeDry(this)); }
-        else if (this.foam.length) { const hw = this._toWorld(200, this._headLocal().y - 120); this._spawn('text', hw.x, hw.y, { text: 'Durula! 🚿', vy: -30, life: 1.4, size: 18, color: '#4FA9D6' }); }
+        else if (this.foam.length) { const hw = this._toWorld(200, this._headLocal().y - 120); this._iconToast(hw.x, hw.y, [['drop', 'Durula!']], { color: '#4FA9D6', size: 18, vy: -30, life: 1.4 }); }
       } else if (d.type === 'sponge') {
         this.showering = false;
       }
@@ -2154,7 +2384,7 @@
 
     // ================================================================ üst bilgi çubuğu (seviye, pati parası, butonlar)
     _hudButtons() {
-      return [['quests', '📋', 'Görevler'], ['shop', '🛍️', 'Mağaza'], ['wardrobe', '👗', 'Dolap'], ['mood', '💬', 'Nasılsın?'], ['vet', '🩺', 'Veteriner']];
+      return [['quests', 'list', 'Görevler'], ['shop', 'bag', 'Mağaza'], ['wardrobe', 'hanger', 'Dolap'], ['talk', 'chat', 'Konuş'], ['vet', 'vet', 'Veteriner']];
     }
     _layoutHud() {
       const r = this.r; if (!r.hudBtns) return;
@@ -2165,7 +2395,7 @@
         const y = 42 + i * 74;
         this.hudHits.push({ id: b[0], x, y });
         m += '<g transform="translate(' + f(x) + ' ' + y + ')"><circle r="26" fill="rgba(255,255,255,0.94)" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
-          '<text y="9" text-anchor="middle" font-size="25">' + b[1] + '</text>' +
+          icon(b[1], 0, 0, 30) +
           '<text y="42" text-anchor="middle" font-family="' + FONT + '" font-size="11" font-weight="800" fill="' + SC.text + '" stroke="#fff" stroke-width="3" paint-order="stroke">' + b[2] + '</text>' +
           '<circle data-b="' + b[0] + '" cx="19" cy="-19" r="8" fill="#FF5E86" stroke="#fff" stroke-width="2.5" display="none"/></g>';
       });
@@ -2185,39 +2415,42 @@
       r.hudCoins.textContent = pr.coins;
       if (this.cycle && CYCLE[this.cycle.phase]) {
         const c = CYCLE[this.cycle.phase];
+        r.hudCycleIcon.innerHTML = icon(c.icon, 18, 17, 20);
         r.hudCycleTxt.textContent = c.label + (this.cycle.phase === 'period' && this.cycle.day ? ' · ' + this.cycle.day + '. gün' : '');
-        let w = 150; try { w = r.hudCycleTxt.getComputedTextLength() + 24 || w; } catch (e) { /* yoksay */ }
+        let w = 150; try { w = r.hudCycleTxt.getComputedTextLength() + 46 || w; } catch (e) { /* yoksay */ }
         r.hudCycleBg.setAttribute('width', f(w));
         r.hudCycle.setAttribute('display', 'inline');
       } else r.hudCycle.setAttribute('display', 'none');
       if (r.hudBtns) {
         const badge = (id, on) => { const e = r.hudBtns.querySelector('[data-b="' + id + '"]'); if (e) e.setAttribute('display', on ? 'inline' : 'none'); };
-        badge('quests', pr.quests.list.some((q) => q.have >= QUESTS[q.id].n && !q.claimed));
+        badge('quests', pr.quests.list.some((q) => QUESTS[q.id] && q.have >= QUESTS[q.id].n && !q.claimed));
         badge('vet', this.stats.health < 40);
-        badge('mood', !this.userMood || this.userMood.date !== this._today());
+        badge('talk', !(pr.daily && pr.daily.done && pr.daily.done.checkin));
       }
     }
 
     // ================================================================ konuşma balonu
+    // opt: { icon: 'heart', button: 'İçtim', onTap: fn }
     say(text, dur, opt) {
       opt = opt || {};
       const r = this.r; if (!r.speech || !text) return;
-      this.speech = { text, t: 0, dur: dur || 3, button: opt.button || null, onTap: opt.onTap || null };
+      this.speech = { text, t: 0, dur: dur || 3, button: opt.button || null, onTap: opt.onTap || null, iw: opt.icon ? 36 : 0 };
       const lines = [], words = String(text).split(' ');
       let cur = '';
       words.forEach((wd) => { if ((cur + ' ' + wd).trim().length > 24 && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); });
       if (cur) lines.push(cur);
       r.speechTxt.innerHTML = lines.map((l, i) => '<tspan x="0" dy="' + (i ? 22 : 0) + '">' + esc(l) + '</tspan>').join('');
+      r.speechIcon.innerHTML = opt.icon ? icon(opt.icon, 0, 0, 28) : '';
       let w = Math.max.apply(null, lines.map((l) => l.length)) * 9.5;
       try { w = r.speechTxt.getBBox().width || w; } catch (e) { /* yoksay */ }
       const btnH = this.speech.button ? 44 : 0;
       if (this.speech.button) {
         r.speechBtnTxt.textContent = this.speech.button;
-        let bw = 110; try { bw = r.speechBtnTxt.getComputedTextLength() + 34 || bw; } catch (e) { /* yoksay */ }
-        w = Math.max(w, bw);
+        let bw = 110; try { bw = r.speechBtnTxt.getComputedTextLength() + 40 || bw; } catch (e) { /* yoksay */ }
+        w = Math.max(w, bw - this.speech.iw);
         this.speech.bw = bw;
       }
-      this.speech.w = w + 32; this.speech.h = lines.length * 22 + 24 + btnH; this.speech.lines = lines.length;
+      this.speech.w = w + 32 + this.speech.iw; this.speech.h = lines.length * 22 + 24 + btnH; this.speech.lines = lines.length;
       r.speech.setAttribute('display', 'inline');
       r.speechBtn.setAttribute('display', this.speech.button ? 'inline' : 'none');
       this._emit('say', { text });
@@ -2225,15 +2458,17 @@
     _updateSpeech(dt) {
       const sp = this.speech, r = this.r; if (!sp || !r.speech) return;
       sp.t += dt;
-      if (sp.t > sp.dur || this.hidden) { this.speech = null; r.speech.setAttribute('display', 'none'); return; }
+      if (sp.t > sp.dur || this.hidden || this.talk) { this.speech = null; r.speech.setAttribute('display', 'none'); return; }
       const hl = this._headLocal(), a = this._toWorld(hl.x + 64, hl.y - 70);
       const W = sp.w, H = sp.h;
       let x0 = clamp(a.x - 34, 8, this.Wv - W - 64), y1 = Math.max(a.y, H + 62), y0 = y1 - H;
       const tx = clamp(a.x - 18, x0 + 20, x0 + W - 30), x1 = x0 + W, rr = 18;
       r.speechBg.setAttribute('d', 'M' + f(x0 + rr) + ' ' + f(y0) + ' H' + f(x1 - rr) + ' Q' + f(x1) + ' ' + f(y0) + ' ' + f(x1) + ' ' + f(y0 + rr) + ' V' + f(y1 - rr) + ' Q' + f(x1) + ' ' + f(y1) + ' ' + f(x1 - rr) + ' ' + f(y1) +
         ' H' + f(tx + 16) + ' L' + f(tx - 8) + ' ' + f(y1 + 22) + ' L' + f(tx) + ' ' + f(y1) + ' H' + f(x0 + rr) + ' Q' + f(x0) + ' ' + f(y1) + ' ' + f(x0) + ' ' + f(y1 - rr) + ' V' + f(y0 + rr) + ' Q' + f(x0) + ' ' + f(y0) + ' ' + f(x0 + rr) + ' ' + f(y0) + ' Z');
-      r.speechTxt.setAttribute('transform', 'translate(' + f(x0 + W / 2) + ' ' + f(y0 + 28) + ')');
+      const btnH = sp.button ? 44 : 0;
+      r.speechTxt.setAttribute('transform', 'translate(' + f(x0 + sp.iw + (W - sp.iw) / 2) + ' ' + f(y0 + 28) + ')');
       r.speechTxt.querySelectorAll('tspan').forEach((t) => t.setAttribute('x', '0'));
+      r.speechIcon.setAttribute('transform', 'translate(' + f(x0 + 30) + ' ' + f(y0 + (H - btnH) / 2) + ')');
       if (sp.button) {
         const bw = sp.bw, bx = x0 + (W - bw) / 2, by = y1 - 48;
         r.speechBtnBg.setAttribute('x', f(bx)); r.speechBtnBg.setAttribute('y', f(by)); r.speechBtnBg.setAttribute('width', f(bw));
@@ -2244,34 +2479,49 @@
       r.speech.setAttribute('transform', 'translate(' + f(tx) + ' ' + f(y1) + ') scale(' + Math.round(k * 100) / 100 + ') translate(' + f(-tx) + ' ' + f(-y1) + ')');
       r.speech.setAttribute('opacity', f(Math.min(1, k * 1.4)));
     }
+    _sayLine(line, dur) { if (line) this.say(line[0], dur || 3.2, { icon: line[1] }); }
     _autoSay(mood) {
-      if (this._sayCool > 0 || this.speech || this.hidden) return;
+      if (this._sayCool > 0 || this.speech || this.hidden || this.talk) return;
       const hr = this._clockInfo ? this._clockInfo.h : 12;
       let lines = NEED_LINES[mood] || NEED_LINES.neutral, p = mood === 'happy' || mood === 'neutral' ? 0.3 : 0.75;
-      if ((hr >= 23 || hr < 6) && !this.lightsOff && Math.random() < 0.5) { lines = ['Geç oldu, uyuyalım mı? 🌙', 'Işığı kapatırsan uyurum 💤']; p = 1; }
+      if ((hr >= 23 || hr < 6) && !this.lightsOff && Math.random() < 0.5) { lines = [['Geç oldu, uyuyalım mı?', 'moon'], ['Işığı kapatırsan uyurum', 'moon']]; p = 1; }
       else if (this.cycle && CYCLE[this.cycle.phase] && (mood === 'happy' || mood === 'neutral') && Math.random() < 0.5) { lines = CYCLE[this.cycle.phase].tips; p = 0.8; }
       if (Math.random() > p) return;
-      this.say(lines[Math.floor(Math.random() * lines.length)], 3.2);
+      this._sayLine(lines[Math.floor(Math.random() * lines.length)]);
       this._sayCool = rand(16, 26);
+    }
+    // ikon + yazı parçalarından uçan bir etiket ("+2 [para] +5 [yıldız]" gibi)
+    _iconToast(x, y, parts, opt) {
+      opt = opt || {};
+      const size = opt.size || 17, col = opt.color || '#D68A00';
+      let m = '', cx = 0;
+      parts.forEach((p) => {
+        if (p[0]) { m += icon(p[0], cx + 11, -size * 0.35, size + 5); cx += 25; }
+        if (p[1]) { m += '<text x="' + f(cx) + '" y="0" font-family="' + FONT + '" font-size="' + size + '" font-weight="900" fill="' + col + '" stroke="#fff" stroke-width="3.5" paint-order="stroke">' + esc(p[1]) + '</text>'; cx += String(p[1]).length * size * 0.58 + 10; }
+      });
+      this._spawn('icontext', x, y, { markup: '<g transform="translate(' + f(-cx / 2) + ' 0)">' + m + '</g>', vy: opt.vy || -45, life: opt.life || 1.5 });
     }
 
     // ================================================================ ilerleme: seviye, pati parası, görevler
-    _xpNeed(lv) { return 40 + lv * 30; }
+    _xpNeed(lv) { return 80 + lv * 40; }
     _rewardAt() { const hl = this._headLocal(); return this._toWorld(hl.x, hl.y - 120); }
     reward(xp, coins, at) {
       const pr = this.progress;
       xp = Math.max(0, xp | 0); coins = Math.max(0, coins | 0);
       pr.xp += xp; pr.coins += coins;
       if (at && (xp || coins)) {
-        this._spawn('text', at.x, at.y, { text: (coins ? '+' + coins + ' 🪙  ' : '') + (xp ? '+' + xp + ' ⭐' : ''), vy: -45, life: 1.5, size: 17, color: '#D68A00' });
+        const parts = [];
+        if (coins) parts.push(['coin', '+' + coins]);
+        if (xp) parts.push(['star', '+' + xp]);
+        this._iconToast(at.x, at.y, parts);
         if (coins) this.sfx.play('coin');
       }
       let up = false;
       while (pr.xp >= this._xpNeed(pr.level)) { pr.xp -= this._xpNeed(pr.level); pr.level++; up = true; }
       if (up) {
-        pr.coins += 10;
+        pr.coins += LEVEL_BONUS;
         const unlocked = Object.keys(CLOTHES).filter((id) => CLOTHES[id].level === pr.level).map((id) => CLOTHES[id].name);
-        this.say('Seviye ' + pr.level + ' oldum! ⭐' + (unlocked.length ? ' Mağazada yeni: ' + unlocked.join(', ') : ''), 4);
+        this.say('Seviye ' + pr.level + ' oldum!' + (unlocked.length ? ' Mağazada yeni: ' + unlocked.join(', ') : ''), 4.5, { icon: 'star' });
         if (!this.sleeping && !this.hidden && !(this.action && this.action.busy)) this._startAction(ACTIONS.celebrate(this));
         this.sfx.play('chime');
         this._emit('level', { level: pr.level, unlocked });
@@ -2279,33 +2529,50 @@
       this._renderHud();
       this._emit('progress', this.getProgress());
     }
+    // bakım ödülü: her bakımın günlük bir sınırı var (gece 12'de sıfırlanır)
+    _earn(key, at) {
+      const R = REWARDS[key]; if (!R) return false;
+      this._checkQuests();
+      const c = this.progress.daily.c, n = c[key] || 0;
+      if (n >= R.cap) return false;
+      c[key] = n + 1;
+      this.reward(R.xp, R.coins, at);
+      return true;
+    }
     getProgress() {
       const pr = this.progress;
       return { level: pr.level, xp: pr.xp, xpNeed: this._xpNeed(pr.level), coins: pr.coins, owned: pr.owned.slice(), wear: Object.assign({}, pr.wear),
-        quests: pr.quests.list.map((q) => ({ id: q.id, text: QUESTS[q.id].text, have: q.have, need: QUESTS[q.id].n, claimed: !!q.claimed })) };
+        quests: pr.quests.list.filter((q) => QUESTS[q.id]).map((q) => ({ id: q.id, text: QUESTS[q.id].text, have: q.have, need: QUESTS[q.id].n, claimed: !!q.claimed })) };
     }
     _today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+    _todayISO() { const d = new Date(), p = (n) => (n < 10 ? '0' : '') + n; return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); }
+    // gün değişince (gece 12) görevler ve günlük ödül sayaçları yenilenir
     _checkQuests() {
       const pr = this.progress, today = this._today();
+      if (!pr.daily || pr.daily.date !== today) pr.daily = { date: today, c: {}, done: {}, asked: {} };
       if (pr.quests.date === today && pr.quests.list.length) return;
       let seed = 0;
       for (let i = 0; i < today.length; i++) seed = (seed * 31 + today.charCodeAt(i)) % 2147483647;
       const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-      const self = SELF_QUESTS[Math.floor(rnd() * SELF_QUESTS.length)];
+      const pick = [SELF_QUESTS[Math.floor(rnd() * SELF_QUESTS.length)]];
       const pool = Object.keys(QUESTS).filter((k) => SELF_QUESTS.indexOf(k) < 0);
-      const pick = [self];
-      while (pick.length < 3) { const k = pool[Math.floor(rnd() * pool.length)]; if (pick.indexOf(k) < 0) pick.push(k); }
+      const fam = (k) => k.replace(/\d+$/, ''); // aynı türden iki görev (feed + feed3) aynı gün gelmez
+      let guard = 0;
+      while (pick.length < QUEST_COUNT && guard++ < 200) { const k = pool[Math.floor(rnd() * pool.length)]; if (!pick.some((p) => fam(p) === fam(k))) pick.push(k); }
       pr.quests = { date: today, list: pick.map((id) => ({ id, have: 0, claimed: false })), bonus: false };
       this._renderHud();
+      if (this.panel && this.panel.kind === 'quests') this._openPanel('quests');
+      this._emit('quests', this.getProgress().quests);
     }
     _quest(id, n) {
+      this._checkQuests();
       const q = this.progress.quests.list.find((x) => x.id === id);
       if (!q || q.claimed) return;
       const need = QUESTS[id].n;
       if (q.have >= need) return;
       q.have = Math.min(need, q.have + (n || 1));
       if (q.have >= need) {
-        this._spawn('text', this.Wv / 2, 128, { text: 'Görev tamam! ' + QUESTS[id].icon + ' ✓', vy: -18, life: 2.2, size: 19, color: '#3FAE8C' });
+        this._iconToast(this.Wv / 2, 128, [['check', 'Görev tamam: ' + QUESTS[id].text]], { color: '#3FAE8C', size: 17, vy: -18, life: 2.4 });
         this.sfx.play('sparkle');
         this._emit('quest', { id, phase: 'done' });
       }
@@ -2314,12 +2581,12 @@
     }
     claimQuest(id) {
       const pr = this.progress, q = pr.quests.list.find((x) => x.id === id);
-      if (!q || q.claimed || q.have < QUESTS[id].n) return false;
+      if (!q || q.claimed || !QUESTS[id] || q.have < QUESTS[id].n) return false;
       q.claimed = true;
-      this.reward(20, 15, { x: this.Wv / 2, y: 150 });
+      this.reward(QUEST_REWARD.xp, QUEST_REWARD.coins, { x: this.Wv / 2, y: 150 });
       if (!pr.quests.bonus && pr.quests.list.every((x) => x.claimed)) {
         pr.quests.bonus = true;
-        setTimeout(() => { this.reward(0, 20, { x: this.Wv / 2, y: 190 }); this.say('Bugünün tüm görevleri bitti! 🎉', 3); }, 600);
+        setTimeout(() => { this.reward(0, QUEST_BONUS, { x: this.Wv / 2, y: 190 }); this.say('Bugünün tüm görevleri bitti!', 3, { icon: 'party' }); }, 600);
       }
       this._emit('quest', { id, phase: 'claimed' });
       if (this.panel && this.panel.kind === 'quests') this._openPanel('quests');
@@ -2352,6 +2619,7 @@
       this._renderWear();
       if (!this.sleeping && !this.hidden && !this.action) this._startAction(ACTIONS.hop(this));
       for (let i = 0; i < 4; i++) this._spawnL('sparkle', rand(130, 270), rand(60, 300), { vy: -30, life: 0.8, s: 0.8 });
+      this._quest('wear');
       this._emit('wear', Object.assign({}, pr.wear));
       return true;
     }
@@ -2366,19 +2634,25 @@
       const w = this.progress.wear, sp = this.species, L = this.C.line;
       r.wearHead.innerHTML = w.head ? clothMarkup(w.head, sp, L) : '';
       r.wearEyes.innerHTML = w.eyes ? clothMarkup(w.eyes, sp, L) : '';
-      r.wearNeck.innerHTML = w.neck ? clothMarkup(w.neck, sp, L) : w.body === 'cape' ? '<circle cx="200" cy="236" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/>' : '';
-      r.wearBody.innerHTML = w.body === 'sweater' ? clothMarkup('sweater', sp, L) : '';
+      r.wearNeck.innerHTML = (w.body === 'tutu' ? clothMarkup('tutu', sp, L) : '') +
+        (w.neck ? clothMarkup(w.neck, sp, L) : w.body === 'cape' ? '<circle cx="200" cy="236" r="9" fill="#FFD166" stroke="' + L + '" stroke-width="3"/>' : '');
+      r.wearBody.innerHTML = ['sweater', 'hoodie', 'raincoat', 'overalls'].indexOf(w.body) >= 0 ? clothMarkup(w.body, sp, L) : '';
       r.wearBack.innerHTML = w.body === 'cape' ? clothMarkup('cape', sp, L) : '';
+      const sl = SLEEVES[w.body];
+      if (sl && r.sleeveF0) for (let i = 0; i < 2; i++) { r['sleeveF' + i].setAttribute('stroke', sl[0]); r['sleeveC' + i].setAttribute('stroke', sl[1]); }
     }
 
-    // ================================================================ paneller (görevler, mağaza, dolap, ruh hali, veteriner)
+    // ================================================================ paneller (görevler, mağaza, dolap, veteriner)
     _openPanel(kind) {
+      if (kind === 'mood' || kind === 'talk') { this.startTalk(kind === 'mood' ? 'mood' : 'checkin'); return; }
       this._closeMenu();
       const r = this.r; if (!r.panel) return;
       const SC = SCENE, pr = this.progress, L = this.C.line;
+      this._checkQuests();
       const W = Math.min(this.Wv - 28, 620), hits = [];
       const tx = (x, y, s, size, weight, color, anchor) => '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="' + (anchor || 'start') + '" font-family="' + FONT + '" font-size="' + size + '" font-weight="' + (weight || 700) + '" fill="' + (color || SC.text) + '">' + esc(s) + '</text>';
-      const title = { quests: '📋 Günlük görevler', shop: '🛍️ Mağaza', wardrobe: '👗 Dolap', mood: '💬 Bugün nasılsın?', vet: '🩺 Veteriner' }[kind];
+      const ttl = { quests: ['list', 'Günlük görevler'], shop: ['bag', 'Mağaza'], wardrobe: ['hanger', 'Dolap'], vet: ['vet', 'Veteriner'] }[kind];
+      if (!ttl) return;
       let m = '', H = 70;
       const grid = (ids, cellFn) => {
         const cw = 108, ch = 128, gap = 10, cols = Math.max(2, Math.floor((W - 32 + gap) / (cw + gap)));
@@ -2390,43 +2664,56 @@
         H += Math.ceil(ids.length / cols) * (ch + gap) + 6;
       };
       if (kind === 'quests') {
-        m += tx(24, 64, 'Her gün yeni görevler gelir 🌞', 13, 600, '#B08A82');
+        m += tx(24, 64, 'Her gece 12\'de yeni görevler gelir', 13, 600, '#B08A82');
         H = 82;
-        pr.quests.list.forEach((q) => {
+        pr.quests.list.filter((q) => QUESTS[q.id]).forEach((q) => {
           const Q = QUESTS[q.id], done = q.have >= Q.n, y = H;
           m += '<rect x="16" y="' + y + '" width="' + (W - 32) + '" height="72" rx="18" fill="' + (q.claimed ? '#F0FBF6' : '#FFF8FA') + '" stroke="#F6DCE3" stroke-width="2"/>' +
-            '<text x="46" y="' + (y + 46) + '" text-anchor="middle" font-size="28">' + Q.icon + '</text>' +
-            tx(76, y + 30, Q.text, 15, 800);
+            icon(Q.icon, 46, y + 36, 30) + tx(76, y + 30, Q.text, 15, 800);
           const bw = W - 32 - 76 - 130;
           m += '<rect x="76" y="' + (y + 42) + '" width="' + f(bw) + '" height="10" rx="5" fill="#F6DCE3"/>' +
             '<rect x="76" y="' + (y + 42) + '" width="' + f(bw * q.have / Q.n) + '" height="10" rx="5" fill="' + (done ? '#5CC9A7' : '#F4A259') + '"/>' +
             tx(76 + bw + 8, y + 52, q.have + '/' + Q.n, 12, 800, '#B08A82');
           const bx = W - 16 - 108;
-          if (q.claimed) m += tx(bx + 54, y + 42, '✓ Alındı', 14, 800, '#3FAE8C', 'middle');
+          if (q.claimed) m += icon('check', bx + 24, y + 36, 22) + tx(bx + 40, y + 42, 'Alındı', 14, 800, '#3FAE8C');
           else if (done) {
-            m += '<rect x="' + bx + '" y="' + (y + 16) + '" width="96" height="40" rx="20" fill="#F06C8B"/>' + tx(bx + 48, y + 42, 'Ödülü al 🎁', 14, 800, '#fff', 'middle');
-            hits.push({ x: bx, y: y + 16, w: 96, h: 40, fn: () => this.claimQuest(q.id) });
-          } else m += tx(bx + 54, y + 42, '🪙15  ⭐20', 13, 800, '#C9A79E', 'middle');
+            m += '<rect x="' + bx + '" y="' + (y + 16) + '" width="100" height="40" rx="20" fill="#F06C8B"/>' + icon('gift', bx + 22, y + 36, 20) + tx(bx + 36, y + 42, 'Ödülü al', 14, 800, '#fff');
+            hits.push({ x: bx, y: y + 16, w: 100, h: 40, fn: () => this.claimQuest(q.id) });
+          } else m += icon('coin', bx + 14, y + 36, 18) + tx(bx + 26, y + 42, String(QUEST_REWARD.coins), 13, 800, '#C9A79E') + icon('star', bx + 52, y + 36, 18) + tx(bx + 64, y + 42, String(QUEST_REWARD.xp), 13, 800, '#C9A79E');
           H += 82;
         });
-        H += 4;
+        m += tx(24, H + 12, 'Hepsini bitirirsen ' + QUEST_BONUS + ' pati parası daha!', 12, 700, '#B08A82');
+        H += 30;
       } else if (kind === 'shop' || kind === 'wardrobe') {
-        m += tx(W - 70, 42, '🪙 ' + pr.coins, 17, 900, '#D68A00', 'end');
-        const ids = kind === 'shop' ? Object.keys(CLOTHES) : pr.owned.filter((id) => CLOTHES[id]);
+        m += icon('coin', W - 132, 36, 22) + tx(W - 116, 42, String(pr.coins), 17, 900, '#D68A00');
+        const tab = this.panelTab || 'head';
+        let tx0 = 16;
+        const tw = (W - 32 - 3 * 8) / 4;
+        CLOTH_SLOTS.forEach((sl) => {
+          const on = sl === tab;
+          m += '<rect x="' + f(tx0) + '" y="56" width="' + f(tw) + '" height="36" rx="18" fill="' + (on ? '#F06C8B' : '#fff') + '" stroke="' + (on ? '#F06C8B' : '#F6DCE3') + '" stroke-width="2"/>' +
+            tx(tx0 + tw / 2, 79, CLOTH_TABS[sl], 14, 800, on ? '#fff' : SC.text, 'middle');
+          const xx = tx0; hits.push({ x: xx, y: 56, w: tw, h: 36, fn: () => { this.panelTab = sl; this._openPanel(kind); } });
+          tx0 += tw + 8;
+        });
+        H = 104;
+        const all = Object.keys(CLOTHES).filter((id) => CLOTHES[id].slot === tab);
+        const ids = kind === 'shop' ? all : all.filter((id) => pr.owned.indexOf(id) >= 0);
         if (kind === 'wardrobe' && !ids.length) {
-          m += tx(W / 2, 100, 'Dolabın henüz boş.', 16, 800, SC.text, 'middle') + tx(W / 2, 124, 'Mağazadan kıyafet alabilirsin!', 14, 600, '#B08A82', 'middle');
-          m += '<rect x="' + (W / 2 - 90) + '" y="142" width="180" height="44" rx="22" fill="#F06C8B"/>' + tx(W / 2, 170, 'Mağazaya git 🛍️', 15, 800, '#fff', 'middle');
-          hits.push({ x: W / 2 - 90, y: 142, w: 180, h: 44, fn: () => this._openPanel('shop') });
-          H = 206;
+          m += tx(W / 2, H + 34, 'Bu bölümde henüz kıyafetin yok.', 16, 800, SC.text, 'middle') + tx(W / 2, H + 58, 'Bakım yapıp pati parası biriktir, mağazadan al!', 13, 600, '#B08A82', 'middle');
+          m += '<rect x="' + (W / 2 - 90) + '" y="' + (H + 76) + '" width="180" height="44" rx="22" fill="#F06C8B"/>' + icon('bag', W / 2 - 52, H + 98, 22) + tx(W / 2 - 34, H + 104, 'Mağazaya git', 15, 800, '#fff');
+          const yy = H + 76; hits.push({ x: W / 2 - 90, y: yy, w: 180, h: 44, fn: () => this._openPanel('shop') });
+          H += 136;
         } else {
           grid(ids, (id, cw, ch, x, y) => {
             const c = CLOTHES[id], owned = pr.owned.indexOf(id) >= 0, worn = pr.wear[c.slot] === id;
             let s = '<rect width="' + cw + '" height="' + ch + '" rx="18" fill="#fff" stroke="' + (worn ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (worn ? 4 : 2) + '"/>' +
-              '<g transform="translate(' + cw / 2 + ' 48)">' + clothPreview(id, this.species, L) + '</g>' + tx(cw / 2, 96, c.name, 12, 800, SC.text, 'middle');
-            if (kind === 'wardrobe') s += tx(cw / 2, 116, worn ? '✓ Giyili' : 'Giy', 12, 800, worn ? '#F06C8B' : '#B08A82', 'middle');
-            else if (owned) s += tx(cw / 2, 116, worn ? '✓ Giyili' : '✓ Sende', 12, 800, '#3FAE8C', 'middle');
-            else if (pr.level < c.level) s += tx(cw / 2, 116, '🔒 Seviye ' + c.level, 12, 800, '#B9A6A0', 'middle');
-            else s += tx(cw / 2, 116, '🪙 ' + c.price, 13, 900, pr.coins >= c.price ? '#D68A00' : '#E05A5A', 'middle');
+              '<g transform="translate(' + cw / 2 + ' 48)">' + clothPreview(id, this.species, L) + '</g>' + tx(cw / 2, 96, c.name, 11.5, 800, SC.text, 'middle');
+            const lab = (ic, t, col) => icon(ic, cw / 2 - 26, 112, 16) + tx(cw / 2 - 14, 117, t, 12, 800, col);
+            if (kind === 'wardrobe') s += worn ? lab('check', 'Giyili', '#F06C8B') : tx(cw / 2, 117, 'Giy', 12, 800, '#B08A82', 'middle');
+            else if (owned) s += lab('check', worn ? 'Giyili' : 'Sende', '#3FAE8C');
+            else if (pr.level < c.level) s += lab('lock', 'Seviye ' + c.level, '#B9A6A0');
+            else s += lab('coin', String(c.price), pr.coins >= c.price ? '#D68A00' : '#E05A5A');
             hits.push({ x, y, w: cw, h: ch, fn: (w) => this._clothTap(kind, id, w) });
             return s;
           });
@@ -2436,24 +2723,14 @@
             H += 52;
           }
         }
-      } else if (kind === 'mood') {
-        m += tx(24, 64, 'Hayvanın senin ruh haline göre sana destek olur 💕', 13, 600, '#B08A82');
-        H = 80;
-        const ids = Object.keys(USER_MOODS), cols = 3, gap = 10, cw = (W - 32 - gap * 2) / 3, ch = 100;
-        ids.forEach((id, i) => {
-          const x = 16 + (i % cols) * (cw + gap), y = H + Math.floor(i / cols) * (ch + gap), sel = this.userMood && this.userMood.mood === id && this.userMood.date === this._today();
-          m += '<rect x="' + f(x) + '" y="' + y + '" width="' + f(cw) + '" height="' + ch + '" rx="20" fill="' + (sel ? '#FFE3EC' : '#fff') + '" stroke="' + (sel ? '#F06C8B' : '#F6DCE3') + '" stroke-width="' + (sel ? 3 : 2) + '"/>' +
-            '<text x="' + f(x + cw / 2) + '" y="' + (y + 54) + '" text-anchor="middle" font-size="40">' + USER_MOODS[id].emoji + '</text>' + tx(x + cw / 2, y + 86, USER_MOODS[id].name, 14, 800, SC.text, 'middle');
-          hits.push({ x, y, w: cw, h: ch, fn: () => { this._closePanel(); this.setUserMood(id); } });
-        });
-        H += Math.ceil(ids.length / cols) * (ch + gap) + 6;
       } else if (kind === 'vet') {
         const hp = Math.round(this.stats.health), sick = hp < 40;
         m += tx(24, 74, 'Sağlık', 14, 800) + '<rect x="84" y="62" width="' + (W - 170) + '" height="14" rx="7" fill="#F6DCE3"/>' +
           '<rect x="84" y="62" width="' + f((W - 170) * hp / 100) + '" height="14" rx="7" fill="' + (sick ? '#E05A5A' : hp < 70 ? '#F4A259' : '#5CC9A7') + '"/>' + tx(W - 24, 75, '%' + hp, 14, 900, SC.text, 'end');
-        m += tx(24, 104, sick ? '🤒 Hasta! Şurup ver, sonra bol bol dinlensin.' : hp < 70 ? '😐 Biraz halsiz. Vitamin iyi gelir.' : '💪 Sağlıklı ve mutlu!', 14, 700, sick ? '#E05A5A' : '#3FAE8C');
-        m += tx(24, 126, 'İlacı seç ve ağzına sürükle', 12, 600, '#B08A82');
-        H = 140;
+        m += icon(sick ? 'face-sick' : hp < 70 ? 'face-tired' : 'face-happy', 36, 99, 22) +
+          tx(54, 104, sick ? 'Hasta! Şurup ver, sonra bol bol dinlensin.' : hp < 70 ? 'Biraz halsiz. Vitamin iyi gelir.' : 'Sağlıklı ve mutlu!', 14, 700, sick ? '#E05A5A' : '#3FAE8C');
+        m += tx(24, 128, 'İlacı seç ve ağzına sürükle', 12, 600, '#B08A82');
+        H = 142;
         const ids = Object.keys(MEDS), gap = 10, cw = (W - 32 - gap * 2) / 3, ch = 120;
         ids.forEach((id, i) => {
           const x = 16 + i * (cw + gap), y = H;
@@ -2467,7 +2744,7 @@
       const x0 = (this.Wv - W) / 2, y0 = Math.max(14, (this.Hv - this.trayH - H) / 2);
       const card = '<rect x="0" y="0" width="' + this.Wv + '" height="' + this.Hv + '" fill="#2B2140" opacity="0.28"/>' +
         '<g transform="translate(' + f(x0) + ' ' + f(y0) + ')"><rect width="' + W + '" height="' + H + '" rx="26" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/>' +
-        tx(24, 42, title, 20, 900) +
+        icon(ttl[0], 38, 35, 28) + tx(58, 42, ttl[1], 20, 900) +
         '<circle cx="' + (W - 30) + '" cy="32" r="18" fill="#F6DCE3"/><path d="M' + (W - 37) + ' 25 l14 14 M' + (W - 23) + ' 25 l-14 14" stroke="' + SC.text + '" stroke-width="3.5" stroke-linecap="round"/>' +
         m + '</g>';
       hits.push({ x: W - 50, y: 12, w: 40, h: 40, fn: () => this._closePanel() });
@@ -2481,7 +2758,7 @@
       this.panel = null; if (this.r.panel) this.r.panel.innerHTML = '';
       this._emit('panel', { name: k, phase: 'close' });
     }
-    openPanel(kind) { if (['quests', 'shop', 'wardrobe', 'mood', 'vet'].indexOf(kind) >= 0) this._openPanel(kind); }
+    openPanel(kind) { if (['quests', 'shop', 'wardrobe', 'vet', 'mood', 'talk'].indexOf(kind) >= 0) this._openPanel(kind); }
     _panelDown(w, pid) {
       const P = this.panel;
       const h = P.hits.find((b) => w.x > b.x && w.x < b.x + b.w && w.y > b.y && w.y < b.y + b.h);
@@ -2490,13 +2767,13 @@
     }
     _clothTap(kind, id, w) {
       const pr = this.progress, c = CLOTHES[id];
-      const toast = (t, col) => this._spawn('text', w.x, w.y - 20, { text: t, vy: -30, life: 1.4, size: 15, color: col || '#E05A5A' });
+      const toast = (ic, t, col) => this._iconToast(w.x, w.y - 20, [[ic, t]], { color: col || '#E05A5A', size: 15, vy: -30, life: 1.5 });
       if (kind === 'wardrobe' || pr.owned.indexOf(id) >= 0) {
         if (pr.wear[c.slot] === id) this.unwear(c.slot); else this.wear(id);
       } else {
         const res = this.buy(id);
-        if (!res.ok) { toast(res.reason === 'level' ? 'Seviye ' + c.level + ' gerekli 🔒' : 'Yeterli pati paran yok 🪙'); return; }
-        toast('Aldın! Hemen giydi 💕', '#3FAE8C');
+        if (!res.ok) { if (res.reason === 'level') toast('lock', 'Seviye ' + c.level + ' gerekli'); else toast('coin', (c.price - pr.coins) + ' pati parası eksik'); return; }
+        toast('heart', 'Aldın! Hemen giydi', '#3FAE8C');
       }
       this._openPanel(kind);
     }
@@ -2535,21 +2812,24 @@
     }
     _groomDone() {
       const s = this.stats;
-      s.happiness = Math.min(100, s.happiness + 10); s.cleanliness = Math.min(100, s.cleanliness + 5); s.health = Math.min(100, s.health + 3);
+      s.happiness = Math.min(100, s.happiness + 6); s.cleanliness = Math.min(100, s.cleanliness + 4); s.health = Math.min(100, s.health + 2);
       this.shine = 20;
       for (let i = 0; i < 8; i++) this._spawnL('sparkle', rand(120, 280), rand(70, 400), { vy: -40, vr: 120, life: 1, s: rand(0.8, 1.3) });
-      this.say('Tüylerim pırıl pırıl! ✨', 2.6);
       this.sfx.play('chime');
-      this._quest('brush'); this.reward(8, 4, this._rewardAt());
+      // tarama günde bir kez ödül verir; sürekli tarayarak para kazanılmaz
+      if (this._earn('brush', this._rewardAt())) { this._quest('brush'); this.say('Tüylerim pırıl pırıl!', 2.6, { icon: 'sparkle' }); }
+      else this.say('Bugün yeterince tarandım, teşekkürler!', 2.8, { icon: 'heart' });
       this._emit('groom', { kind: 'brush' });
     }
     _teethDone() {
-      const s = this.stats;
-      s.health = Math.min(100, s.health + 5); s.happiness = Math.min(100, s.happiness + 6);
+      const s = this.stats, d = this.progress.daily, now = Date.now();
+      s.health = Math.min(100, s.health + 3); s.happiness = Math.min(100, s.happiness + 4);
       if (this.drag && this.drag.type === 'tooth') this._releaseDrag();
       this._startAction(ACTIONS.grin(this));
-      this.say('Dişlerim pırıl pırıl! 😁', 2.6);
-      this._quest('teeth'); this.reward(8, 4, this._rewardAt());
+      // sabah / akşam: iki fırçalama arasında en az 3 saat olmalı
+      const gapOk = !d.lastTeeth || now - d.lastTeeth > 3 * 3600 * 1000;
+      if (gapOk && this._earn('teeth', this._rewardAt())) { d.lastTeeth = now; this._quest('teeth'); this._quest('teeth2'); this.say('Dişlerim pırıl pırıl!', 2.6, { icon: 'tooth' }); }
+      else this.say(gapOk ? 'Dişlerim pırıl pırıl!' : 'Dişlerimi az önce fırçaladık!', 2.6, { icon: 'tooth' });
       this._emit('groom', { kind: 'teeth' });
     }
 
@@ -2587,7 +2867,7 @@
             '<g data-h="peek-basket" display="none">' + peekMarkup(b, this.C) + '</g>' + basketMarkup(L) + '</g>' +
         '</g>' +
         '<g data-h="cover"><rect x="0" y="0" width="' + f(this.Wv) + '" height="' + f(this.Hv) + '" fill="#2B2140" opacity="0.93"/>' +
-          '<text x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36) + '" text-anchor="middle" font-size="88">🙈</text>' +
+          '<g transform="translate(' + f(this.Wv / 2) + ' ' + f(this.Hv * 0.36 - 40) + ') scale(1.6)">' + coverEyesMarkup(b, this.C) + '</g>' +
           '<text data-h="num" x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36 + 110) + '" text-anchor="middle" font-family="' + FONT + '" font-size="84" font-weight="900" fill="#FFD166">3</text>' +
           '<text x="' + f(this.Wv / 2) + '" y="' + f(this.Hv * 0.36 + 170) + '" text-anchor="middle" font-family="' + FONT + '" font-size="24" font-weight="800" fill="#fff">Gözlerini kapat, saklanıyorum…</text></g>';
       this.r.gameLayer.appendChild(g.el);
@@ -2604,7 +2884,7 @@
           g.phase = 'seek'; g.st = 0;
           this.hidden = true; this._clearActions();
           Q.cover.remove(); Q.props.setAttribute('display', 'inline'); Q.peek.setAttribute('display', 'inline');
-          this._setBanner('🔍 Nerede saklandı? Dokun!   ✕');
+          this._setBanner('Nerede saklandı? Dokun!', 'search', true);
         }
         return;
       }
@@ -2640,19 +2920,25 @@
       for (let i = 0; i < 8; i++) this._spawn('sparkle', s.hx + rand(-50, 50), s.hy + rand(-40, 20), { vy: -50, vr: 160, life: 0.9, s: rand(0.8, 1.2) });
       this._startAction(ACTIONS.celebrate(this));
       if (found) {
-        this.say(g.tries ? 'Buldun! 🎉' : 'Hemen buldun! Çok iyisin 🎉', 2.6);
+        this.say(g.tries ? 'Buldun!' : 'Hemen buldun! Çok iyisin', 2.6, { icon: 'party' });
         this.sfx.play('chime');
-        this._quest('hide'); this.reward(10, 5, this._rewardAt());
+        this._quest('hide'); this._earn('hide', this._rewardAt());
         this._emit('play', { kind: 'hide', found: true });
-      } else { this.say('Buradaydım! 😄', 2.4); this._emit('play', { kind: 'hide', found: false }); }
-      this._setBanner(found ? '🎉 Buldun!' : '😄 Bulamadın, olsun!');
+      } else { this.say('Buradaydım!', 2.4, { icon: 'paw' }); this._emit('play', { kind: 'hide', found: false }); }
+      this._setBanner(found ? 'Buldun!' : 'Bulamadın, olsun!', found ? 'party' : 'paw', false);
     }
-    _setBanner(label) {
+    _setBanner(label, iconName, closable) {
       const r = this.r;
+      if (closable === undefined) closable = true;
       r.bannerTxt.textContent = label;
-      this._bannerW = 300;
-      try { this._bannerW = r.bannerTxt.getComputedTextLength() + 40 || 300; } catch (e) { /* yoksay */ }
-      r.bannerBg.setAttribute('x', f(-this._bannerW / 2)); r.bannerBg.setAttribute('width', f(this._bannerW));
+      let tw = label.length * 8.6;
+      try { tw = r.bannerTxt.getComputedTextLength() || tw; } catch (e) { /* yoksay */ }
+      const iw = iconName ? 28 : 0, cw = closable ? 30 : 0, W = tw + 36 + iw + cw;
+      r.bannerIcon.innerHTML = iconName ? icon(iconName, -W / 2 + 28, 0, 22) : '';
+      r.bannerTxt.setAttribute('x', f(-W / 2 + 18 + iw));
+      r.bannerX.innerHTML = closable ? icon('close', W / 2 - 24, 0, 22) : '';
+      this._bannerW = W;
+      r.bannerBg.setAttribute('x', f(-W / 2)); r.bannerBg.setAttribute('width', f(W));
       r.banner.setAttribute('display', 'inline');
     }
 
@@ -2670,31 +2956,33 @@
     }
 
     // ================================================================ regl döngüsü, su hatırlatma, kullanıcının ruh hali
+    // c: { phase: 'period'|'pms'|'follicular'|'ovulation'|'luteal', day: 2, daysUntilNext: 1 }
     setCycle(c) {
       const prev = this.cycle ? this.cycle.phase : null;
-      this.cycle = c && CYCLE[c.phase] ? { phase: c.phase, day: c.day | 0 || null } : null;
+      this.cycle = c && (CYCLE[c.phase] || c.daysUntilNext != null) ? { phase: CYCLE[c.phase] ? c.phase : null, day: c.day | 0 || null,
+        daysUntilNext: c.daysUntilNext == null || isNaN(+c.daysUntilNext) ? null : +c.daysUntilNext } : null;
       this._renderHud();
       this._emit('cycle', this.cycle);
-      if (this.cycle && this.cycle.phase !== prev && !this._silentState) { this._cycleNext = 0; this._cycleFirst = true; }
+      if (this.cycle && this.cycle.phase && this.cycle.phase !== prev && !this._silentState) { this._cycleNext = 0; this._cycleFirst = true; }
     }
     _cycleAct() {
-      const c = this.cycle; if (!c) return;
+      const c = this.cycle; if (!c || !CYCLE[c.phase]) return;
       const ph = c.phase, tips = CYCLE[ph].tips, tip = () => tips[Math.floor(Math.random() * tips.length)];
       const first = this._cycleFirst; this._cycleFirst = false;
-      if (this.sleeping || this.hidden || this.scene !== 'room') return;
+      if (this.sleeping || this.hidden || this.scene !== 'room' || this.talk) return;
       this._clearActions();
       const roll = Math.random();
       if (ph === 'period') {
-        if (first || roll < 0.35) { this._enqueue(ACTIONS.hug(this)); this.say(first ? 'Kendine iyi bak 💕 Ben yanındayım' : tip(), 3.4); if (first) this._enqueue(ACTIONS.offer(this, 'bottle')); }
-        else if (roll < 0.7) { this._enqueue(ACTIONS.offer(this, 'bottle')); this.say('Sıcak su torbası getirdim, karnına iyi gelir 💕', 3.4); }
-        else { this._enqueue(ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+        if (first || roll < 0.35) { this._enqueue(ACTIONS.hug(this)); this._sayLine(first ? ['Kendine iyi bak, ben yanındayım', 'heart'] : tip(), 3.4); if (first) this._enqueue(ACTIONS.offer(this, 'bottle')); }
+        else if (roll < 0.7) { this._enqueue(ACTIONS.offer(this, 'bottle')); this.say('Sıcak su torbası getirdim, karnına iyi gelir', 3.4, { icon: 'bottle' }); }
+        else { this._enqueue(ACTIONS.headTilt(this)); this._sayLine(tip(), 3.4); }
       } else if (ph === 'pms') {
-        if (first || roll < 0.4) { this._enqueue(ACTIONS.offer(this, 'choco')); this.say('Biraz çikolata ister misin? 🍫', 3.4); }
-        else if (roll < 0.7) { this._enqueue(ACTIONS.hug(this)); this.say(tip(), 3.4); }
-        else { this._enqueue(ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+        if (first || roll < 0.4) { this._enqueue(ACTIONS.offer(this, 'choco')); this.say('Biraz çikolata ister misin?', 3.4, { icon: 'choco' }); }
+        else if (roll < 0.7) { this._enqueue(ACTIONS.hug(this)); this._sayLine(tip(), 3.4); }
+        else { this._enqueue(ACTIONS.headTilt(this)); this._sayLine(tip(), 3.4); }
       } else if (ph === 'follicular' || ph === 'ovulation') {
-        this._enqueue(ACTIONS.dance(this)); this.say(tip(), 3.4);
-      } else { this._enqueue(roll < 0.5 ? ACTIONS.hug(this) : ACTIONS.headTilt(this)); this.say(tip(), 3.4); }
+        this._enqueue(ACTIONS.dance(this)); this._sayLine(tip(), 3.4);
+      } else { this._enqueue(roll < 0.5 ? ACTIONS.hug(this) : ACTIONS.headTilt(this)); this._sayLine(tip(), 3.4); }
       this._sayCool = 12;
     }
     setWaterReminder(min) { this.waterEvery = Math.max(0, +min || 0) * 60; this._waterT = 0; }
@@ -2704,40 +2992,336 @@
       if (this.sleeping || this.lightsOff) this.setLights(true);
       this._waterT = 0;
       this._enqueue(ACTIONS.offer(this, 'glass'));
-      this.say('Sen de bir bardak su iç 💧', 40, { button: 'İçtim ✓', onTap: () => this.userDrankWater() });
+      this.say('Sen de bir bardak su iç', 40, { icon: 'glass', button: 'İçtim', onTap: () => this.userDrankWater() });
       this._emit('waterReminder', {});
     }
     userDrankWater() {
       if (this.speech && this.speech.button) this.speech = null, this.r.speech.setAttribute('display', 'none');
-      this._quest('userWater'); this.reward(3, 2, this._rewardAt());
+      this._quest('userWater'); this._quest('userWater4');
+      this._earn('userWater', this._rewardAt());
       if (!this.sleeping && !this.hidden) { this._clearActions(); this._startAction(ACTIONS.celebrate(this)); }
-      this.say('Aferin! Sağlığına 💧', 2.6);
+      this.say('Aferin! Sağlığına', 2.6, { icon: 'drop' });
       this._emit('userWater', { time: Date.now() });
     }
-    setUserMood(mood) {
+    setUserMood(mood, opt) {
       if (!USER_MOODS[mood]) return false;
       const fresh = !this.userMood || this.userMood.date !== this._today();
       this.userMood = { mood, date: this._today() };
-      this._renderHud();
       this._emit('userMood', { mood, date: this.userMood.date });
-      if (fresh) { this._quest('mood'); this.reward(3, 2, this._rewardAt()); }
+      this._quest('mood');
+      if (fresh) this._earn('mood', this._rewardAt());
+      this._renderHud();
+      if (!(opt && opt.silent)) this._moodReact(mood);
+      return true;
+    }
+    _moodReact(mood) {
       if (this.hidden) this.stopGame();
       if (this.scene !== 'room') this.goRoom();
       if (this.lightsOff) this.setLights(true);
       this._clearActions();
       if (this.sleeping) this._enqueue(ACTIONS.wake(this));
       const A = ACTIONS, q = (a) => this._enqueue(a);
-      const say = (t) => setTimeout(() => this.say(t, 3.6), this.sleeping ? 2800 : 0);
+      const say = (t, ic) => setTimeout(() => this.say(t, 3.6, { icon: ic }), this.sleeping ? 2800 : 0);
       switch (mood) {
-        case 'happy': q(A.dance(this)); q(A.hop(this)); say('Ne güzel! Mutluluğun bana da geçti 💃'); break;
-        case 'sad': q(A.hug(this)); q(A.hug(this)); say('Yanındayım, sarılalım mı? 🤗'); break;
-        case 'tired': q(A.yawn(this)); q(A.stretch(this)); say('Biraz dinlen, ben buradayım 💤'); break;
-        case 'pain': q(A.offer(this, 'bottle')); q(A.hug(this)); say('Sıcak su torbası iyi gelir 💕 Geçmiş olsun'); break;
-        case 'angry': q(A.breathe(this)); say('Birlikte derin nefes alalım 🌬️'); break;
-        case 'anxious': q(A.hug(this)); q(A.breathe(this)); say('Her şey yoluna girecek 🌈'); break;
+        case 'happy': q(A.dance(this)); q(A.hop(this)); say('Ne güzel! Mutluluğun bana da geçti', 'note'); break;
+        case 'sad': q(A.hug(this)); q(A.hug(this)); say('Yanındayım, sarılalım mı?', 'heart'); break;
+        case 'tired': q(A.yawn(this)); q(A.stretch(this)); say('Biraz dinlen, ben buradayım', 'moon'); break;
+        case 'pain': q(A.offer(this, 'bottle')); q(A.hug(this)); say('Sıcak su torbası iyi gelir, geçmiş olsun', 'bottle'); break;
+        case 'angry': q(A.breathe(this)); say('Birlikte derin nefes alalım', 'wind'); break;
+        case 'anxious': q(A.hug(this)); q(A.breathe(this)); say('Her şey yoluna girecek', 'rainbow'); break;
       }
+    }
+
+    // ================================================================ konuşma: regl yaklaşıyor, şikayet / ağrı / ilaç sorma
+    // Uygulama, takvimdeki hazır listeleri ve bugünün kayıtlarını verir; hayvanın aldığı cevaplar 'log' olayıyla geri gönderilir.
+    // o: { symptoms: [...], medications: [...], today: { date: 'YYYY-MM-DD', symptoms: [...], pain: 7|null, medications: [...] } }
+    setLogOptions(o) {
+      o = o || {};
+      const L = this._logOpts();
+      if (Array.isArray(o.symptoms)) L.symptoms = o.symptoms.filter(Boolean).map(String);
+      if (Array.isArray(o.medications)) L.medications = o.medications.filter(Boolean).map(String);
+      if (o.today) L.today = { date: o.today.date || this._todayISO(), symptoms: (o.today.symptoms || []).map(String), pain: o.today.pain == null ? null : +o.today.pain, medications: (o.today.medications || []).map(String) };
+      this.connected = true;
+      if (this.talk) this._renderTalk();
+    }
+    _logOpts() {
+      if (!this.logOpts) this.logOpts = { symptoms: DEFAULT_SYMPTOMS.slice(), medications: [], today: null };
+      const L = this.logOpts, iso = this._todayISO();
+      if (!L.today || L.today.date !== iso) L.today = { date: iso, symptoms: [], pain: null, medications: [] };
+      return L;
+    }
+    _log(kind, value, extra) {
+      const T = this._logOpts().today;
+      if (kind === 'symptom' && T.symptoms.indexOf(value) < 0) T.symptoms.push(value);
+      if (kind === 'pain') T.pain = value;
+      if (kind === 'medication' && T.medications.indexOf(value) < 0) T.medications.push(value);
+      this._emit('log', Object.assign({ kind, date: T.date, value }, extra || {}));
+    }
+    // kind: 'checkin' (ruh hali → şikayet → ağrı → ilaç), 'meds', 'forecast', 'mood'
+    startTalk(kind) {
+      if (!this.showTools || this.talk) return false;
+      if (this.scene !== 'room') this.goRoom();
+      if (this.game) this.stopGame();
+      this._closePanel(); this._closeMenu();
+      if (this.drag) { this.drag = null; this.auto = null; this._hideHeld(); }
+      if (this.sleeping || this.lightsOff) this.setLights(true);
+      this._checkQuests();
+      const T = this._logOpts().today, ph = this.cycle && this.cycle.phase, d = this.progress.daily;
+      let steps;
+      if (kind === 'forecast') steps = ['forecast'];
+      else if (kind === 'mood') steps = ['mood'];
+      else if (kind === 'meds') steps = ['medTaken'];
+      else {
+        kind = 'checkin';
+        steps = [];
+        if (!this.userMood || this.userMood.date !== this._today()) steps.push('mood');
+        steps.push('symptoms', 'pain?');
+        if (ph === 'period' && !T.medications.length) steps.push('medTaken');
+      }
+      d.asked[kind] = true;
+      this.speech = null; if (this.r.speech) this.r.speech.setAttribute('display', 'none');
+      this.talk = { kind, steps, i: 0, sel: [], extra: { symptoms: [], meds: [] }, data: { mood: null, symptoms: [], pain: null, medTaken: null, meds: [] } };
+      this._clearActions();
+      if (kind === 'forecast') this._startAction(ACTIONS.offer(this, 'pouch'));
+      this._talkStep();
+      this._emit('talk', { kind, phase: 'start' });
       return true;
     }
+    _talkStep() {
+      const t = this.talk; if (!t) return;
+      if (t.i >= t.steps.length) { this._talkFinish(); return; }
+      let st = t.steps[t.i];
+      if (st === 'pain?') { // ağrı: regl / PMS günlerinde ya da bir şikayet seçildiyse sorulur
+        const T = this._logOpts().today, ph = this.cycle && this.cycle.phase;
+        if (T.pain != null || (!t.data.symptoms.length && ph !== 'period' && ph !== 'pms')) { t.i++; this._talkStep(); return; }
+        st = t.steps[t.i] = 'pain';
+      }
+      t.sel = st === 'symptoms' ? this._logOpts().today.symptoms.slice() : [];
+      if (!this.action) this._startAction(ACTIONS.headTilt(this));
+      this._renderTalk();
+    }
+    _talkQuestion(st) {
+      const c = this.cycle, du = c && c.daysUntilNext;
+      switch (st) {
+        case 'forecast': return du === 0 ? 'Reglin bugün başlayabilir. Yanında ped var mı?' : du === 1 ? 'Reglin yarın başlayabilir. Çantana ped koydun mu?' : 'Reglin ' + du + ' gün sonra başlayabilir. Çantanı hazırlayalım mı?';
+        case 'mood': return 'Bugün nasılsın?';
+        case 'symptoms': return 'Bugün bir şikayetin var mı? Seçersen takvimine kaydederim.';
+        case 'pain': return 'Ağrın 10 üzerinden ne kadar?';
+        case 'medTaken': return 'Bugün ağrı kesici ya da başka bir ilaç içtin mi?';
+        case 'medWhich': return 'Hangi ilacı içtin? Takvimine ekleyeyim.';
+      }
+      return '';
+    }
+    _talkOptions(st) {
+      const t = this.talk, L = this._logOpts();
+      switch (st) {
+        case 'forecast': return { single: true, opts: [{ id: 'yes', label: 'Koydum', icon: 'check' }, { id: 'later', label: 'Şimdi koyacağım', icon: 'pouch' }] };
+        case 'mood': return { single: true, opts: Object.keys(USER_MOODS).map((id) => ({ id, label: USER_MOODS[id].name, icon: 'face-' + id })) };
+        case 'symptoms': {
+          const list = L.symptoms.concat(t.extra.symptoms.filter((x) => L.symptoms.indexOf(x) < 0));
+          L.today.symptoms.forEach((x) => { if (list.indexOf(x) < 0) list.push(x); });
+          return { opts: list.map((x) => ({ id: x, label: x, locked: L.today.symptoms.indexOf(x) >= 0 })).concat([{ id: '+', label: 'Kendim yazayım', icon: 'plus', input: 'symptom' }]),
+            buttons: [{ id: 'none', label: 'Şikayetim yok' }, { id: 'save', label: 'Kaydet', primary: true }] };
+        }
+        case 'pain': return { pain: true, opts: [{ id: 'none', label: 'Ağrım yok', icon: 'face-happy' }] };
+        case 'medTaken': return { single: true, opts: [{ id: 'yes', label: 'Evet, içtim', icon: 'pill' }, { id: 'no', label: 'Hayır, içmedim' }, { id: 'later', label: 'Henüz değil', icon: 'moon' }] };
+        case 'medWhich': {
+          const list = L.medications.concat(t.extra.meds.filter((x) => L.medications.indexOf(x) < 0));
+          return { opts: list.map((x) => ({ id: x, label: x, icon: 'pill' })).concat([{ id: '+', label: 'Başka bir ilaç', icon: 'plus', input: 'med' }]),
+            buttons: [{ id: 'skip', label: 'Vazgeç' }, { id: 'save', label: 'Kaydet', primary: true }] };
+        }
+      }
+      return { opts: [] };
+    }
+    _renderTalk() {
+      const t = this.talk, r = this.r; if (!t || !r.talk) return;
+      const SC = SCENE, st = t.steps[t.i], O = this._talkOptions(st), q = this._talkQuestion(st);
+      const W = Math.min(this.Wv - 24, 640), x0 = (this.Wv - W) / 2, hits = [];
+      const tx = (x, y, s, size, weight, color, anchor) => '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="' + (anchor || 'start') + '" font-family="' + FONT + '" font-size="' + size + '" font-weight="' + (weight || 700) + '" fill="' + (color || SC.text) + '">' + esc(s) + '</text>';
+      // soru (satırlara bölünür)
+      const maxCh = Math.floor((W - 96) / 10), lines = [];
+      let cur = '';
+      q.split(' ').forEach((wd) => { if ((cur + ' ' + wd).trim().length > maxCh && cur) { lines.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); });
+      if (cur) lines.push(cur);
+      let m = '', y = 22;
+      lines.forEach((l, i) => { m += tx(24, y + 18 + i * 25, l, 18, 800); });
+      y += lines.length * 25 + 16;
+      // seçenekler
+      if (O.pain) {
+        const gap = 6, d = Math.min(44, (W - 40 - gap * 9) / 10);
+        for (let n = 1; n <= 10; n++) {
+          const cx = 20 + d / 2 + (n - 1) * (d + gap), col = mix('#7FD3A8', '#E05A5A', (n - 1) / 9);
+          m += '<circle cx="' + f(cx) + '" cy="' + f(y + d / 2) + '" r="' + f(d / 2) + '" fill="' + col + '" stroke="#fff" stroke-width="2.5"/>' + tx(cx, y + d / 2 + 6, String(n), 16, 900, '#fff', 'middle');
+          hits.push({ x: cx - d / 2, y, w: d, h: d, fn: () => this._talkAnswer(n) });
+        }
+        m += tx(20, y + d + 16, 'hafif', 11, 700, '#9AC9B0') + tx(W - 20, y + d + 16, 'çok şiddetli', 11, 700, '#E05A5A', 'end');
+        y += d + 30;
+      }
+      const chipH = 42, gapX = 8, gapY = 8;
+      let cx = 20, rowY = y;
+      O.opts.forEach((o) => {
+        const isSel = t.sel.indexOf(o.id) >= 0 || o.locked;
+        const iw = o.icon ? 28 : (O.single ? 0 : 24);
+        const w = Math.min(W - 40, o.label.length * 8.6 + 30 + iw);
+        if (cx + w > W - 20) { cx = 20; rowY += chipH + gapY; }
+        const fill = isSel ? '#F06C8B' : '#fff', tc = isSel ? '#fff' : SC.text;
+        m += '<rect x="' + f(cx) + '" y="' + f(rowY) + '" width="' + f(w) + '" height="' + chipH + '" rx="21" fill="' + fill + '" stroke="' + (isSel ? '#F06C8B' : '#F3CFD9') + '" stroke-width="2"/>';
+        let lx = cx + 15;
+        if (o.icon) { m += icon(o.icon === 'close2' ? 'face-sad' : o.icon, lx + 10, rowY + chipH / 2, 22); lx += 28; }
+        else if (!O.single) { m += isSel ? icon('check', lx + 8, rowY + chipH / 2, 18) : '<circle cx="' + f(lx + 8) + '" cy="' + f(rowY + chipH / 2) + '" r="8" fill="none" stroke="#E7C3CD" stroke-width="2"/>'; lx += 24; }
+        m += tx(lx, rowY + chipH / 2 + 5.5, o.label, 15, 700, tc);
+        const hx = cx, hy = rowY;
+        hits.push({ x: hx, y: hy, w, h: chipH, fn: () => this._talkChip(o, O) });
+        cx += w + gapX;
+      });
+      y = rowY + chipH + 14;
+      // butonlar
+      if (O.buttons) {
+        const bw = (W - 40 - 10) / 2;
+        O.buttons.forEach((b, i) => {
+          const bx = 20 + i * (bw + 10), en = !b.primary || t.sel.some((s) => !this._isLogged(st, s));
+          m += '<rect x="' + f(bx) + '" y="' + f(y) + '" width="' + f(bw) + '" height="46" rx="23" fill="' + (b.primary ? (en ? '#F06C8B' : '#F6C3D0') : '#F6DCE3') + '"/>' +
+            tx(bx + bw / 2, y + 29, b.label, 16, 800, b.primary ? '#fff' : SC.text, 'middle');
+          if (en) hits.push({ x: bx, y, w: bw, h: 46, fn: () => this._talkAnswer(b.id) });
+        });
+        y += 58;
+      }
+      m += tx(24, y + 4, t.steps.length > 1 ? (t.i + 1) + ' / ' + t.steps.length : '', 11, 700, '#C9A79E');
+      const H = y + 14, y0 = Math.max(150, this.Hv - this.trayH - 12 - H);
+      const tailX = clamp(this.petX - x0, 60, W - 60);
+      const card = '<g transform="translate(' + f(x0) + ' ' + f(y0) + ')"><path d="M' + f(tailX - 16) + ' 2 L' + f(tailX) + ' -18 L' + f(tailX + 16) + ' 2 Z" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3" stroke-linejoin="round"/>' +
+        '<rect width="' + W + '" height="' + H + '" rx="26" fill="#FFF8FA" stroke="' + SC.trayEdge + '" stroke-width="3"/><rect x="' + f(tailX - 14) + '" y="0" width="28" height="5" fill="#FFF8FA"/>' +
+        '<circle cx="' + (W - 28) + '" cy="28" r="16" fill="#F6DCE3"/><path d="M' + (W - 34) + ' 22 l12 12 M' + (W - 22) + ' 22 l-12 12" stroke="' + SC.text + '" stroke-width="3" stroke-linecap="round"/>' + m + '</g>';
+      hits.push({ x: W - 46, y: 10, w: 36, h: 36, fn: () => this.endTalk(true) });
+      r.talk.innerHTML = card;
+      t.ui = { x0, y0, W, H, hits: hits.map((h) => ({ x: h.x + x0, y: h.y + y0, w: h.w, h: h.h, fn: h.fn })) };
+    }
+    _isLogged(st, id) { const T = this._logOpts().today; return st === 'symptoms' ? T.symptoms.indexOf(id) >= 0 : st === 'medWhich' ? T.medications.indexOf(id) >= 0 : false; }
+    _talkDown(w) {
+      const t = this.talk; if (!t || !t.ui) return;
+      const h = t.ui.hits.find((b) => w.x > b.x && w.x < b.x + b.w && w.y > b.y && w.y < b.y + b.h);
+      if (h) h.fn();
+    }
+    _talkChip(o, O) {
+      const t = this.talk; if (!t) return;
+      if (O.single) { this._talkAnswer(o.id); return; }
+      if (o.input) {
+        this._askText(o.input === 'med' ? 'İlacın adını yaz' : 'Şikayetini yaz', (v) => {
+          if (!this.talk) return;
+          const list = o.input === 'med' ? t.extra.meds : t.extra.symptoms;
+          if (list.indexOf(v) < 0) list.push(v);
+          if (t.sel.indexOf(v) < 0) t.sel.push(v);
+          this._renderTalk();
+        });
+        return;
+      }
+      if (o.locked) return; // daha önce kaydedilmiş: burada silinmez
+      const i = t.sel.indexOf(o.id);
+      if (i >= 0) t.sel.splice(i, 1); else t.sel.push(o.id);
+      this.sfx.play('pop');
+      this._renderTalk();
+    }
+    _talkAnswer(a) {
+      const t = this.talk; if (!t) return;
+      const st = t.steps[t.i], L = this._logOpts();
+      this._hideText();
+      if (st === 'forecast') {
+        t.data.forecast = a;
+        this._earn('forecast', this._rewardAt());
+      } else if (st === 'mood') {
+        t.data.mood = a; this.setUserMood(a, { silent: true });
+      } else if (st === 'symptoms') {
+        if (a === 'save') t.sel.forEach((x) => { if (L.today.symptoms.indexOf(x) < 0) this._log('symptom', x, { custom: L.symptoms.indexOf(x) < 0 }); });
+        t.data.symptoms = L.today.symptoms.slice();
+      } else if (st === 'pain') {
+        if (a !== 'none') { this._log('pain', a); t.data.pain = a; } else t.data.pain = 0;
+      } else if (st === 'medTaken') {
+        t.data.medTaken = a === 'yes' ? true : a === 'no' ? false : null;
+        if (a === 'yes') t.steps.splice(t.i + 1, 0, 'medWhich');
+        if (a === 'later') this.progress.daily.medRetryAt = Date.now() + 2 * 3600 * 1000; // 2 saat sonra tekrar sorar
+        this._emit('medAnswer', { date: L.today.date, taken: t.data.medTaken });
+      } else if (st === 'medWhich') {
+        if (a === 'save') {
+          t.sel.forEach((x) => { if (L.today.medications.indexOf(x) < 0) this._log('medication', x, { custom: L.medications.indexOf(x) < 0 }); });
+          t.data.meds = t.sel.slice();
+          if (t.data.meds.length) this._earn('medLog', this._rewardAt());
+        }
+      }
+      t.i++;
+      this._talkStep();
+    }
+    endTalk(cancelled) {
+      const t = this.talk; if (!t) return;
+      this.talk = null; this._hideText();
+      if (this.r.talk) this.r.talk.innerHTML = '';
+      this._emit('talk', { kind: t.kind, phase: 'end', cancelled: !!cancelled });
+      if (cancelled) this.say('Peki, sonra konuşuruz', 2.4, { icon: 'heart' });
+    }
+    _talkFinish() {
+      const t = this.talk; if (!t) return;
+      const d = t.data;
+      this.endTalk(false);
+      if (t.kind === 'forecast') {
+        if (d.forecast === 'yes') { this._startAction(ACTIONS.celebrate(this)); this.say('Harika, hazırlıklısın!', 3, { icon: 'sparkle' }); }
+        else { this._startAction(ACTIONS.offer(this, 'pouch')); this.say('Unutma, çantana koymayı!', 3, { icon: 'pouch' }); }
+        return;
+      }
+      if (t.kind === 'checkin') {
+        this.progress.daily.done.checkin = true;
+        this._quest('checkin');
+        this._earn('checkin', this._rewardAt());
+        this._emit('checkin', { date: this._logOpts().today.date, mood: d.mood, symptoms: d.symptoms, pain: d.pain, medTaken: d.medTaken, medications: d.meds });
+        this._renderHud();
+      }
+      this._clearActions();
+      const A = ACTIONS;
+      if (d.pain >= 9) { this._enqueue(A.hug(this)); this.say('Bu çok şiddetli bir ağrı. Böyle sürerse doktora danışmayı düşünebilirsin.', 5, { icon: 'heart' }); }
+      else if (d.pain >= 6) { this._enqueue(A.offer(this, 'bottle')); this._enqueue(A.hug(this)); this.say('Geçmiş olsun. Sıcak su torbası iyi gelebilir.', 4, { icon: 'bottle' }); }
+      else if (d.meds.length) { this._enqueue(A.hug(this)); this.say('İlacını takvimine ekledim, geçmiş olsun.', 3.6, { icon: 'pill' }); }
+      else if (d.mood) this._moodReact(d.mood);
+      else if (d.symptoms.length || d.pain) { this._enqueue(A.hug(this)); this.say('Kaydettim. Kendine iyi bak.', 3.4, { icon: 'heart' }); }
+      else if (t.kind === 'checkin') { this._enqueue(A.dance(this)); this.say('Bugün iyi olmana çok sevindim!', 3.2, { icon: 'sun' }); }
+    }
+    // hayvan kendisi sorar: regl yaklaşıyorsa ped hatırlatması, günde bir kez şikayet sorusu, regl günlerinde ilaç sorusu
+    _autoTalk() {
+      if (!this.showTools || this.talk || this.panel || this.game || this.drag || this.sleeping || this.hidden || this.scene !== 'room' || this._sceneMoving()) return;
+      if (this.action && this.action.busy) return;
+      if (!this.connected && !this.askAlways) return;
+      this._checkQuests();
+      const d = this.progress.daily, c = this.cycle, T = this._logOpts().today;
+      if (c && c.daysUntilNext != null && c.daysUntilNext >= 0 && c.daysUntilNext <= 2 && c.phase !== 'period' && !d.asked.forecast) { this.startTalk('forecast'); return; }
+      if (!d.asked.checkin && !d.done.checkin) { this.startTalk('checkin'); return; }
+      if (c && c.phase === 'period' && !T.medications.length && d.medRetryAt && Date.now() > d.medRetryAt) { d.medRetryAt = null; this.startTalk('meds'); }
+    }
+    // serbest yazı için küçük bir HTML kutusu (SVG içinde yazı girilemez)
+    _askText(placeholder, cb) {
+      const c = this.container; if (typeof document === 'undefined' || !c) return;
+      try { if (getComputedStyle(c).position === 'static') c.style.position = 'relative'; } catch (e) { /* yoksay */ }
+      let box = this._inputBox;
+      const btn = 'font:800 15px -apple-system,Roboto,sans-serif;border:0;border-radius:14px;padding:0 14px;';
+      if (!box) {
+        box = document.createElement('div');
+        box.style.cssText = 'position:absolute;left:4%;right:4%;display:none;gap:8px;z-index:5;background:#fff;padding:8px;border-radius:18px;box-shadow:0 6px 20px rgba(120,60,70,.25);';
+        box.innerHTML = '<input type="text" maxlength="40" style="flex:1;min-width:0;font:600 16px -apple-system,Roboto,sans-serif;padding:11px 12px;border-radius:12px;border:2px solid #F3CFD9;background:#fff;color:#4A2C22;outline:none">' +
+          '<button data-a="ok" style="' + btn + 'background:#F06C8B;color:#fff">Ekle</button><button data-a="no" style="' + btn + 'background:#F6DCE3;color:#8E5E55">Vazgeç</button>';
+        ['pointerdown', 'touchstart', 'mousedown'].forEach((ev) => box.addEventListener(ev, (e) => e.stopPropagation()));
+        c.appendChild(box); this._inputBox = box;
+      }
+      const inp = box.querySelector('input'), ok = box.querySelector('[data-a="ok"]'), no = box.querySelector('[data-a="no"]');
+      let top = 12;
+      try {
+        const t = this.talk, pt = this.svg.createSVGPoint(); pt.x = 0; pt.y = t && t.ui ? t.ui.y0 - 10 : this.Hv * 0.4;
+        const sp = pt.matrixTransform(this.svg.getScreenCTM()), cr = c.getBoundingClientRect();
+        top = Math.max(8, sp.y - cr.top - 66);
+      } catch (e) { /* yoksay */ }
+      box.style.top = top + 'px'; box.style.display = 'flex';
+      inp.value = ''; inp.placeholder = placeholder;
+      const done = (v) => { this._hideText(); if (v) cb(v); };
+      ok.onclick = () => done(inp.value.trim()); no.onclick = () => done('');
+      inp.onkeydown = (e) => { if (e.key === 'Enter') done(inp.value.trim()); };
+      setTimeout(() => { try { inp.focus(); } catch (e) { /* yoksay */ } }, 30);
+    }
+    _hideText() { if (this._inputBox) { this._inputBox.style.display = 'none'; try { this._inputBox.querySelector('input').blur(); } catch (e) { /* yoksay */ } } }
 
     // ---------------------------------------------------------------- genel API
     feed() {
@@ -2919,6 +3503,7 @@
         if (sp.xp >= 0) pr.xp = +sp.xp; if (sp.coins >= 0) pr.coins = +sp.coins;
         if (Array.isArray(sp.owned)) pr.owned = sp.owned.filter((id) => CLOTHES[id]);
         if (sp.wear) CLOTH_SLOTS.forEach((k) => { pr.wear[k] = CLOTHES[sp.wear[k]] && pr.owned.indexOf(sp.wear[k]) >= 0 ? sp.wear[k] : null; });
+        if (sp.daily && typeof sp.daily === 'object' && sp.daily.c) pr.daily = { date: sp.daily.date, c: Object.assign({}, sp.daily.c), done: Object.assign({}, sp.daily.done), asked: Object.assign({}, sp.daily.asked), lastTeeth: sp.daily.lastTeeth || null, medRetryAt: sp.daily.medRetryAt || null };
         if (sp.quests && Array.isArray(sp.quests.list)) pr.quests = { date: sp.quests.date || '', list: sp.quests.list.filter((q) => QUESTS[q.id]).map((q) => ({ id: q.id, have: q.have | 0, claimed: !!q.claimed })), bonus: !!sp.quests.bonus };
         this._checkQuests();
         if (this.svg) { this._renderWear(); this._renderHud(); }
@@ -2992,6 +3577,8 @@
         case 'growl': el = mk('path', { d: 'M-14 0 Q-10 -6 -6 0 T2 0 T10 0 T18 0', fill: 'none', stroke: line, 'stroke-width': 3, 'stroke-linecap': 'round' }); break;
         case 'stink': el = mk('path', { d: 'M0 10 Q-6 4 0 -2 T0 -14', fill: 'none', stroke: PR.stink, 'stroke-width': 3.5, 'stroke-linecap': 'round' }); break;
         case 'dust': el = mk('ellipse', { rx: 18, ry: 4, fill: '#fff', opacity: 0.7 }); break;
+        case 'icontext': el = mk('g', {}); el.innerHTML = o.markup || ''; break;
+        case 'note': el = mk('g', {}); el.innerHTML = icon('note', 0, 0, 26); break;
         case 'tuft': el = mk('path', { d: 'M-7 4 Q-3 -7 7 -5 Q1 -1 -7 4 Z', fill: this.C.fur, stroke: line, 'stroke-width': 1.5 }); break;
         case 'bubble':
           el = mk('g', {});
@@ -2999,7 +3586,7 @@
           break;
         default: return;
       }
-      this.r.fx.appendChild(el);
+      (type === 'icontext' && this.r.fxTop ? this.r.fxTop : this.r.fx).appendChild(el);
       this.particles.push({ el, type, x, y, vx: o.vx || 0, vy: o.vy || 0, g: o.g || 0, age: 0, life: o.life || 1.4,
         s: o.s || 1, rot: o.rot || 0, vr: o.vr || 0, wobble: o.wobble || 0 });
       if (this.particles.length > 220) { const p = this.particles.shift(); p.el.remove(); }
@@ -3059,6 +3646,12 @@
       this._updateNight(dt);
       this._updateScene(dt);
       this._updateSpeech(dt);
+      this._talkT -= dt;
+      if (this._talkT <= 0) { this._talkT = 15; this._autoTalk(); }
+      if (this.talk && !this.action && !this.sleeping) { // dinliyor: başı hafif yana eğik, elleri önünde
+        T.tilt = 7; T.lookX = 0; T.lookY = 0.15; T.earLift = 0.35; T.smile = Math.max(T.smile, 0.6); T.brow = -0.1;
+        T.h0x = 178; T.h0y = 300; T.h1x = 222; T.h1y = 300; T.wagFreq = 1.8; T.wagAmp = 12;
+      }
       this._sayCool -= dt; this._cycleNext -= dt;
       if (this.waterEvery > 0 && !this.sleeping) this._waterT += dt;
       if (this.waterEvery > 0 && this._waterT >= this.waterEvery && !this.action && !this.drag && !this.game && !this.panel && this.scene === 'room' && !this.sleeping) this.remindWater();
@@ -3106,7 +3699,7 @@
         this.shine -= dt;
         if (Math.random() < dt * 2.5) this._spawnL('sparkle', rand(130, 270), rand(80, 400) + this._upY(), { vy: -20, life: 0.7, s: rand(0.5, 0.9) });
       }
-      if (this.hidden) return;
+      if (this.hidden || this.talk) return;
       if (this.action || this.pet.level > 0.2 || this.drag || this.ball.held) return;
       if (this.sleeping) {
         this.fx.z -= dt;
@@ -3281,7 +3874,7 @@
         const Sx = SHOULDER[i][0], Sy = SHOULDER[i][1] + shY;
         const res = ik(Sx, Sy, P['h' + i + 'x'], P['h' + i + 'y'], L1, L2, i === 0 ? 1 : -1);
         this._limb('arm', i, [[Sx, Sy], [res.ex, res.ey], [res.hx, res.hy]], ARM_W);
-        if (this.progress.wear.body === 'sweater') {
+        if (SLEEVES[this.progress.wear.body]) {
           const at = (k) => f(lerp(Sx, res.ex, k)) + ' ' + f(lerp(Sy, res.ey, k));
           r['sleeve' + i].setAttribute('display', 'inline');
           r['sleeveO' + i].setAttribute('d', 'M' + at(0) + ' L' + at(0.9)); r['sleeveO' + i].setAttribute('stroke-width', f(ARM_W * 2 + 11));
@@ -3709,7 +4302,7 @@
           T._rot = b * 5 * o; T.tilt = -b * 8 * o; T.smile = 1; T.mouthOpen = 0.3 * o; T.eyeOpen = 0; T.closedCurve = 1;
           T.h0x = lerp(T.h0x, 130, o); T.h0y = lerp(T.h0y, 230 + b * 30, o); T.h1x = lerp(T.h1x, 270, o); T.h1y = lerp(T.h1y, 230 - b * 30, o);
           T.foot0 = Math.max(0, b) * 0.4 * o; T.foot1 = Math.max(0, -b) * 0.4 * o; T.wagFreq = 3; T.wagAmp = 22;
-          if (Math.random() < dt * 2) pet._spawnL('text', rand(120, 280), 60, { text: '♪', vy: -40, life: 1.2, size: 26, color: '#9B8DE8' });
+          if (Math.random() < dt * 2) pet._spawnL('note', rand(120, 280), 60, { vy: -40, life: 1.2 });
         }
       };
     },
@@ -3860,8 +4453,8 @@
           T.eyeOpen = t < 3.6 ? 1 : 0; T.closedCurve = 1; T.smile = 0.6; T.brow = -0.1;
           T.h0x = lerp(150, 110, inh); T.h0y = lerp(330, 220, inh); T.h1x = lerp(250, 290, inh); T.h1y = lerp(330, 220, inh);
           T.headY = -inh * 6; T.breathAmp = 0.3; T.wagAmp = 3; T.earLift = inh * 0.4; T.mouthOpen = ph > 0.55 && ph < 0.9 ? 0.12 : 0;
-          if (this.cue === 0 && t > 3.6) { this.cue = 1; pet.say('Nefes al… 🌬️', 3.4); }
-          if (this.cue === 1 && ph > 0.55) { this.cue = 2; pet.say('Nefes ver… 😌', 3.4); }
+          if (this.cue === 0 && t > 3.6) { this.cue = 1; pet.say('Nefes al…', 3.4, { icon: 'wind' }); }
+          if (this.cue === 1 && ph > 0.55) { this.cue = 2; pet.say('Nefes ver…', 3.4, { icon: 'wind' }); }
         }
       };
     },
@@ -3902,7 +4495,7 @@
               this.done = true;
               const hp = pet.stats.health, sick = hp < 40;
               const deg = sick ? (38.4 + (40 - hp) / 40 * 1.4).toFixed(1) : (36.5 + Math.random() * 0.5).toFixed(1);
-              pet.say(deg.replace('.', ',') + '°C ' + (sick ? '🤒 Ateşim var, şurup lazım' : '😊 Ateşim yok!'), 3.2);
+              pet.say(deg.replace('.', ',') + '°C ' + (sick ? 'Ateşim var, şurup lazım' : 'Ateşim yok!'), 3.2, { icon: sick ? 'thermo' : 'face-happy' });
             }
           } else if (id === 'syrup') {
             if (t < 1.1) { T.itemShow = 1; T.itemScale = 1; hold(); T.mouthOpen = 0.5; T.eyeOpen = 0; T.closedCurve = 1; T.brow = 0.3; }
@@ -3919,7 +4512,7 @@
           Object.keys(M.fx).forEach((k) => { s[k] = clamp(s[k] + M.fx[k], 0, 100); });
           if (id !== 'thermo') {
             for (let i = 0; i < 4; i++) pet._spawnL('sparkle', rand(140, 260), rand(80, 260), { vy: -40, life: 0.9 });
-            pet.say(id === 'syrup' ? (s.health >= 40 ? 'Kendimi daha iyi hissediyorum 💪' : 'Biraz daha iyiyim…') : 'Güç doldu! ⚡', 2.6);
+            pet.say(id === 'syrup' ? (s.health >= 40 ? 'Kendimi daha iyi hissediyorum' : 'Biraz daha iyiyim…') : 'Güç doldu!', 2.6, { icon: id === 'syrup' ? 'heart' : 'bolt' });
           }
           pet._emit('med', { id, phase: 'end', health: Math.round(s.health) });
           pet._emit('stats', pet.getState());
@@ -3989,6 +4582,9 @@
     return svg;
   };
   PetEngine.FOODS = FOODS;
+  PetEngine.DEFAULT_SYMPTOMS = DEFAULT_SYMPTOMS;
+  PetEngine.REWARDS = REWARDS;
+  PetEngine.icon = icon;
   PetEngine.CLOTHES = CLOTHES;
   PetEngine.QUESTS = QUESTS;
   PetEngine.USER_MOODS = USER_MOODS;
@@ -4015,14 +4611,17 @@
  *   {type:'lights', on:true|false}  {type:'toggleLights'}  {type:'game', name:'ball'|'laser'|'bubbles'|'butterfly'}  {type:'stopGame'}
  *   {type:'setName', name:'Pamuk'}  {type:'sound', on:true|false}  {type:'headThumb', breed:'kangal'}  {type:'scene', scene:'bath'|'room'}
  *   {type:'brushFur'} {type:'brushTeeth'} {type:'medicine', id:'thermo'|'syrup'|'vitamin'}  {type:'game', name:'hide'}
- *   Regl uygulaması: {type:'cycle', phase:'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day:2}
+ *   Regl uygulaması: {type:'cycle', phase:'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day:2, daysUntilNext:1}
+ *                   {type:'logOptions', symptoms:['Karın ağrısı',...], medications:['Parol',...], today:{date:'2026-10-06', symptoms:[], pain:null, medications:[]}}
+ *                   {type:'talk', kind:'checkin'|'meds'|'forecast'|'mood'}  {type:'endTalk'}
  *                   {type:'userMood', mood:'happy'|'sad'|'tired'|'pain'|'angry'|'anxious'}
  *                   {type:'remindWater'} {type:'waterReminder', minutes:120} {type:'userDrankWater'}
  *   İlerleme: {type:'reward', xp:10, coins:5} {type:'getProgress'} {type:'getShop'} {type:'buy', id:'crown'} {type:'wear', id:'crown'} {type:'unwear', slot:'head'}
  *             {type:'claimQuest', id:'feed'} {type:'panel', name:'quests'|'shop'|'wardrobe'|'mood'|'vet'}
  *   Diğer: {type:'say', text:'Merhaba!', duration:3} {type:'setHour', hour:21} (test için; null → telefon saati)
  * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state'|
- *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult', data:{...}}
+ *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult'|
+ *                 'log' ({kind:'symptom'|'pain'|'medication', date, value, custom}) | 'checkin' | 'talk' | 'medAnswer' | 'quests', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -4066,7 +4665,10 @@
       case 'brushFur': pet.brushFur(); break;
       case 'brushTeeth': pet.brushTeeth(); break;
       case 'medicine': pet.giveMedicine(cmd.id); break;
-      case 'cycle': pet.setCycle(cmd.phase ? { phase: cmd.phase, day: cmd.day } : null); break;
+      case 'cycle': pet.setCycle(cmd.phase || cmd.daysUntilNext != null ? { phase: cmd.phase, day: cmd.day, daysUntilNext: cmd.daysUntilNext } : null); break;
+      case 'logOptions': pet.setLogOptions(cmd); break;
+      case 'talk': pet.startTalk(cmd.kind || 'checkin'); break;
+      case 'endTalk': pet.endTalk(true); break;
       case 'userMood': pet.setUserMood(cmd.mood); break;
       case 'remindWater': pet.remindWater(); break;
       case 'waterReminder': pet.setWaterReminder(cmd.minutes); break;

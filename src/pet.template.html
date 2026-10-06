@@ -28,14 +28,17 @@
  *   {type:'lights', on:true|false}  {type:'toggleLights'}  {type:'game', name:'ball'|'laser'|'bubbles'|'butterfly'}  {type:'stopGame'}
  *   {type:'setName', name:'Pamuk'}  {type:'sound', on:true|false}  {type:'headThumb', breed:'kangal'}  {type:'scene', scene:'bath'|'room'}
  *   {type:'brushFur'} {type:'brushTeeth'} {type:'medicine', id:'thermo'|'syrup'|'vitamin'}  {type:'game', name:'hide'}
- *   Regl uygulaması: {type:'cycle', phase:'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day:2}
+ *   Regl uygulaması: {type:'cycle', phase:'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day:2, daysUntilNext:1}
+ *                   {type:'logOptions', symptoms:['Karın ağrısı',...], medications:['Parol',...], today:{date:'2026-10-06', symptoms:[], pain:null, medications:[]}}
+ *                   {type:'talk', kind:'checkin'|'meds'|'forecast'|'mood'}  {type:'endTalk'}
  *                   {type:'userMood', mood:'happy'|'sad'|'tired'|'pain'|'angry'|'anxious'}
  *                   {type:'remindWater'} {type:'waterReminder', minutes:120} {type:'userDrankWater'}
  *   İlerleme: {type:'reward', xp:10, coins:5} {type:'getProgress'} {type:'getShop'} {type:'buy', id:'crown'} {type:'wear', id:'crown'} {type:'unwear', slot:'head'}
  *             {type:'claimQuest', id:'feed'} {type:'panel', name:'quests'|'shop'|'wardrobe'|'mood'|'vet'}
  *   Diğer: {type:'say', text:'Merhaba!', duration:3} {type:'setHour', hour:21} (test için; null → telefon saati)
  * Giden olaylar: {type:'ready'|'stats'|'mood'|'action'|'pet'|'play'|'drag'|'feed'|'game'|'lights'|'name'|'sleep'|'wake'|'breed'|'breeds'|'foods'|'headThumb'|'state'|
- *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult', data:{...}}
+ *                 'scene'|'say'|'level'|'progress'|'quest'|'buy'|'wear'|'med'|'groom'|'cycle'|'userMood'|'userWater'|'waterReminder'|'panel'|'shop'|'buyResult'|
+ *                 'log' ({kind:'symptom'|'pain'|'medication', date, value, custom}) | 'checkin' | 'talk' | 'medAnswer' | 'quests', data:{...}}
  */
 (function () {
   var q = new URLSearchParams(location.search);
@@ -79,7 +82,10 @@
       case 'brushFur': pet.brushFur(); break;
       case 'brushTeeth': pet.brushTeeth(); break;
       case 'medicine': pet.giveMedicine(cmd.id); break;
-      case 'cycle': pet.setCycle(cmd.phase ? { phase: cmd.phase, day: cmd.day } : null); break;
+      case 'cycle': pet.setCycle(cmd.phase || cmd.daysUntilNext != null ? { phase: cmd.phase, day: cmd.day, daysUntilNext: cmd.daysUntilNext } : null); break;
+      case 'logOptions': pet.setLogOptions(cmd); break;
+      case 'talk': pet.startTalk(cmd.kind || 'checkin'); break;
+      case 'endTalk': pet.endTalk(true); break;
       case 'userMood': pet.setUserMood(cmd.mood); break;
       case 'remindWater': pet.remindWater(); break;
       case 'waterReminder': pet.setWaterReminder(cmd.minutes); break;

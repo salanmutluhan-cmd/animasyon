@@ -41,6 +41,8 @@ class PetView @JvmOverloads constructor(
     var onEvent: ((type: String, data: JSONObject?) -> Unit)? = null
     /** Kullanıcı balondaki "İçtim ✓" butonuna bastı → uygulamada su kaydı ekleyebilirsiniz */
     var onUserDrankWater: (() -> Unit)? = null
+    /** Hayvanla konuşurken verilen cevap: kind = "symptom" | "pain" | "medication", date = "YYYY-MM-DD", value, custom (kullanıcı kendisi yazdı) */
+    var onLog: ((kind: String, date: String, value: String, custom: Boolean) -> Unit)? = null
 
     private val main = Handler(Looper.getMainLooper())
     private var pendingSpecies = "dog"
@@ -88,7 +90,14 @@ class PetView @JvmOverloads constructor(
 
     // ---- Regl uygulamasıyla bağlantı
     /** phase: "period", "pms", "follicular", "ovulation", "luteal" (null → kapalı). day: regl'in kaçıncı günü */
-    fun setCycle(phase: String?, day: Int = 0) = send(if (phase == null) """{"type":"cycle","phase":null}""" else """{"type":"cycle","phase":"$phase","day":$day}""")
+    fun setCycle(phase: String?, day: Int = 0, daysUntilNext: Int? = null) =
+        send(JSONObject().put("type", "cycle").put("phase", phase ?: JSONObject.NULL).put("day", day).put("daysUntilNext", daysUntilNext ?: JSONObject.NULL).toString())
+    /** Takvimdeki hazır şikayetler / ilaçlar ve bugün zaten girilenler. Hayvan bunları sorarken kullanır. */
+    fun setLogOptions(symptoms: List<String>, medications: List<String>, todayIso: String, todaySymptoms: List<String>, todayPain: Int?, todayMeds: List<String>) =
+        send(JSONObject().put("type", "logOptions").put("symptoms", org.json.JSONArray(symptoms)).put("medications", org.json.JSONArray(medications))
+            .put("today", JSONObject().put("date", todayIso).put("symptoms", org.json.JSONArray(todaySymptoms)).put("pain", todayPain ?: JSONObject.NULL).put("medications", org.json.JSONArray(todayMeds))).toString())
+    /** checkin (şikayet/ağrı/ilaç), meds, forecast, mood */
+    fun startTalk(kind: String = "checkin") = send("""{"type":"talk","kind":"$kind"}""")
     /** happy, sad, tired, pain, angry, anxious */
     fun setUserMood(mood: String) = send("""{"type":"userMood","mood":"$mood"}""")
     fun remindWater() = send("""{"type":"remindWater"}""")
@@ -143,6 +152,7 @@ class PetView @JvmOverloads constructor(
                     "mood" -> data?.let { onMood?.invoke(it.optString("mood")) }
                     "action" -> data?.let { onAction?.invoke(it.optString("name"), it.optString("phase")) }
                     "userWater" -> onUserDrankWater?.invoke()
+                    "log" -> data?.let { onLog?.invoke(it.optString("kind"), it.optString("date"), it.optString("value"), it.optBoolean("custom")) }
                 }
             }
         }

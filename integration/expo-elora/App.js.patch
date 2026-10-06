@@ -1,0 +1,109 @@
+--- a/App.js
++++ b/App.js
+@@ -14,6 +14,7 @@
+ import Svg, { Circle, Path, Ellipse, G } from "react-native-svg";
+ import { Asset } from "expo-asset";
+ import { MaterialCommunityIcons } from "@expo/vector-icons";
++import PetScreen, { petCycleFrom } from "./PetScreen";
+ 
+ // Reklam SDK'sı native bir modül gerektirir; Expo Go içinde bulunmaz. Burada
+ // güvenli (try/catch) şekilde yüklüyoruz ki Expo Go ile test ederken uygulama
+@@ -1366,6 +1367,7 @@
+   const [logMode, setLogMode] = useState(false);
+   const [dayModalDate, setDayModalDate] = useState(null);
+   const [flowModalDate, setFlowModalDate] = useState(null);
++  const [petOpen, setPetOpen] = useState(false);
+ 
+   const theme = themeOf(settings.darkMode);
+   const lang = settings.language || "tr";
+@@ -1517,6 +1519,28 @@
+     setMedications((prev) => { const arr = [...(prev[iso] || [])]; arr.splice(idx, 1); const next = { ...prev }; if (arr.length) next[iso] = arr; else delete next[iso]; return next; });
+   }
+ 
++  // ---- Pati dostu: hayvanla konuşurken verilen cevaplar o günün kaydına eklenir ----
++  function handlePetLog(e) {
++    if (!e || e.value == null || e.value === "") return;
++    const iso = e.date || toISO(new Date());
++    if (e.kind === "symptom") { addNote(iso, e.value); if (e.custom) createPreset(e.value); }
++    else if (e.kind === "pain") savePain(iso, Math.max(1, Math.min(10, Math.round(+e.value))));
++    else if (e.kind === "medication") { addMedication(iso, e.value); createMedPreset(e.value); }
++  }
++  const petPeriodDay = useMemo(() => {
++    if (!periodDaysSet.has(nowISO)) return 0;
++    let n = 0, d = fromISO(nowISO);
++    while (periodDaysSet.has(toISO(d)) && n < 60) { n++; d = addDays(d, -1); }
++    return n;
++  }, [periodDaysSet, nowISO]);
++  const petCycle = useMemo(() => petCycleFrom({
++    info, phaseName: info.hasData ? getPhase(info) : null, isPeriodToday: periodDaysSet.has(nowISO),
++    periodDayIndex: petPeriodDay, pregnancyActive: pregnancy.active,
++  }), [info, periodDaysSet, nowISO, petPeriodDay, pregnancy.active]);
++  const petToday = useMemo(() => ({
++    date: nowISO, symptoms: notes[nowISO] || [], pain: painLevels[nowISO] ?? null, medications: medications[nowISO] || [],
++  }), [nowISO, notes, painLevels, medications]);
++
+   useEffect(() => {
+     (async () => {
+       try {
+@@ -1631,7 +1655,7 @@
+   function renderTabContent(tabId) {
+     switch (tabId) {
+       case "anasayfa":
+-        return <AnasayfaTab theme={theme} info={info} notes={notes} painLevels={painLevels} medications={medications} settings={settings} s={s} lang={lang} />;
++        return <AnasayfaTab theme={theme} info={info} notes={notes} painLevels={painLevels} medications={medications} settings={settings} s={s} lang={lang} onOpenPet={() => setPetOpen(true)} />;
+       case "takvim":
+         return (
+           <TakvimTab theme={theme} lang={lang} s={s} info={info} periodDaysSet={periodDaysSet} monthDate={monthDate} setMonthDate={setMonthDate}
+@@ -1681,6 +1705,10 @@
+         onCreateMedPreset={createMedPreset} onRemoveMedPreset={removeMedPreset}
+         onClose={() => setDayModalDate(null)} />
+ 
++      <PetScreen visible={petOpen} onClose={() => setPetOpen(false)} title={lang === "en" ? "My pet" : "Pati dostum"}
++        cycle={petCycle} symptoms={settings.presetNotes || DEFAULT_PRESET_NOTES[lang]} medications={settings.presetMedications || []}
++        today={petToday} onLog={handlePetLog} />
++
+       <Modal visible={notifOpen} transparent animationType="fade" onRequestClose={() => setNotifOpen(false)}>
+         <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setNotifOpen(false)}>
+           <View style={{ position: "absolute", top: 70, right: 16, width: 270, backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, padding: 12 }}>
+@@ -1707,6 +1735,9 @@
+             <Text style={{ fontSize: 12, color: theme.muted }}>{formatDate(today, lang)}</Text>
+           </View>
+         </View>
++        <TouchableOpacity onPress={() => setPetOpen(true)} style={{ width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center", marginRight: 8 }}>
++          <Icon name="paw" size={18} color={theme.accent} />
++        </TouchableOpacity>
+         <TouchableOpacity onPress={() => setNotifOpen(true)} style={{ width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center" }}>
+           <Icon name="bell-outline" size={18} color={theme.ink} />
+           {notifications.length > 0 && <View style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: theme.accent, borderWidth: 2, borderColor: theme.bg }} />}
+@@ -1746,7 +1777,7 @@
+ 
+ /* ---------------------------------- Anasayfa ---------------------------------- */
+ 
+-function AnasayfaTab({ theme, info, notes, painLevels, medications, settings, s, lang }) {
++function AnasayfaTab({ theme, info, notes, painLevels, medications, settings, s, lang, onOpenPet }) {
+   const todayNotes = notes[todayISO] || [];
+   const todayPain = painLevels[todayISO];
+   const todayMeds = medications[todayISO] || [];
+@@ -1765,6 +1796,22 @@
+         <CardTitle theme={theme}>{s.thisCycle}</CardTitle>
+         <CycleWheel theme={theme} info={info} s={s} />
+       </Card>
++      {onOpenPet && (
++        <TouchableOpacity activeOpacity={0.85} onPress={onOpenPet}>
++          <Card theme={theme}>
++            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
++              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.accent + "22", alignItems: "center", justifyContent: "center" }}>
++                <Icon name="paw" size={22} color={theme.accent} />
++              </View>
++              <View style={{ flex: 1 }}>
++                <Text style={{ fontSize: 15, fontWeight: "700", color: theme.ink }}>{lang === "en" ? "Your pet" : "Pati dostun"}</Text>
++                <Text style={{ fontSize: 12.5, color: theme.muted, marginTop: 2 }}>{lang === "en" ? "Take care of it and tell it how you feel today." : "Onunla ilgilen, bugün nasıl hissettiğini ona anlat."}</Text>
++              </View>
++              <Icon name="chevron-right" size={20} color={theme.muted} />
++            </View>
++          </Card>
++        </TouchableOpacity>
++      )}
+       {phase && (
+         <Card theme={theme}>
+           <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>

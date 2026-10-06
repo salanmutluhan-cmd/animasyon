@@ -16,6 +16,11 @@ fs.writeFileSync(path.join(root, 'dist/pet.html'), pet);
 fs.mkdirSync(path.join(root, 'integration/android/assets'), { recursive: true });
 fs.writeFileSync(path.join(root, 'integration/android/assets/pet.html'), pet);
 fs.writeFileSync(path.join(root, 'demo.html'), inline('src/demo.template.html'));
+fs.mkdirSync(path.join(root, 'integration/expo-elora/pet'), { recursive: true });
+fs.writeFileSync(
+  path.join(root, 'integration/expo-elora/pet/petHtml.js'),
+  '// Otomatik üretildi: node tools/build.js\nexport default ' + JSON.stringify(pet) + ';\n'
+);
 fs.writeFileSync(
   path.join(root, 'integration/react-native/petHtml.js'),
   '// Otomatik üretildi: node tools/build.js\nexport default ' + JSON.stringify(pet) + ';\n'

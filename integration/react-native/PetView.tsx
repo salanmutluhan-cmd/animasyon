@@ -34,7 +34,11 @@ export interface PetViewHandle {
   /** 'thermo' | 'syrup' | 'vitamin' */
   giveMedicine(id: string): void;
   /** Regl uygulaması: döngü evresi (null → kapalı), day: regl'in kaçıncı günü */
-  setCycle(phase: CyclePhase | null, day?: number): void;
+  setCycle(phase: CyclePhase | null, day?: number, daysUntilNext?: number | null): void;
+  /** takvimdeki hazır şikayet / ilaç listeleri ve bugün girilenler */
+  setLogOptions(o: { symptoms: string[]; medications: string[]; today?: { date: string; symptoms: string[]; pain: number | null; medications: string[] } }): void;
+  /** 'checkin' | 'meds' | 'forecast' | 'mood' */
+  startTalk(kind?: string): void;
   setUserMood(mood: UserMood): void;
   remindWater(): void;
   /** dakika; 0 → kapalı */
@@ -80,6 +84,8 @@ interface Props {
   onPet?(phase: 'start' | 'end'): void;
   /** Kullanıcı balondaki "İçtim ✓" butonuna bastı */
   onUserDrankWater?(): void;
+  /** Hayvanla konuşurken verilen cevap → o günün takvim kaydına ekleyin */
+  onLog?(e: { kind: 'symptom' | 'pain' | 'medication'; date: string; value: string | number; custom?: boolean }): void;
   /** Tüm olaylar (level, quest, userMood, buy, med, groom, say …) */
   onEvent?(type: string, data: any): void;
 }
@@ -107,7 +113,9 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
     brushFur: () => send({ type: 'brushFur' }),
     brushTeeth: () => send({ type: 'brushTeeth' }),
     giveMedicine: (id: string) => send({ type: 'medicine', id }),
-    setCycle: (phase, day) => send({ type: 'cycle', phase, day }),
+    setCycle: (phase, day, daysUntilNext) => send({ type: 'cycle', phase, day, daysUntilNext }),
+    setLogOptions: (o) => send({ type: 'logOptions', ...o }),
+    startTalk: (kind = 'checkin') => send({ type: 'talk', kind }),
     setUserMood: (mood) => send({ type: 'userMood', mood }),
     remindWater: () => send({ type: 'remindWater' }),
     setWaterReminder: (minutes: number) => send({ type: 'waterReminder', minutes }),
@@ -155,6 +163,7 @@ export const PetView = forwardRef<PetViewHandle, Props>(function PetView(props, 
       case 'action': props.onAction?.(d.name, d.phase); break;
       case 'pet': props.onPet?.(d.phase); break;
       case 'userWater': props.onUserDrankWater?.(); break;
+      case 'log': props.onLog?.(d); break;
     }
   };
 

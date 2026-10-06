@@ -41,7 +41,12 @@ class PetController {
   /// thermo, syrup, vitamin
   Future<void> giveMedicine(String id) => send({'type': 'medicine', 'id': id});
   /// Regl uygulaması: period, pms, follicular, ovulation, luteal (null → kapalı)
-  Future<void> setCycle(String? phase, {int day = 0}) => send({'type': 'cycle', 'phase': phase, 'day': day});
+  Future<void> setCycle(String? phase, {int day = 0, int? daysUntilNext}) => send({'type': 'cycle', 'phase': phase, 'day': day, 'daysUntilNext': daysUntilNext});
+  /// takvimdeki hazır şikayet / ilaç listeleri ve bugün girilenler
+  Future<void> setLogOptions(List<String> symptoms, List<String> medications, {Map<String, dynamic>? today}) =>
+      send({'type': 'logOptions', 'symptoms': symptoms, 'medications': medications, if (today != null) 'today': today});
+  /// checkin, meds, forecast, mood
+  Future<void> startTalk([String kind = 'checkin']) => send({'type': 'talk', 'kind': kind});
   /// happy, sad, tired, pain, angry, anxious
   Future<void> setUserMood(String mood) => send({'type': 'userMood', 'mood': mood});
   Future<void> remindWater() => send({'type': 'remindWater'});
@@ -83,6 +88,7 @@ class PetView extends StatefulWidget {
     this.onAction,
     this.onEvent,
     this.onUserDrankWater,
+    this.onLog,
   });
 
   final PetController controller;
@@ -96,6 +102,8 @@ class PetView extends StatefulWidget {
   final void Function(String type, dynamic data)? onEvent;
   /// Kullanıcı balondaki "İçtim ✓" butonuna bastı
   final void Function()? onUserDrankWater;
+  /// Hayvanla konuşurken verilen cevap: {kind: symptom|pain|medication, date, value, custom}
+  final void Function(Map<String, dynamic> log)? onLog;
 
   @override
   State<PetView> createState() => _PetViewState();
@@ -141,6 +149,9 @@ class _PetViewState extends State<PetView> {
         break;
       case 'userWater':
         widget.onUserDrankWater?.call();
+        break;
+      case 'log':
+        widget.onLog?.call(Map<String, dynamic>.from(data));
         break;
     }
   }
