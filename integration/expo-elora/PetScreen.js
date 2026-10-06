@@ -16,8 +16,8 @@ const PET_KEY = "pet-state";
  *  cycle:       { phase: 'period'|'pms'|'follicular'|'ovulation'|'luteal'|null, day, daysUntilNext }
  *  symptoms:    hazır şikayetler (settings.presetNotes)
  *  medications: hazır ilaçlar (settings.presetMedications)
- *  today:       { date: 'YYYY-MM-DD', symptoms: [...], pain: 7|null, medications: [...] }  (bugün zaten girilmiş olanlar)
- *  onLog(e):    e = { kind: 'symptom'|'pain'|'medication', date, value, custom }
+ *  today:       { date: 'YYYY-MM-DD', symptoms: [...], pain: 7|null, medications: [...], mood: 'sad'|null }  (bugün zaten girilmiş olanlar)
+ *  onLog(e):    e = { kind: 'mood'|'symptom'|'pain'|'medication', date, value, custom }
  */
 export default function PetScreen({ visible, onClose, cycle, symptoms, medications, today, onLog, title = "Pati dostum" }) {
   const web = useRef(null);

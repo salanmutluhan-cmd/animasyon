@@ -166,7 +166,7 @@ petView.setCycle("period", day = 2, daysUntilNext = 26) // period, pms, follicul
 4. Regl günlerinde: "Bugün ağrı kesici ya da başka bir ilaç içtin mi?" Evet / Hayır / Henüz değil (2 saat sonra tekrar sorar)
 5. Evet ise: "Hangi ilacı içtin?" Uygulamadaki **hazır ilaçlar** çıkar; "Başka bir ilaç" ile yeni ilaç yazılabilir.
 
-Her cevap hemen `log` olayıyla uygulamaya gelir ve **o günün takvim kaydına** eklenir:
+Her cevap (ruh hali dahil: `mood` = happy, sad, tired, pain, angry, anxious) hemen `log` olayıyla uygulamaya gelir ve **o günün takvim kaydına** eklenir:
 
 ```kotlin
 petView.setLogOptions(symptoms = hazirSikayetler, medications = hazirIlaclar,

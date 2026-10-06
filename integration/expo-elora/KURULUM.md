@@ -18,7 +18,10 @@ Hazır paketi kullanıyorsan bu adımları yapmana gerek yok; zip içindeki proj
 3. `App.js.patch` içindeki değişiklikleri uygula (`git apply App.js.patch` ya da elle). Yapılanlar:
    - Üst çubuğa, zil butonunun soluna bir **pati** butonu eklenir.
    - Ana sayfada çevrim çarkının altına bir **"Pati dostun"** kartı eklenir.
+   - Takvimde güne dokununca açılan pencereye ve ana sayfadaki "Bugünün kaydı" kartına **ruh hali** eklenir (6 yüz simgesi).
+   - Reklamlar Expo Go ile test için geçici olarak kapalı (`ADS_ENABLED = false`). Play Store'a yüklemeden önce `true` yap.
    - Hayvanla konuşurken verilen cevaplar `handlePetLog` ile **o günün kaydına** yazılır:
+     - **Ruh hali** → `saveMood`
      - **Şikayet** → `addNote` (kullanıcı kendisi yazdıysa hazır şikayetlere de eklenir)
      - **Ağrı** → `savePain` (1-10)
      - **İlaç** → `addMedication` + `createMedPreset` (elle eklemedeki gibi hazır ilaçlara da girer)

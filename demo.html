@@ -3145,20 +3145,24 @@
       const L = this._logOpts();
       if (Array.isArray(o.symptoms)) L.symptoms = o.symptoms.filter(Boolean).map(String);
       if (Array.isArray(o.medications)) L.medications = o.medications.filter(Boolean).map(String);
-      if (o.today) L.today = { date: o.today.date || this._todayISO(), symptoms: (o.today.symptoms || []).map(String), pain: o.today.pain == null ? null : +o.today.pain, medications: (o.today.medications || []).map(String) };
+      if (o.today) {
+        L.today = { date: o.today.date || this._todayISO(), symptoms: (o.today.symptoms || []).map(String), pain: o.today.pain == null ? null : +o.today.pain, medications: (o.today.medications || []).map(String), mood: USER_MOODS[o.today.mood] ? o.today.mood : null };
+        if (L.today.mood) this.userMood = { mood: L.today.mood, date: this._today() }; // takvimde elle girildiyse tekrar sormaz
+      }
       this.connected = true;
       if (this.talk) this._renderTalk();
     }
     _logOpts() {
       if (!this.logOpts) this.logOpts = { symptoms: DEFAULT_SYMPTOMS.slice(), medications: [], today: null };
       const L = this.logOpts, iso = this._todayISO();
-      if (!L.today || L.today.date !== iso) L.today = { date: iso, symptoms: [], pain: null, medications: [] };
+      if (!L.today || L.today.date !== iso) L.today = { date: iso, symptoms: [], pain: null, medications: [], mood: null };
       return L;
     }
     _log(kind, value, extra) {
       const T = this._logOpts().today;
       if (kind === 'symptom' && T.symptoms.indexOf(value) < 0) T.symptoms.push(value);
       if (kind === 'pain') T.pain = value;
+      if (kind === 'mood') T.mood = value;
       if (kind === 'medication' && T.medications.indexOf(value) < 0) T.medications.push(value);
       this._emit('log', Object.assign({ kind, date: T.date, value }, extra || {}));
     }
@@ -3179,7 +3183,7 @@
       else {
         kind = 'checkin';
         steps = [];
-        if (!this.userMood || this.userMood.date !== this._today()) steps.push('mood');
+        if (!T.mood && (!this.userMood || this.userMood.date !== this._today())) steps.push('mood');
         steps.push('symptoms', 'pain?');
         if (ph === 'period' && !T.medications.length) steps.push('medTaken');
       }
@@ -3334,7 +3338,7 @@
         t.data.forecast = a;
         this._earn('forecast', this._rewardAt());
       } else if (st === 'mood') {
-        t.data.mood = a; this.setUserMood(a, { silent: true });
+        t.data.mood = a; this.setUserMood(a, { silent: true }); this._log('mood', a);
       } else if (st === 'symptoms') {
         if (a === 'save') t.sel.forEach((x) => { if (L.today.symptoms.indexOf(x) < 0) this._log('symptom', x, { custom: L.symptoms.indexOf(x) < 0 }); });
         t.data.symptoms = L.today.symptoms.slice();
