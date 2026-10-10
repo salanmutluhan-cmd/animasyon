@@ -1,7 +1,20 @@
 --- a/App.js
 +++ b/App.js
-@@ -14,6 +14,7 @@
- import Svg, { Circle, Path, Ellipse, G } from "react-native-svg";
+@@ -2,7 +2,7 @@
+ import {
+   SafeAreaView, View, Text, ScrollView, TouchableOpacity, TextInput, Pressable,
+   Modal, Image, ImageBackground, Switch, StyleSheet, Platform, Animated, PanResponder,
+-  useWindowDimensions, Alert, KeyboardAvoidingView, unstable_batchedUpdates, Linking, AppState,
++  useWindowDimensions, Alert, KeyboardAvoidingView, unstable_batchedUpdates, Linking, AppState, Easing,
+ } from "react-native";
+ import { StatusBar } from "expo-status-bar";
+ import AsyncStorage from "@react-native-async-storage/async-storage";
+@@ -11,9 +11,10 @@
+ import * as Print from "expo-print";
+ import * as Sharing from "expo-sharing";
+ import * as Notifications from "expo-notifications";
+-import Svg, { Circle, Path, Ellipse, G } from "react-native-svg";
++import Svg, { Circle, Path, Ellipse, G, Line, Rect, Defs, LinearGradient, RadialGradient, Stop } from "react-native-svg";
  import { Asset } from "expo-asset";
  import { MaterialCommunityIcons } from "@expo/vector-icons";
 +import PetScreen, { petCycleFrom } from "./PetScreen";
@@ -66,7 +79,24 @@
  const ADS_ENABLED = true;
  
  Notifications.setNotificationHandler({
-@@ -246,8 +286,35 @@
+@@ -59,7 +99,6 @@
+ });
+ 
+ const BG_IMAGE = require("./assets/arka_plan.jpg");
+-const LEAF_WREATH_IMAGE = require("./assets/wheel/leaf_wreath.png");
+ const BG_IMAGE_DARK = require("./assets/arka_plan_dark.jpg");
+ 
+ /* ---------------------------------- yardımcılar ---------------------------------- */
+@@ -204,7 +243,7 @@
+ };
+ 
+ const ALL_IMAGE_ASSETS = [
+-  BG_IMAGE, BG_IMAGE_DARK, LEAF_WREATH_IMAGE,
++  BG_IMAGE, BG_IMAGE_DARK,
+   ...Object.values(MYTH_IMAGES_TR),
+   ...Object.values(MYTH_IMAGES_EN),
+   ...Object.values(AVATAR_IMAGES),
+@@ -246,8 +285,35 @@
    painLevels: {},
    flowLevels: {},
    medications: {},
@@ -102,7 +132,7 @@
  const ANIMALS = ["cat", "dog", "rabbit", "bird", "fish", "turtle", "bug", "paw"];
  
  // Play Store paket adı (app.json > android.package ile aynı) — "Bizi
-@@ -513,6 +580,7 @@
+@@ -513,6 +579,7 @@
      bannerNoData: "Takvim sekmesinden \"Regl gir\" tuşuna basıp bir güne dokunarak regl başlangıcını işaretle.",
      thisCycle: "Bu döngü",
      todaysLog: "Bugünün kaydı",
@@ -110,7 +140,16 @@
      painLevelLabel: (v) => `Ağrı düzeyi: ${v}/10`,
      whatToWatch: "Regl döneminde nelere dikkat etmeli?",
      careTips: ["Sıcak su torbası kramp ağrısını hafifletebilir.", "Bol su içmek şişkinliği azaltmaya yardımcı olur.", "Hafif yürüyüş ya da esneme hareketleri ağrıyı rahatlatabilir.", "Tuz ve kafein tüketimini azaltmak şişkinliği azaltabilir."],
-@@ -648,6 +716,7 @@
+@@ -523,7 +590,7 @@
+     periodExpected: "Regl bekleniyor",
+     daysToPeriod: (n) => `Regle ${n} gün`,
+     delayDaysWheel: (n) => `${n} gün gecikme`,
+-    legendPeriod: "Regl", legendFertile: "Doğurgan pencere", legendOvulation: "Yumurtlama",
++    legendPeriod: "Regl", legendFertile: "Doğurgan pencere", legendOvulation: "Yumurtlama", legendToday: "Bugün",
+     yearView: "Yıl görünümü", backToMonth: "Ay görünümüne dön", goToCurrentYear: "Bugünün yılına git",
+     tapMonthHint: "Bir aya dokunarak o ayı büyük takvimde açabilirsin.",
+     logOn: "Regl girme açık — bir güne dokun", logOff: "Regl gir",
+@@ -648,6 +715,7 @@
      bannerNoData: "Tap \"Log period\" on the Calendar tab and tap a day to mark the start of your period.",
      thisCycle: "This cycle",
      todaysLog: "Today's log",
@@ -118,7 +157,367 @@
      painLevelLabel: (v) => `Pain level: ${v}/10`,
      whatToWatch: "What to watch for during your period?",
      careTips: ["A hot water bottle can ease cramp pain.", "Drinking plenty of water can help reduce bloating.", "Light walking or stretching can ease pain.", "Cutting back on salt and caffeine can reduce bloating."],
-@@ -954,7 +1023,7 @@
+@@ -658,7 +726,7 @@
+     periodExpected: "Period expected",
+     daysToPeriod: (n) => `${n} days to period`,
+     delayDaysWheel: (n) => `${n} days late`,
+-    legendPeriod: "Period", legendFertile: "Fertile window", legendOvulation: "Ovulation",
++    legendPeriod: "Period", legendFertile: "Fertile window", legendOvulation: "Ovulation", legendToday: "Today",
+     yearView: "Year view", backToMonth: "Back to month view", goToCurrentYear: "Go to current year",
+     tapMonthHint: "Tap a month to open it in the full calendar.",
+     logOn: "Logging on — tap a day", logOff: "Log period",
+@@ -855,94 +923,290 @@
+   return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 0 ${e.x} ${e.y}`;
+ }
+ 
+-// Küçük bir 5 yapraklı çiçek (regl ve doğurgan pencere günlerini işaretlemek için)
+-function WheelFlower({ cx, cy, color, centerColor, size }) {
+-  const petalR = size * 0.42;
+-  const dist = size * 0.5;
++// ---------------------------------------------------------------- Döngü çarkı (çiçekli, böcekli, animasyonlu)
++// Sabit kısımlar (sarmaşık, yapraklar, tomurcuklar, halka) tek bir SVG'de bir kez çizilir.
++// Hareket eden parçalar (çiçekler, uğur böceği, kelebekler, arı, parıltılar) ayrı küçük
++// görünümlerdedir ve sadece transform/opacity ile canlandırılır (useNativeDriver: true):
++// animasyonlar telefonun kendi animasyon motorunda döner, JavaScript'i yormaz.
++const WV = 260, WC = 130, WR = 96; // çarkın iç ölçüleri (viewBox)
++const WHEEL_PAL = {
++  period: { p: "#F7739A", p2: "#FFB3C8", c: "#FFD86B" },
++  fertile: { p: "#B69AF0", p2: "#DCCBFF", c: "#FFD86B" },
++  ovulation: { p: "#FFC94D", p2: "#FFE7A3", c: "#E58A2E" },
++};
++const wPol = (r, deg) => { const a = ((deg - 90) * Math.PI) / 180; return [WC + r * Math.cos(a), WC + r * Math.sin(a)]; };
++const w2 = (n) => Math.round(n * 100) / 100;
++
++function WheelFlowerArt({ kind, size }) {
++  const pal = WHEEL_PAL[kind], n = kind === "ovulation" ? 8 : 5, pr = size * 0.5;
+   const petals = [];
+-  for (let i = 0; i < 5; i++) {
+-    const rad = (i * 72 * Math.PI) / 180;
+-    petals.push(
+-      <Circle key={i} cx={cx + dist * Math.cos(rad)} cy={cy + dist * Math.sin(rad)} r={petalR} fill={color} opacity={0.95} />
+-    );
++  for (let i = 0; i < n; i++) {
++    const a = (i * 360) / n;
++    petals.push(<Ellipse key={"a" + i} cx={0} cy={-pr * 0.62} rx={pr * (n === 8 ? 0.3 : 0.42)} ry={pr * 0.6} fill={pal.p} transform={`rotate(${a})`} />);
++    petals.push(<Ellipse key={"b" + i} cx={0} cy={-pr * 0.68} rx={pr * (n === 8 ? 0.13 : 0.18)} ry={pr * 0.3} fill={pal.p2} opacity={0.85} transform={`rotate(${a})`} />);
+   }
+   return (
+-    <>
++    <G>
+       {petals}
+-      <Circle cx={cx} cy={cy} r={size * 0.26} fill={centerColor} />
+-    </>
++      <Circle r={pr * 0.32} fill={pal.c} />
++      <Circle cx={-pr * 0.1} cy={-pr * 0.1} r={pr * 0.1} fill="#fff" opacity={0.7} />
++    </G>
++  );
++}
++function LadybugArt() { // başı sağa bakar (saat yönünde yürür)
++  const legs = [-3, 0, 3].map((x) => (
++    <G key={x}>
++      <Line x1={x} y1={-4} x2={x + 1} y2={-7.5} stroke="#2B1B1F" strokeWidth={1.1} strokeLinecap="round" />
++      <Line x1={x} y1={4} x2={x + 1} y2={7.5} stroke="#2B1B1F" strokeWidth={1.1} strokeLinecap="round" />
++    </G>
++  ));
++  return (
++    <G>
++      {legs}
++      <Circle cx={6.5} cy={0} r={3.6} fill="#2B1B1F" />
++      <Circle cx={7.6} cy={-1.4} r={0.9} fill="#fff" />
++      <Circle cx={7.6} cy={1.4} r={0.9} fill="#fff" />
++      <Path d="M9.5 -1.5 Q12.5 -3 12.5 -4.5 M9.5 1.5 Q12.5 3 12.5 4.5" stroke="#2B1B1F" strokeWidth={0.9} fill="none" strokeLinecap="round" />
++      <Ellipse rx={7} ry={6.2} fill="#E8434F" stroke="#B8283A" strokeWidth={0.8} />
++      <Line x1={-6.8} y1={0} x2={6.6} y2={0} stroke="#2B1B1F" strokeWidth={0.9} />
++      <Circle cx={2.5} cy={-3} r={1.5} fill="#2B1B1F" />
++      <Circle cx={2.5} cy={3} r={1.5} fill="#2B1B1F" />
++      <Circle cx={-2.6} cy={-3.2} r={1.3} fill="#2B1B1F" />
++      <Circle cx={-2.6} cy={3.2} r={1.3} fill="#2B1B1F" />
++      <Ellipse cx={3.6} cy={-2.4} rx={1.4} ry={0.8} fill="#fff" opacity={0.55} />
++    </G>
++  );
++}
++function ButterflyWing({ c1, c2, s }) {
++  return (
++    <G>
++      <Path d={`M0 -1 C${9 * s} -12 ${15 * s} -4 ${8 * s} 1 Z`} fill={c1} />
++      <Path d={`M0 0 C${8 * s} 2 ${10 * s} 9 ${3 * s} 8 Z`} fill={c2} />
++      <Circle cx={7 * s} cy={-4} r={1.6} fill="#fff" opacity={0.7} />
++    </G>
++  );
++}
++function BeeArt() {
++  return (
++    <G>
++      <Ellipse cx={-2.5} cy={-4.5} rx={2.8} ry={4} fill="#DDF2FF" opacity={0.9} transform="rotate(-25 -2.5 -4.5)" />
++      <Ellipse cx={2.5} cy={-4.5} rx={2.8} ry={4} fill="#DDF2FF" opacity={0.9} transform="rotate(25 2.5 -4.5)" />
++      <Ellipse rx={5.6} ry={4} fill="#FFC94D" />
++      <Rect x={-1.8} y={-3.9} width={1.6} height={7.8} fill="#3B2A33" />
++      <Rect x={1.6} y={-3.6} width={1.4} height={7.2} fill="#3B2A33" />
++      <Circle cx={-5.4} cy={0} r={2.6} fill="#3B2A33" />
++      <Circle cx={-6} cy={-0.6} r={0.7} fill="#fff" />
++      <Path d="M5.6 0 L7.6 0" stroke="#3B2A33" strokeWidth={1.2} strokeLinecap="round" />
++    </G>
++  );
++}
++const sparklePath = (s) => `M0 ${-s} Q0 0 ${s} 0 Q0 0 0 ${s} Q0 0 ${-s} 0 Q0 0 0 ${-s}Z`;
++const heartPath = (s) => `M0 ${s * 0.9} C${-s * 1.6} 0 ${-s * 1.1} ${-s * 1.4} 0 ${-s * 0.5} C${s * 1.1} ${-s * 1.4} ${s * 1.6} 0 0 ${s * 0.9}Z`;
++
++// Küçük bir parçayı (kendi SVG'siyle) çark üzerindeki (x, y) noktasına yerleştirir.
++function WheelSprite({ k, x, y, box, style, children }) {
++  const half = box / 2;
++  return (
++    <Animated.View pointerEvents="none" style={[{ position: "absolute", left: (x - half) * k, top: (y - half) * k, width: box * k, height: box * k }, style]}>
++      <Svg width={box * k} height={box * k} viewBox={`${-half} ${-half} ${box} ${box}`}>{children}</Svg>
++    </Animated.View>
+   );
+ }
+-function CycleWheel({ theme, info, s }) {
++
++const AnimatedSvgCircle = Animated.createAnimatedComponent(Circle);
++
++function CycleWheel({ theme, info, s, paused }) {
+   const { width: winW } = useWindowDimensions();
+-  const size = Math.min(winW - 90, 220);
+-  const cx = 110, cy = 110, r = 90;
+-  const N = info.avgCycleLength;
+-  const angFor = (dayIdx) => (dayIdx / N) * 360;
++  const size = Math.min(winW - 70, 270);
++  const k = size / WV;
++  const dark = theme.bg === "#1B1130";
++  const N = Math.max(1, info.avgCycleLength);
++  const day = Math.max(0, Math.min(N - 1, info.dayInCycle));
+   const periodEnd = Math.min(info.avgPeriodLength - 1, N - 1);
+   const ovIdx = Math.max(0, Math.min(N - 1, info.ovulationIndex));
+-  const fertStart = Math.max(0, ovIdx - 5);
+-  const fertEnd = Math.min(N - 1, ovIdx + 1);
+-  const todayPt = polar(cx, cy, r, angFor(info.dayInCycle + 0.5));
+-
+-  // Sarmaşık üzerindeki çiçekler: regl günleri kendi rengiyle, doğurgan pencere
+-  // günleri kendi rengiyle. Yumurtlama günü tamamen altın sarısı bir çiçekle
+-  // öne çıkarılıyor.
+-  const periodFlowers = [];
+-  for (let d = 0; d <= periodEnd; d++) {
+-    const pt = polar(cx, cy, r, angFor(d + 0.5));
+-    periodFlowers.push(<WheelFlower key={`p${d}`} cx={pt.x} cy={pt.y} color={theme.rose} centerColor={theme.goldSoft} size={15} />);
+-  }
+-  const fertileFlowers = [];
+-  for (let d = fertStart; d <= fertEnd; d++) {
+-    const pt = polar(cx, cy, r, angFor(d + 0.5));
+-    const isOv = d === ovIdx;
+-    fertileFlowers.push(
+-      <WheelFlower key={`f${d}`} cx={pt.x} cy={pt.y}
+-        color={isOv ? theme.gold : theme.lav}
+-        centerColor={isOv ? "#8A5A12" : theme.gold}
+-        size={isOv ? 18 : 15} />
++  const fertStart = Math.max(0, ovIdx - 5), fertEnd = Math.min(N - 1, ovIdx + 1);
++  const typeOf = (d) => (d <= periodEnd ? "period" : d === ovIdx ? "ovulation" : d >= fertStart && d <= fertEnd ? "fertile" : "none");
++  const angOf = (d) => ((d + 0.5) / N) * 360;
++  const [replay, setReplay] = useState(0);
++
++  // ---- animasyon değerleri
++  const intro = useRef(new Animated.Value(0)).current;  // 0→1: sarmaşık ve yapraklar belirir
++  const blooms = useMemo(() => Array.from({ length: N }, () => new Animated.Value(0)), [N]);
++  const walk = useRef(new Animated.Value(0)).current;   // uğur böceğinin açısı (derece)
++  const prog = useRef(new Animated.Value(0)).current;   // ilerleme halkası 0→1
++  const loop = useRef(new Animated.Value(0)).current;   // 0→1 sürekli: sallanma, kanat, parıltı
++  const orbit = useRef(new Animated.Value(0)).current;  // 0→1 sürekli: kelebeklerin turu
++  const [num, setNum] = useState(day + 1);
++
++  // giriş animasyonu (açılışta ve çarka dokununca bir kez)
++  useEffect(() => {
++    intro.setValue(0); walk.setValue(0); prog.setValue(0);
++    blooms.forEach((b) => b.setValue(0));
++    const target = angOf(day);
++    const anim = Animated.parallel([
++      Animated.timing(intro, { toValue: 1, duration: 900, useNativeDriver: true }),
++      Animated.stagger(45, blooms.map((b) => Animated.spring(b, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }))),
++      Animated.sequence([Animated.delay(900), Animated.timing(walk, { toValue: target, duration: 1100 + day * 55, easing: Easing.inOut(Easing.quad), useNativeDriver: true })]),
++      Animated.timing(prog, { toValue: 1, duration: 1800, easing: Easing.out(Easing.cubic), useNativeDriver: false }),
++    ]);
++    anim.start();
++    // gün sayacı: 1'den bugüne sayar (yaklaşık 20 güncelleme)
++    let n = 0; const steps = 18;
++    const id = setInterval(() => { n++; setNum(Math.max(1, Math.round(((day + 1) * n) / steps))); if (n >= steps) clearInterval(id); }, 70);
++    return () => { anim.stop(); clearInterval(id); };
++  }, [replay, day, N, periodEnd, ovIdx]);
++
++  // sürekli animasyonlar: hayvan ekranı açıkken ya da uygulama arka plandayken durur
++  useEffect(() => {
++    if (paused) return;
++    const a = Animated.loop(Animated.timing(loop, { toValue: 1, duration: 2400, easing: Easing.linear, useNativeDriver: true }));
++    const b = Animated.loop(Animated.timing(orbit, { toValue: 1, duration: 36000, easing: Easing.linear, useNativeDriver: true }));
++    a.start(); b.start();
++    return () => { a.stop(); b.stop(); };
++  }, [paused]);
++
++  // ---- türetilmiş hareketler (hepsi native)
++  const swayA = loop.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ["0deg", "7deg", "0deg", "-7deg", "0deg"] });
++  const swayB = loop.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: ["0deg", "-6deg", "0deg", "6deg", "0deg"] });
++  const spin = loop.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "45deg"] }); // 8 yapraklı çiçek: 45° dönünce başa döner, kesintisiz görünür
++  const pulse = loop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.15, 1] });
++  const flap = loop.interpolate({ inputRange: [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1], outputRange: [1, 0.35, 1, 0.35, 1, 0.35, 1, 0.35, 1] });
++  const beeX = loop.interpolate({ inputRange: [0, 0.25, 0.5, 0.75, 1], outputRange: [0, 18, 0, -18, 0] });
++  const beeY = loop.interpolate({ inputRange: [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1], outputRange: [-4, -12, -4, 4, -4, -12, -4, 4, -4] });
++  const beeFlip = loop.interpolate({ inputRange: [0, 0.249, 0.25, 0.749, 0.75, 1], outputRange: [-1, -1, 1, 1, -1, -1] });
++  const orbitA = orbit.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
++  const orbitB = orbit.interpolate({ inputRange: [0, 1], outputRange: ["180deg", "-180deg"] });
++  const bob = loop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -4, 0] });
++  const walkDeg = walk.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] });
++  const twinkle = (ph) => loop.interpolate({ inputRange: [0, ph, ph + 0.25, ph + 0.5, 1], outputRange: [0.15, 0.15, 1, 0.15, 0.15] });
++
++  // ---- sabit çizim (bir kez hesaplanır)
++  const staticArt = useMemo(() => {
++    let vine = "";
++    for (let i = 0; i <= 360; i++) { const a = i, r = WR + 3.2 * Math.sin(((a * Math.PI) / 180) * N); const [x, y] = wPol(r, a); vine += (i ? "L" : "M") + w2(x) + " " + w2(y); }
++    const leaves = [], curls = [], buds = [];
++    for (let i = 0; i < N; i++) {
++      const a = (i / N) * 360, out = i % 2 === 0, [x, y] = wPol(WR + (out ? 2 : -2), a), len = 11 + (i % 3);
++      const col = i % 3 === 0 ? "#6DBB74" : i % 3 === 1 ? "#8FD08A" : "#5AA866";
++      leaves.push(
++        <G key={"l" + i} transform={`translate(${w2(x)} ${w2(y)}) rotate(${w2(a + (out ? -55 : 55))})`}>
++          <Path d={`M0 0 C${w2(len * 0.35)} ${w2(-len * 0.45)} ${w2(len * 0.85)} ${w2(-len * 0.3)} ${len} 0 C${w2(len * 0.85)} ${w2(len * 0.3)} ${w2(len * 0.35)} ${w2(len * 0.45)} 0 0Z`} fill={col} />
++          <Path d={`M1 0 L${w2(len * 0.8)} 0`} stroke="rgba(255,255,255,0.45)" strokeWidth={0.8} strokeLinecap="round" />
++        </G>
++      );
++      if (i % 4 === 2) { const [tx, ty] = wPol(WR + (out ? -9 : 9), a + 3); curls.push(<Path key={"c" + i} d={`M${w2(x)} ${w2(y)} Q${w2((x + tx) / 2 + 3)} ${w2((y + ty) / 2 - 3)} ${w2(tx)} ${w2(ty)}`} fill="none" stroke="#9CCB8F" strokeWidth={1.2} strokeLinecap="round" />); }
++      if (typeOf(i) === "none") { const [bx, by] = wPol(WR, angOf(i)); buds.push(<G key={"b" + i}><Circle cx={w2(bx)} cy={w2(by)} r={3.4} fill="#FFFFFF" stroke="#9CCB8F" strokeWidth={1.4} /><Circle cx={w2(bx)} cy={w2(by)} r={1.3} fill="#F9D3DE" /></G>); }
++    }
++    const hearts = [[200, WR + 20], [340, WR + 18], [95, WR + 22]].map(([a, r], i) => { const [x, y] = wPol(r, a); return <Path key={"h" + i} d={heartPath(4)} fill="#FF9DBB" opacity={0.75} transform={`translate(${w2(x)} ${w2(y)})`} />; });
++    return { vine, leaves, curls, buds, hearts };
++  }, [N, periodEnd, ovIdx]);
++
++  const circ = 2 * Math.PI * 72;
++  const frac = (day + 0.5) / N;
++  const dashOff = prog.interpolate({ inputRange: [0, 1], outputRange: [circ, circ * (1 - frac)] });
++  const discColor = dark ? "#33214A" : "#FFF8FA";
++  const trackColor = dark ? "#3E2A52" : "#F8E3EA";
++
++  // çiçekli günler
++  const flowers = [];
++  for (let i = 0; i < N; i++) {
++    const t = typeOf(i);
++    if (t === "none") continue;
++    const [x, y] = wPol(WR, angOf(i)), ov = t === "ovulation", sz = ov ? 22 : 16;
++    const bl = blooms[i] || intro;
++    flowers.push(
++      <WheelSprite key={"f" + i} k={k} x={x} y={y} box={ov ? 34 : 22}
++        style={{ transform: [{ scale: bl }, { rotate: ov ? spin : i % 2 ? swayA : swayB }] }}>
++        {ov && <Circle r={13} fill="none" stroke="#FFC94D" strokeWidth={1} opacity={0.6} />}
++        <WheelFlowerArt kind={t} size={sz} />
++      </WheelSprite>
+     );
+   }
++  const [ox, oy] = wPol(WR, angOf(ovIdx));
++  const sparkles = [[30, 0], [70, 1], [118, 2], [160, 3], [205, 4], [250, 5], [300, 6], [335, 7]].map(([a, i]) => {
++    const [x, y] = wPol(WR + (i % 2 ? 24 : 20), a + 12);
++    return (
++      <WheelSprite key={"s" + i} k={k} x={x} y={y} box={12} style={{ opacity: twinkle(0.02 + (i % 4) * 0.15), transform: [{ scale: pulse }] }}>
++        <Path d={sparklePath(i % 2 ? 3.4 : 4.6)} fill={i % 3 === 0 ? "#FFC94D" : i % 3 === 1 ? "#FF9DBB" : "#C9B3FF"} />
++      </WheelSprite>
++    );
++  });
+ 
+   let centerLine2 = "";
+   if (info.delayDays > 0) centerLine2 = s.delayDaysWheel(info.delayDays);
+   else if (info.daysUntilNext === 0) centerLine2 = s.periodExpected;
+   else if (info.daysUntilNext != null) centerLine2 = s.daysToPeriod(info.daysUntilNext);
+ 
+-  // Çelenk görselini biraz büyütüp ortalıyoruz ki dal, çiçeklerin oturduğu
+-  // çemberin (r=90) tam üzerine denk gelsin.
+-  const wreathSize = size * 0.86;
+-  const wreathOffset = (size - wreathSize) / 2;
+-
++  const full = { position: "absolute", left: 0, top: 0, width: size, height: size };
+   return (
+     <View style={{ alignItems: "center" }}>
+-      <View style={{ width: size, height: size }}>
+-        <Image source={LEAF_WREATH_IMAGE}
+-          style={{ position: "absolute", width: wreathSize, height: wreathSize, top: wreathOffset, left: wreathOffset }}
+-          resizeMode="contain" />
+-        <Svg viewBox="0 0 220 220" width={size} height={size}>
+-          {periodFlowers}
+-          {fertileFlowers}
+-          <Circle cx={todayPt.x} cy={todayPt.y} r="7" fill={theme.ink} stroke={theme.surface} strokeWidth="2" />
++      <Pressable onPress={() => setReplay((r) => r + 1)} style={{ width: size, height: size }}>
++        {/* sabit katman */}
++        <Animated.View style={[full, { opacity: intro, transform: [{ scale: intro.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1] }) }] }]} pointerEvents="none">
++          <Svg width={size} height={size} viewBox={`0 0 ${WV} ${WV}`}>
++            <Defs>
++              <RadialGradient id="wdisc"><Stop offset="0.55" stopColor={discColor} /><Stop offset="1" stopColor={discColor} stopOpacity="0" /></RadialGradient>
++            </Defs>
++            <Circle cx={WC} cy={WC} r={84} fill="url(#wdisc)" />
++            <Circle cx={WC} cy={WC} r={72} fill="none" stroke={trackColor} strokeWidth={6} />
++            <Path d={staticArt.vine} fill="none" stroke={dark ? "#6FAF74" : "#8CC88A"} strokeWidth={2.6} strokeLinecap="round" />
++            {staticArt.curls}
++            {staticArt.leaves}
++            {staticArt.buds}
++            {staticArt.hearts}
++          </Svg>
++        </Animated.View>
++        {/* ilerleme halkası (bir kez dolar) */}
++        <Svg width={size} height={size} viewBox={`0 0 ${WV} ${WV}`} style={full} pointerEvents="none">
++          <Defs><LinearGradient id="wprog" x1="0" y1="0" x2="1" y2="1"><Stop offset="0" stopColor="#FF8FB1" /><Stop offset="1" stopColor="#B69AF0" /></LinearGradient></Defs>
++          <AnimatedSvgCircle cx={WC} cy={WC} r={72} fill="none" stroke="url(#wprog)" strokeWidth={6} strokeLinecap="round"
++            strokeDasharray={`${circ} ${circ}`} strokeDashoffset={dashOff} transform={`rotate(-90 ${WC} ${WC})`} />
+         </Svg>
+-        <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+-          <Text style={{ fontSize: 28, fontWeight: "700", color: theme.ink }}>{info.dayInCycle + 1}.</Text>
+-          <Text style={{ fontSize: 11, color: theme.muted }}>{s.cycleDay}</Text>
+-          {!!centerLine2 && <Text style={{ fontSize: 12.5, fontWeight: "700", color: theme.rose, marginTop: 4 }}>{centerLine2}</Text>}
++        {sparkles}
++        {flowers}
++        {/* arı: yumurtlama çiçeğinin çevresinde uçar */}
++        <WheelSprite k={k} x={ox} y={oy} box={18} style={{ transform: [{ translateX: Animated.multiply(beeX, k) }, { translateY: Animated.multiply(beeY, k) }, { scaleX: beeFlip }] }}>
++          <BeeArt />
++        </WheelSprite>
++        {/* kelebekler: çarkın çevresinde tur atar */}
++        {[[orbitA, "#FF8FB1", "#FFC2D4", 22], [orbitB, "#B69AF0", "#DCCBFF", 28]].map(([rot, c1, c2, rr], i) => (
++          <Animated.View key={"bf" + i} pointerEvents="none" style={[full, { transform: [{ rotate: rot }] }]}>
++            <WheelSprite k={k} x={WC} y={WC - WR - rr} box={34} style={{ transform: [{ translateY: Animated.multiply(bob, k) }, { rotate: i ? "-20deg" : "15deg" }] }}>
++              <G transform="scale(1.4)">
++                <Ellipse rx={1.4} ry={5.5} fill="#5A3341" />
++                <Path d="M-.6 -5 Q-2.5 -9 -4 -9.5 M.6 -5 Q2.5 -9 4 -9.5" stroke="#5A3341" strokeWidth={0.8} fill="none" strokeLinecap="round" />
++              </G>
++            </WheelSprite>
++            {[-1, 1].map((side) => (
++              <WheelSprite key={side} k={k} x={WC} y={WC - WR - rr} box={34} style={{ transform: [{ translateY: Animated.multiply(bob, k) }, { rotate: i ? "-20deg" : "15deg" }, { scaleX: flap }] }}>
++                <G transform="scale(1.4)"><ButterflyWing c1={c1} c2={c2} s={side} /></G>
++              </WheelSprite>
++            ))}
++          </Animated.View>
++        ))}
++        {/* uğur böceği: 1. günden bugüne yürür (bütün katman çarkın ortası etrafında döner) */}
++        <Animated.View pointerEvents="none" style={[full, { opacity: intro, transform: [{ rotate: walkDeg }] }]}>
++          <WheelSprite k={k} x={WC} y={WC - WR} box={26}><G transform="scale(1.15)"><LadybugArt /></G></WheelSprite>
++        </Animated.View>
++        <View pointerEvents="none" style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
++          <Text style={{ fontSize: 36, fontWeight: "800", color: theme.ink }}>{num}.</Text>
++          <Text style={{ fontSize: 11.5, color: theme.muted }}>{s.cycleDay}</Text>
++          {!!centerLine2 && <Text style={{ fontSize: 13, fontWeight: "800", color: dark ? "#FF7FA6" : "#E0507A", marginTop: 4 }}>{centerLine2}</Text>}
+         </View>
+-      </View>
++      </Pressable>
+       <View style={{ flexDirection: "row", gap: 14, marginTop: 8, flexWrap: "wrap", justifyContent: "center" }}>
+-        <LegendDot theme={theme} color={theme.rose} label={s.legendPeriod} />
+-        <LegendDot theme={theme} color={theme.lav} label={s.legendFertile} />
++        <LegendDot theme={theme} color="#F7739A" label={s.legendPeriod} />
++        <LegendDot theme={theme} color="#B69AF0" label={s.legendFertile} />
++        <LegendDot theme={theme} color="#FFC94D" label={s.legendOvulation} />
+         <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+-          <Icon name="star" size={11} color={theme.gold} />
+-          <Text style={{ fontSize: 11.5, color: theme.muted }}>{s.legendOvulation}</Text>
++          <Svg width={12} height={12} viewBox="-6 -6 12 12"><Circle r={5} fill="#E8434F" /><Circle cx={-1.8} cy={1} r={1.1} fill="#2B1B1F" /><Circle cx={1.9} cy={-0.6} r={1.1} fill="#2B1B1F" /></Svg>
++          <Text style={{ fontSize: 11.5, color: theme.muted }}>{s.legendToday}</Text>
+         </View>
+       </View>
+     </View>
+   );
+ }
++
+ function LegendDot({ theme, color, label }) {
+   return (
+     <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+@@ -954,7 +1218,7 @@
  
  /* ---------------------------------- Takvim ---------------------------------- */
  
@@ -127,7 +526,7 @@
    const year = monthDate.getFullYear();
    const month = monthDate.getMonth();
    const firstOfMonth = new Date(year, month, 1);
-@@ -1002,7 +1071,7 @@
+@@ -1002,7 +1266,7 @@
            const dateObj = new Date(year, month, d, 12, 0, 0);
            const iso = toISO(dateObj);
            const c = classifyDay(dateObj, iso, ctx);
@@ -136,7 +535,7 @@
  
            let bg = theme.bg, color = theme.ink, fontWeight = "400", borderW = 0, borderStyle = "solid", borderColor = "transparent";
            if (c.isPeriod) {
-@@ -1091,7 +1160,7 @@
+@@ -1091,7 +1355,7 @@
    );
  }
  
@@ -145,7 +544,7 @@
    const [text, setText] = useState("");
    const [medText, setMedText] = useState("");
    const [pain, setPain] = useState(painLevel || 5);
-@@ -1114,6 +1183,13 @@
+@@ -1114,6 +1378,13 @@
            </TouchableOpacity>
          </View>
  
@@ -159,7 +558,7 @@
          {isPeriodDay && (
            <View style={{ marginBottom: 18 }}>
              <Text style={{ fontSize: 12.5, fontWeight: "700", color: theme.muted, marginBottom: 8 }}>{s.flowTitle}</Text>
-@@ -1359,6 +1435,7 @@
+@@ -1359,6 +1630,7 @@
    const [painLevels, setPainLevels] = useState({});
    const [flowLevels, setFlowLevels] = useState({});
    const [medications, setMedications] = useState({});
@@ -167,7 +566,7 @@
    const [monthDate, setMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
    const [notifOpen, setNotifOpen] = useState(false);
    const [pregDateInput, setPregDateInput] = useState(todayISO);
-@@ -1366,6 +1443,7 @@
+@@ -1366,6 +1638,7 @@
    const [logMode, setLogMode] = useState(false);
    const [dayModalDate, setDayModalDate] = useState(null);
    const [flowModalDate, setFlowModalDate] = useState(null);
@@ -175,7 +574,7 @@
  
    const theme = themeOf(settings.darkMode);
    const lang = settings.language || "tr";
-@@ -1385,6 +1463,7 @@
+@@ -1385,6 +1658,7 @@
            setPainLevels(parsed.painLevels || {});
            setFlowLevels(parsed.flowLevels || {});
            setMedications(parsed.medications || {});
@@ -183,7 +582,7 @@
          }
        } catch (e) { /* ilk kullanım */ } finally { setLoading(false); }
      })();
-@@ -1392,8 +1471,8 @@
+@@ -1392,8 +1666,8 @@
  
    useEffect(() => {
      if (loading) return;
@@ -194,7 +593,7 @@
  
    const info = useCycleInfo(periodDays, settings);
    const periodDaysSet = useMemo(() => new Set(periodDays), [periodDays]);
-@@ -1505,6 +1584,7 @@
+@@ -1505,6 +1779,7 @@
      setNotes((prev) => { const arr = [...(prev[iso] || [])]; arr.splice(idx, 1); const next = { ...prev }; if (arr.length) next[iso] = arr; else delete next[iso]; return next; });
    }
    function savePain(iso, v) { setPainLevels((prev) => ({ ...prev, [iso]: v })); }
@@ -202,7 +601,7 @@
    function saveFlow(iso, l) { setFlowLevels((prev) => ({ ...prev, [iso]: l })); }
    function createPreset(text) { setSettings((st) => { const list = st.presetNotes || []; if (list.includes(text)) return st; return { ...st, presetNotes: [...list, text], presetNotesCustomized: true }; }); }
    function removePreset(text) { setSettings((st) => ({ ...st, presetNotes: (st.presetNotes || []).filter((p) => p !== text), presetNotesCustomized: true })); }
-@@ -1517,6 +1597,29 @@
+@@ -1517,6 +1792,29 @@
      setMedications((prev) => { const arr = [...(prev[iso] || [])]; arr.splice(idx, 1); const next = { ...prev }; if (arr.length) next[iso] = arr; else delete next[iso]; return next; });
    }
  
@@ -232,12 +631,16 @@
    useEffect(() => {
      (async () => {
        try {
-@@ -1631,11 +1734,11 @@
-   function renderTabContent(tabId) {
+@@ -1628,14 +1926,14 @@
+     { id: "profil", label: s.tabProfile, icon: "account" },
+   ];
+ 
+-  function renderTabContent(tabId) {
++  function renderTabContent(tabId, slotIdx) {
      switch (tabId) {
        case "anasayfa":
 -        return <AnasayfaTab theme={theme} info={info} notes={notes} painLevels={painLevels} medications={medications} settings={settings} s={s} lang={lang} />;
-+        return <AnasayfaTab theme={theme} info={info} notes={notes} painLevels={painLevels} medications={medications} moods={moods} settings={settings} s={s} lang={lang} onOpenPet={() => setPetOpen(true)} />;
++        return <AnasayfaTab theme={theme} info={info} notes={notes} painLevels={painLevels} medications={medications} moods={moods} settings={settings} s={s} lang={lang} onOpenPet={() => setPetOpen(true)} paused={petOpen || slotIdx !== activeSlot} />;
        case "takvim":
          return (
            <TakvimTab theme={theme} lang={lang} s={s} info={info} periodDaysSet={periodDaysSet} monthDate={monthDate} setMonthDate={setMonthDate}
@@ -246,7 +649,7 @@
              logMode={logMode} setLogMode={setLogMode}
              autoPeriod={settings.autoPeriod !== false} onAutoPeriodChange={setAutoPeriodEnabled} autoRun={meta.autoRun} nowISO={nowISO}
              avgPeriodLength={settings.avgPeriodLength} />
-@@ -1650,7 +1753,7 @@
+@@ -1650,7 +1948,7 @@
          return (
            <ProfilTab theme={theme} lang={lang} s={s} settings={settings} setSettings={setSettings} setPeriodDays={setPeriodDays}
              setPregnancy={setPregnancy} setMeta={setMeta} setNotes={setNotes} setPainLevels={setPainLevels} setFlowLevels={setFlowLevels}
@@ -255,7 +658,7 @@
              pregnancy={pregnancy} info={info} painLevels={painLevels} notes={notes} medications={medications}
              pregDateInput={pregDateInput} setPregDateInput={setPregDateInput}
              showPregPicker={showPregPicker} setShowPregPicker={setShowPregPicker} pickPhoto={pickPhoto}
-@@ -1674,6 +1777,7 @@
+@@ -1674,6 +1972,7 @@
          notes={notes[dayModalDate] || []} presetNotes={settings.presetNotes || DEFAULT_PRESET_NOTES[lang]}
          painLevel={painLevels[dayModalDate]} isPeriodDay={dayModalDate ? periodDaysSet.has(dayModalDate) : false}
          flowLevel={flowLevels[dayModalDate]} medications={medications[dayModalDate] || []} presetMedications={settings.presetMedications || []}
@@ -263,7 +666,7 @@
          onAddNote={(t) => addNote(dayModalDate, t)} onDeleteNote={(i) => deleteNote(dayModalDate, i)}
          onSavePain={(v) => savePain(dayModalDate, v)} onSaveFlow={(l) => saveFlow(dayModalDate, l)}
          onCreatePreset={createPreset} onRemovePreset={removePreset}
-@@ -1681,6 +1785,12 @@
+@@ -1681,6 +1980,12 @@
          onCreateMedPreset={createMedPreset} onRemoveMedPreset={removeMedPreset}
          onClose={() => setDayModalDate(null)} />
  
@@ -276,7 +679,7 @@
        <Modal visible={notifOpen} transparent animationType="fade" onRequestClose={() => setNotifOpen(false)}>
          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={() => setNotifOpen(false)}>
            <View style={{ position: "absolute", top: 70, right: 16, width: 270, backgroundColor: theme.surface, borderRadius: 14, borderWidth: 1, borderColor: theme.border, padding: 12 }}>
-@@ -1707,6 +1817,9 @@
+@@ -1707,6 +2012,9 @@
              <Text style={{ fontSize: 12, color: theme.muted }}>{formatDate(today, lang)}</Text>
            </View>
          </View>
@@ -286,20 +689,38 @@
          <TouchableOpacity onPress={() => setNotifOpen(true)} style={{ width: 40, height: 40, borderRadius: 12, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.surface, alignItems: "center", justifyContent: "center" }}>
            <Icon name="bell-outline" size={18} color={theme.ink} />
            {notifications.length > 0 && <View style={{ position: "absolute", top: -2, right: -2, width: 10, height: 10, borderRadius: 5, backgroundColor: theme.accent, borderWidth: 2, borderColor: theme.bg }} />}
-@@ -1746,8 +1859,9 @@
+@@ -1716,12 +2024,12 @@
+       <View style={{ flex: 1, overflow: "hidden" }} {...panResponder.panHandlers}>
+         <Animated.View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, transform: [{ translateX: pos0 }] }}>
+           <ScrollView ref={scrollRefs[0]} style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 16 }}>
+-            {renderTabContent(slotTabs[0])}
++            {renderTabContent(slotTabs[0], 0)}
+           </ScrollView>
+         </Animated.View>
+         <Animated.View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, transform: [{ translateX: pos1 }] }}>
+           <ScrollView ref={scrollRefs[1]} style={{ flex: 1, paddingHorizontal: 20 }} contentContainerStyle={{ paddingBottom: 16 }}>
+-            {renderTabContent(slotTabs[1])}
++            {renderTabContent(slotTabs[1], 1)}
+           </ScrollView>
+         </Animated.View>
+       </View>
+@@ -1746,8 +2054,9 @@
  
  /* ---------------------------------- Anasayfa ---------------------------------- */
  
 -function AnasayfaTab({ theme, info, notes, painLevels, medications, settings, s, lang }) {
-+function AnasayfaTab({ theme, info, notes, painLevels, medications, moods = {}, settings, s, lang, onOpenPet }) {
++function AnasayfaTab({ theme, info, notes, painLevels, medications, moods = {}, settings, s, lang, onOpenPet, paused }) {
    const todayNotes = notes[todayISO] || [];
 +  const todayMood = MOOD_OPTIONS.find((m) => m.id === moods[todayISO]);
    const todayPain = painLevels[todayISO];
    const todayMeds = medications[todayISO] || [];
    const phase = info.hasData ? PHASE_INFO[getPhase(info)] : null;
-@@ -1765,6 +1879,22 @@
+@@ -1763,8 +2072,24 @@
+       {!info.hasData && <Banner theme={theme} kind="info">{s.bannerNoData}</Banner>}
+       <Card theme={theme}>
          <CardTitle theme={theme}>{s.thisCycle}</CardTitle>
-         <CycleWheel theme={theme} info={info} s={s} />
+-        <CycleWheel theme={theme} info={info} s={s} />
++        <CycleWheel theme={theme} info={info} s={s} paused={paused} />
        </Card>
 +      {onOpenPet && (
 +        <TouchableOpacity activeOpacity={0.85} onPress={onOpenPet}>
@@ -320,7 +741,7 @@
        {phase && (
          <Card theme={theme}>
            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-@@ -1776,9 +1906,15 @@
+@@ -1776,9 +2101,15 @@
            <Text style={{ fontSize: 13, color: theme.ink, lineHeight: 19 }}>{phase.desc[lang]}</Text>
          </Card>
        )}
@@ -337,7 +758,7 @@
            {todayPain != null && <Text style={{ fontSize: 13, color: theme.ink, marginBottom: 8 }}>{s.painLevelLabel(todayPain)}</Text>}
            {todayNotes.map((n, i) => (
              <View key={i} style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}>
-@@ -1926,7 +2062,7 @@
+@@ -1926,7 +2257,7 @@
    }, [seedKey]);
  }
  
@@ -346,7 +767,7 @@
    const autoDone = autoRun ? Math.min(autoRun.length, Math.max(0, diffDays(fromISO(nowISO), fromISO(autoRun.start)) + 1)) : 0;
    const [yearView, setYearView] = useState(false);
    const [yearViewYear, setYearViewYear] = useState(monthDate.getFullYear());
-@@ -1945,7 +2081,7 @@
+@@ -1945,7 +2276,7 @@
        ) : (
          <>
            <MonthCalendar theme={theme} lang={lang} monthDate={monthDate} setMonthDate={setMonthDate} periodDaysSet={periodDaysSet} info={info}
@@ -355,7 +776,7 @@
            <TouchableOpacity onPress={() => setLogMode((v) => !v)}
              style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, padding: 13, borderRadius: 12, borderWidth: 1.5,
                borderColor: logMode ? theme.rose : theme.border, backgroundColor: logMode ? theme.rose : theme.surface, marginBottom: 14 }}>
-@@ -2281,7 +2417,7 @@
+@@ -2281,7 +2612,7 @@
  
  /* ---------------------------------- Profil ---------------------------------- */
  
@@ -364,7 +785,7 @@
    const [confirmReset, setConfirmReset] = useState(false);
    const [exporting, setExporting] = useState(false);
    const [presetInput, setPresetInput] = useState("");
-@@ -2509,7 +2645,7 @@
+@@ -2509,7 +2840,7 @@
              <View style={{ flexDirection: "row", gap: 8 }}>
                <Btn theme={theme} title={s.resetYes} onPress={() => {
                  setPeriodDays([]); setSettings(DEFAULTS.settings); setPregnancy(DEFAULTS.pregnancy);

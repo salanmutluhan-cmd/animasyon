@@ -19,31 +19,24 @@ const PROPS = {
 const MARK = "# --- Elora: koruma kuralları ---";
 const RULES = `
 ${MARK}
-# React Native / Hermes
+# Not: Kütüphaneler (React Native, Expo, AdMob, Sentry, WebView) kendi R8 kurallarını
+# zaten getirir. Burada sadece gerçekten gereken dar kurallar var; geniş "-keep ... { *; }"
+# kuralları kodun büyük kısmını karartmadan bırakıp Play'deki "kod karartma" oranını düşürür.
+# React Native / Hermes (küçük paketler, yerel kod bu adlarla çağırır)
 -keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.jni.** { *; }
--keep class com.facebook.react.turbomodule.** { *; }
 -keep,allowobfuscation @interface com.facebook.proguard.annotations.DoNotStrip
 -keep @com.facebook.proguard.annotations.DoNotStrip class *
 -keepclassmembers class * { @com.facebook.proguard.annotations.DoNotStrip *; }
-# WebView (pati dostu) — JavaScript köprüsü adları değişmemeli
--keep class com.reactnativecommunity.webview.** { *; }
--keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
-# SVG
+# SVG: özellik adları yansıma (reflection) ile okunur, adları değişmemeli
 -keep public class com.horcrux.svg.** { *; }
-# Google Mobile Ads (AdMob)
--keep class io.invertase.googlemobileads.** { *; }
--keep class com.google.android.gms.ads.** { *; }
+# WebView (pati dostu) — JavaScript köprüsü metotları
+-keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+# Uyarıları sustur (eksik isteğe bağlı sınıflar derlemeyi durdurmasın)
 -dontwarn com.google.android.gms.**
-# Expo modülleri
--keep class expo.modules.** { *; }
 -dontwarn expo.modules.**
-# Sentry
--keep class io.sentry.** { *; }
 -dontwarn io.sentry.**
-# AsyncStorage, Slider
--keep class com.reactnativecommunity.asyncstorage.** { *; }
--keep class com.reactnativecommunity.slider.** { *; }
+-dontwarn com.facebook.react.**
 `;
 
 function withMinifyProps(config) {
@@ -63,7 +56,9 @@ function withKeepRules(config) {
     async (config) => {
       const file = path.join(config.modRequest.platformProjectRoot, "app", "proguard-rules.pro");
       let txt = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
-      if (!txt.includes(MARK)) fs.writeFileSync(file, txt + "\n" + RULES);
+      const at = txt.indexOf(MARK);
+      if (at >= 0) txt = txt.slice(0, at); // eski (geniş) kurallar varsa yenileriyle değiştir
+      fs.writeFileSync(file, txt.trimEnd() + "\n" + RULES);
       return config;
     },
   ]);

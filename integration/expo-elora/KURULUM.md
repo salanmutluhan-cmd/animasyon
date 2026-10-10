@@ -43,3 +43,9 @@ Hayvanın verileri (seviye, para, kıyafetler, görevler) telefonda `pet-state` 
 `plugins/withAndroidMinify.js` eklentisi Android release derlemelerinde R8'i (kod küçültme + karartma) ve kaynak küçültmeyi açar.
 `app.json` içindeki `plugins` listesine `"./plugins/withAndroidMinify"` eklenmelidir. Kütüphanelerin bozulmaması için koruma kuralları `proguard-rules.pro` dosyasına otomatik yazılır.
 Yayına göndermeden önce `preview` profiliyle bir APK alıp telefonda denemen önerilir (reklamlar, pati dostu, takvim, bildirimler).
+
+## Döngü çarkı ve performans (sürüm 1.1.0, yeni derleme)
+
+- Anasayfadaki çark yenilendi: sarmaşık, çiçekler (regl pembe, doğurgan mor, yumurtlama sarı), uğur böceği (bugün), kelebekler, arı ve parıltılar. Animasyonlar telefonun kendi animasyon motorunda döner (`useNativeDriver`), JavaScript'i yormaz. Çarka dokununca giriş animasyonu tekrar oynar. Hayvan ekranı açıkken ve çark ekranda değilken animasyonlar durur.
+- Pati dostu ekranı hafifletildi: oda ayrı bir katmanda (her karede yeniden çizilmez), değişmeyen değerler tekrar yazılmaz, sakin anlarda saniyede 30 kare, 90/120 Hz ekranlarda en fazla 60 kare. Hayvanın kaydı telefona en fazla 10 saniyede bir yazılır; ekran kapanınca ve uygulama arka plana atılınca hemen yazılır.
+- R8 kuralları daraltıldı: kütüphaneler kendi kurallarını getirdiği için geniş `-keep` kuralları kaldırıldı, kodun çok daha büyük kısmı karartılır.

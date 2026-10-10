@@ -708,6 +708,14 @@
     return s;
   }
 
+  // Performans: aynı değeri tekrar yazmak tarayıcıya sahneyi baştan çizdirir. Her karede yazılan
+  // değerlerin çoğu değişmediği için, değer aynıysa SVG özelliğine hiç dokunulmaz.
+  if (typeof SVGElement !== 'undefined' && !SVGElement.prototype.__petSameAttr) {
+    const setA = Element.prototype.setAttribute;
+    SVGElement.prototype.setAttribute = function (k, v) { v = '' + v; if (this.getAttribute(k) !== v) setA.call(this, k, v); };
+    SVGElement.prototype.__petSameAttr = true;
+  }
+
   function buildPet(b, C, P, uid, hq) {
     const sp = b.species, S = SPECIES[sp], L = C.line, isDog = sp === 'dog', fl = b.fluff || 1;
     const st = ' stroke="' + L + '" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"';
@@ -1475,6 +1483,7 @@
       this.showTools = options.tools !== false;
       this.showBackground = options.background !== false;
       this.hq = options.quality !== 'low';
+      this._lowFps = options.fps === 30;
       this.scaleOpt = options.petScale || 0;
       this.labels = Object.assign({ food: 'Mama', water: 'Su', game: 'Oyun', light: 'Işık', bath: 'Banyo', home: 'Oda', sponge: 'Sünger', shower: 'Duş', brush: 'Tarak', tooth: 'Diş' }, options.labels || {});
       this.name = options.name || '';
@@ -1572,13 +1581,17 @@
         '<g data-r="icon' + name + '" transform="translate(0 -8)">' + icon + '</g>' +
         '<text y="34" text-anchor="middle" font-family="-apple-system, Roboto, Segoe UI, sans-serif" font-size="14" font-weight="700" fill="' + SC.text + '">' + label + '</text></g>';
 
+      // Performans: oda (arka plan) ayrı bir SVG'de durur ve kendi katmanında kalır. Hayvan her karede
+      // hareket ettiğinde sadece öndeki SVG yeniden çizilir; oda her karede tekrar boyanmaz.
+      const svgOpen = (extra, style) => '<svg xmlns="' + SVGNS + '" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid meet" ' + (extra || '') +
+        'style="position:absolute;left:0;top:0;width:100%;height:100%;display:block;overflow:hidden;' + style + '">';
+      if (getComputedStyle(this.container).position === 'static') this.container.style.position = 'relative';
       this.container.innerHTML =
-        '<svg xmlns="' + SVGNS + '" viewBox="0 0 400 420" preserveAspectRatio="xMidYMid meet" ' +
-        'style="width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overflow:hidden">' +
+        (this.showBackground ? svgOpen('data-layer="bg" ', 'pointer-events:none') + '<g data-r="world"><g data-r="room"></g><g data-r="bathroom"></g></g></svg>' : '') +
+        svgOpen('data-layer="main" ', 'touch-action:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;will-change:transform') +
         '<defs>' + built.defs +
           '<linearGradient id="' + u + '-wall" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + SC.wallTop + '"/><stop offset="1" stop-color="' + SC.wallBottom + '"/></linearGradient>' +
         '</defs>' +
-        (this.showBackground ? '<g data-r="world"><g data-r="room"></g><g data-r="bathroom"></g></g>' : '') +
         '<ellipse data-r="ballShadow" fill="' + P.shadow + '" display="none"/>' +
         '<g data-r="pet">' + built.pet + '</g>' +
         '<g data-r="gameLayer"></g>' +
@@ -1632,9 +1645,10 @@
         (this.showTools ? '<g data-r="panel"></g><g data-r="talk"></g>' : '') +
         '<g data-r="fxTop" style="pointer-events:none"></g>' +
         '</svg>';
-      this.svg = this.container.querySelector('svg');
+      this.svg = this.container.querySelector('svg[data-layer="main"]');
+      this.bgSvg = this.container.querySelector('svg[data-layer="bg"]');
       const r = this.r = {};
-      this.svg.querySelectorAll('[data-r]').forEach((n) => {
+      this.container.querySelectorAll('[data-r]').forEach((n) => {
         const k = n.getAttribute('data-r');
         (r[k + 'All'] = r[k + 'All'] || []).push(n);
         if (!r[k]) r[k] = n;
@@ -1673,6 +1687,7 @@
       const Wv = Math.max(tall ? 540 : 680, 600 * w / h), Hv = Wv * h / w;
       this.Wv = Wv; this.Hv = Hv;
       this.svg.setAttribute('viewBox', '0 0 ' + f(Wv) + ' ' + f(Hv));
+      if (this.bgSvg) this.bgSvg.setAttribute('viewBox', '0 0 ' + f(Wv) + ' ' + f(Hv));
       this.trayH = this.showTools ? 112 : 0;
       // ekran çok uzunsa hayvan ve alt tuşlar yukarı (ortaya) taşınır, üst kısım boş kalmaz
       const extra = this.showTools ? Math.max(0, Hv - Wv * 1.42) : 0;
@@ -1848,6 +1863,8 @@
       };
       this._ph.unlock = () => this.sfx.unlock();
       ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => svg.addEventListener(ev, this._ph.unlock));
+      this._ph.busy = () => { this._touchT = 2.5; };
+      ['pointerdown', 'pointermove'].forEach((ev) => svg.addEventListener(ev, this._ph.busy, { passive: true }));
       svg.addEventListener('pointerdown', this._ph.down);
       svg.addEventListener('pointermove', this._ph.move);
       svg.addEventListener('pointerup', this._ph.up);
@@ -1856,6 +1873,7 @@
     _unbindPointer() {
       if (!this.svg || !this._ph) return;
       ['pointerup', 'touchend', 'click', 'keydown'].forEach((ev) => this.svg.removeEventListener(ev, this._ph.unlock));
+      ['pointerdown', 'pointermove'].forEach((ev) => this.svg.removeEventListener(ev, this._ph.busy));
       this.svg.removeEventListener('pointerdown', this._ph.down);
       this.svg.removeEventListener('pointermove', this._ph.move);
       this.svg.removeEventListener('pointerup', this._ph.up);
@@ -3932,8 +3950,18 @@
     _loop(now) {
       this._raf = requestAnimationFrame(this._loop);
       if (this._last == null) { this._last = now; return; }
-      const dt = Math.min(0.05, (now - this._last) / 1000);
+      // Performans: 90/120 Hz ekranlarda en fazla 60 kare; yavaş telefonlarda kendiliğinden 30 kareye iner.
+      const iv = now - this._last;
+      // sakin anlarda (sürükleme, oyun, top, dokunma yokken) 30 kare yeterli; pil ve ısınma için
+      const busy = this.drag || this.game || this.ball.active || this._touchT > 0;
+      if (iv < (this._lowFps || !busy ? 30 : 14)) return;
+      if (!this._lowFps && this.t > 2) {
+        this._ivAvg = this._ivAvg ? this._ivAvg * 0.96 + iv * 0.04 : iv;
+        if (this._ivAvg > 24) this._lowFps = true;
+      }
+      const dt = Math.min(0.05, iv / 1000);
       this._last = now;
+      if (this._touchT > 0) this._touchT -= dt;
       if (this.paused) return;
       this.t += dt;
 
@@ -3983,7 +4011,7 @@
 
       this._statsEmit -= dt;
       if (this._holdStats && this.t > 4) this._holdStats = false;
-      if (this._statsEmit <= 0) { this._statsEmit = 1; if (!this._holdStats) this._emit('stats', this.getState()); }
+      if (this._statsEmit <= 0) { this._statsEmit = 3; if (!this._holdStats) this._emit('stats', this.getState()); } // 3 sn'de bir yeter (uygulama her seferinde telefona yazıyor)
     }
 
     _idle(dt, T, mood) {

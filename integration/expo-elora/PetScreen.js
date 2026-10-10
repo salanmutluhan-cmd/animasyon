@@ -2,7 +2,7 @@
 // Hayvanla konuşurken verilen cevaplar (şikayet, ağrı, ilaç) onLog ile uygulamaya döner
 // ve o günün takvim kaydına eklenir. Elle giriş de aynen çalışmaya devam eder.
 import React, { useEffect, useRef } from "react";
-import { Modal, View, Text, TouchableOpacity, Platform, StatusBar } from "react-native";
+import { Modal, View, Text, TouchableOpacity, Platform, StatusBar, AppState } from "react-native";
 import { WebView } from "react-native-webview";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -27,10 +27,18 @@ export default function PetScreen({ visible, onClose, cycle, symptoms, medicatio
   const ready = useRef(false);
   const lastState = useRef(null); // hayvanın en son durumu (para, seviye, kıyafet…)
   const restored = useRef(false);
+  const lastSave = useRef(0);
   const latest = useRef({});
   latest.current = { cycle, symptoms, medications, today, onLog, onRewardedAd, onInterstitial };
 
   useEffect(() => { if (!visible) ready.current = false; }, [visible]);
+  // uygulama arka plana atılırsa son durum hemen telefona yazılır (para/seviye kaybolmasın)
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (st) => {
+      if (st !== "active" && restored.current && lastState.current) AsyncStorage.setItem(PET_KEY, JSON.stringify(lastState.current)).catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
 
   const send = (cmd) => {
     if (!web.current || !ready.current) return;
@@ -59,11 +67,17 @@ export default function PetScreen({ visible, onClose, cycle, symptoms, medicatio
         break;
       }
       case "stats":
-      case "state":
+      case "state": {
         if (!restored.current) break; // kayıt geri yüklenmeden gelen boş durum kaydın üzerine yazılmasın
         lastState.current = d;
-        AsyncStorage.setItem(PET_KEY, JSON.stringify(d)).catch(() => {});
+        // telefona en fazla 10 saniyede bir yazılır; kapanırken ("state") hemen yazılır
+        const now = Date.now();
+        if (msg.type === "state" || now - lastSave.current > 10000) {
+          lastSave.current = now;
+          AsyncStorage.setItem(PET_KEY, JSON.stringify(d)).catch(() => {});
+        }
         break;
+      }
       case "log":
         latest.current.onLog && latest.current.onLog(d);
         break;
